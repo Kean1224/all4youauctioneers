@@ -11,11 +11,11 @@ let sendTimerUpdate = null;
 let sendAuctionUpdate = null;
 
 try {
-  const wsServer = require('../../ws-server');
-  wsNotify = wsServer.sendNotification;
-  sendBidUpdate = wsServer.sendBidUpdate;
-  sendTimerUpdate = wsServer.sendTimerUpdate;
-  sendAuctionUpdate = wsServer.sendAuctionUpdate;
+  const realtimeClient = require('../../utils/realtime-client');
+  wsNotify = realtimeClient.sendNotification;
+  sendBidUpdate = realtimeClient.sendBidUpdate;
+  sendTimerUpdate = realtimeClient.sendTimerUpdate;
+  sendAuctionUpdate = realtimeClient.sendAuctionUpdate;
   console.log('✅ Real-time WebSocket bidding system loaded');
 } catch (e) {
   console.log('⚠️  WebSocket server not available for lot notifications');

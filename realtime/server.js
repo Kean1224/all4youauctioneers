@@ -129,23 +129,23 @@ setInterval(() => {
 
 // API endpoints for other services to interact with WebSocket
 app.post('/api/notify', (req, res) => {
-  const { email, payload } = req.body;
+  const { userEmail, data } = req.body;
   
-  if (email && clients.has(email)) {
-    const ws = clients.get(email);
+  if (userEmail && clients.has(userEmail)) {
+    const ws = clients.get(userEmail);
     if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(payload));
+      ws.send(JSON.stringify(data));
       res.json({ success: true, sent: 1 });
     } else {
-      clients.delete(email);
+      clients.delete(userEmail);
       res.json({ success: false, error: 'Connection closed' });
     }
-  } else if (!email) {
+  } else if (!userEmail) {
     // Broadcast to all connected clients
     let sent = 0;
     for (const ws of clients.values()) {
       if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(payload));
+        ws.send(JSON.stringify(data));
         sent++;
       }
     }
@@ -157,7 +157,7 @@ app.post('/api/notify', (req, res) => {
 });
 
 app.post('/api/bid-update', (req, res) => {
-  const { auctionId, lotId, bidData } = req.body;
+  const { auctionId, lotId, ...bidData } = req.body;
   
   if (auctionSubscriptions.has(auctionId)) {
     const subscribers = auctionSubscriptions.get(auctionId);
@@ -180,6 +180,66 @@ app.post('/api/bid-update', (req, res) => {
     }
     
     console.log(`💰 Bid update sent to ${sent} subscribers for auction ${auctionId}, lot ${lotId}`);
+    res.json({ success: true, sent });
+  } else {
+    res.json({ success: false, error: 'No subscribers for this auction' });
+  }
+});
+
+// Timer update endpoint for auction countdown updates
+app.post('/api/timer-update', (req, res) => {
+  const { auctionId, ...timerData } = req.body;
+  
+  if (auctionSubscriptions.has(auctionId)) {
+    const subscribers = auctionSubscriptions.get(auctionId);
+    let sent = 0;
+    
+    for (const email of subscribers) {
+      if (clients.has(email)) {
+        const ws = clients.get(email);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'timer_update',
+            auctionId,
+            ...timerData,
+            timestamp: new Date().toISOString()
+          }));
+          sent++;
+        }
+      }
+    }
+    
+    console.log(`⏰ Timer update sent to ${sent} subscribers for auction ${auctionId}`);
+    res.json({ success: true, sent });
+  } else {
+    res.json({ success: false, error: 'No subscribers for this auction' });
+  }
+});
+
+// Auction update endpoint for general auction changes
+app.post('/api/auction-update', (req, res) => {
+  const { auctionId, ...updateData } = req.body;
+  
+  if (auctionSubscriptions.has(auctionId)) {
+    const subscribers = auctionSubscriptions.get(auctionId);
+    let sent = 0;
+    
+    for (const email of subscribers) {
+      if (clients.has(email)) {
+        const ws = clients.get(email);
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({
+            type: 'auction_update',
+            auctionId,
+            ...updateData,
+            timestamp: new Date().toISOString()
+          }));
+          sent++;
+        }
+      }
+    }
+    
+    console.log(`📋 Auction update sent to ${sent} subscribers for auction ${auctionId}`);
     res.json({ success: true, sent });
   } else {
     res.json({ success: false, error: 'No subscribers for this auction' });

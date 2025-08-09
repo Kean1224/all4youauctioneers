@@ -95,11 +95,12 @@ router.get('/health', async (req, res) => {
       healthData.services.email = 'not_configured';
     }
 
-    // WebSocket server check
+    // Realtime WebSocket service check
     try {
-      const wsServer = require('../../ws-server');
-      healthData.services.websocket = 'active';
-      healthData.services.websocketConnections = wsServer.getConnectionCount ? wsServer.getConnectionCount() : 'unknown';
+      const realtimeClient = require('../../utils/realtime-client');
+      const isAvailable = await realtimeClient.checkRealtimeService();
+      healthData.services.websocket = isAvailable ? 'active' : 'unavailable';
+      healthData.services.websocketService = process.env.REALTIME_SERVICE_URL || 'http://localhost:5001';
     } catch (e) {
       healthData.services.websocket = 'error';
     }

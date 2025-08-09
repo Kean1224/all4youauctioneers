@@ -10,5 +10,7 @@ services:
         value: production
       - key: PORT
         value: 5000
+      - key: REALTIME_SERVICE_URL
+        value: https://all4you-realtime-service.onrender.com
     healthCheckPath: /health
     autoDeploy: true
