@@ -1,0 +1,226 @@
+[
+  {
+    "id": "1",
+    "title": "Demo Auction 1",
+    "description": "A demo auction for testing lots display.",
+    "location": "Cape Town",
+    "startTime": "2025-07-22T10:00:00.000Z",
+    "endTime": "2025-07-22T18:00:00.000Z",
+    "increment": 10,
+    "createdAt": "2025-07-20T09:00:00.000Z",
+    "viewCount": 10,
+    "auctionImage": "",
+    "lots": [
+      {
+        "id": "lot1",
+        "title": "Antique Vase",
+        "description": "A beautiful antique vase from the 19th century.",
+        "imageUrl": "",
+        "currentBid": 170,
+        "status": "open",
+        "bidHistory": [
+          {
+            "bidderEmail": "demo@example.com",
+            "amount": 110,
+            "time": "2025-07-22T20:45:31.300Z"
+          },
+          {
+            "bidderEmail": "demo@example.com",
+            "amount": 120,
+            "time": "2025-07-22T20:45:36.111Z"
+          },
+          {
+            "bidderEmail": "demo@example.com",
+            "amount": 130,
+            "time": "2025-07-23T12:08:00.077Z"
+          },
+          {
+            "bidderEmail": "demo@example.com",
+            "amount": 140,
+            "time": "2025-07-23T12:08:08.207Z"
+          },
+          {
+            "bidderEmail": "demo@example.com",
+            "amount": 150,
+            "time": "2025-07-23T12:13:19.930Z"
+          },
+          {
+            "bidderEmail": "demo@example.com",
+            "amount": 160,
+            "time": "2025-07-23T12:14:25.575Z"
+          },
+          {
+            "bidderEmail": "demo@example.com",
+            "amount": 170,
+            "time": "2025-07-23T12:14:30.417Z"
+          }
+        ],
+        "bidIncrement": 10
+      }
+    ],
+    "depositRequired": false,
+    "depositAmount": 0
+  },
+  {
+    "id": "8270dae3-c829-4def-b509-03f8a9f0563f",
+    "title": "efdfedgf",
+    "description": "",
+    "location": "rgfafdvdxv",
+    "startTime": "2025-07-23T22:59",
+    "endTime": "2025-07-26T22:59",
+    "increment": 50,
+    "lots": [
+      {
+        "id": "lot-demo-1",
+        "title": "Modern Art Painting",
+        "description": "A vibrant modern art piece, perfect for contemporary spaces.",
+        "imageUrl": "",
+        "currentBid": 500,
+        "status": "open",
+        "bidHistory": [
+          {
+            "bidderEmail": "user1@example.com",
+            "amount": 300,
+            "time": "2025-08-01T10:00:00.000Z"
+          },
+          {
+            "bidderEmail": "user2@example.com",
+            "amount": 400,
+            "time": "2025-08-02T12:00:00.000Z"
+          },
+          {
+            "bidderEmail": "user3@example.com",
+            "amount": 500,
+            "time": "2025-08-03T14:00:00.000Z"
+          }
+        ],
+        "bidIncrement": 50,
+        "endTime": "2025-08-10T18:00:00.000Z",
+        "lotNumber": 1
+      }
+    ],
+    "depositRequired": false,
+    "depositAmount": 0,
+    "createdAt": "2025-07-22T20:59:14.335Z",
+    "viewCount": 4
+  },
+  {
+    "id": "0a5bad08-8474-45d5-bc71-7204616cdf81",
+    "title": "iuh",
+    "description": "",
+    "location": "iupg",
+    "startTime": "2025-07-23T14:15",
+    "endTime": "2025-07-25T14:15",
+    "increment": 50,
+    "lots": [
+      {
+        "id": "65e62762-7a1f-4c61-9eb0-08f7ede7ca1d",
+        "title": "kar",
+        "description": "baie goeie toestand",
+        "startPrice": 500,
+        "image": "/uploads/lots/985a36c1-5388-4c60-b3e8-f9c6b8a980cf.png",
+        "currentBid": 500,
+        "bidIncrement": 50,
+        "bidHistory": [],
+        "endTime": "2025-08-07T11:44:58.215Z",
+        "createdAt": "2025-08-07T11:39:58.413Z",
+        "sellerEmail": null,
+        "lotNumber": 1,
+        "condition": "Good"
+      },
+      {
+        "id": "652feab5-81c3-4d89-9a15-6b7805942ec3",
+        "title": "groot",
+        "description": "qergadg rgargar aergr rga ergaerg ragreg ",
+        "startPrice": 50,
+        "image": "/uploads/lots/4a55de8f-d848-4309-a475-d4c1fa5f33cd.png",
+        "currentBid": 50,
+        "bidIncrement": 10,
+        "bidHistory": [],
+        "endTime": "2025-08-07T11:53:24.025Z",
+        "createdAt": "2025-08-07T11:47:24.036Z",
+        "sellerEmail": null,
+        "lotNumber": 2,
+        "condition": "Good"
+      },
+      {
+        "id": "123cdc37-9236-47a0-b13e-d5602eaa631e",
+        "title": "SDGADFSG",
+        "description": "ASGASDG",
+        "startPrice": 50,
+        "image": "/uploads/lots/5e403c25-b508-4b0b-aa59-b7037bf64748.png",
+        "currentBid": 50,
+        "bidIncrement": 20,
+        "bidHistory": [],
+        "endTime": "2025-08-07T12:00:15.693Z",
+        "createdAt": "2025-08-07T11:53:15.706Z",
+        "sellerEmail": null,
+        "lotNumber": 3,
+        "condition": "Good"
+      },
+      {
+        "id": "016db566-5216-402f-ac36-54be0e8b20f2",
+        "title": "4twertgewt",
+        "description": "ertertv trqetqerrt",
+        "startPrice": 50,
+        "image": "/uploads/lots/2d5e0494-d636-4616-aa0f-94a5eed2c039.png",
+        "currentBid": 50,
+        "bidIncrement": 20,
+        "bidHistory": [],
+        "endTime": "2025-08-07T12:06:05.330Z",
+        "createdAt": "2025-08-07T11:58:05.345Z",
+        "sellerEmail": null,
+        "lotNumber": 4,
+        "condition": "Good"
+      },
+      {
+        "id": "f9b13a87-160d-4a79-9df4-c504ba879e3b",
+        "title": "ghghghhg",
+        "description": "hzgfhxfzgh",
+        "startPrice": 50,
+        "image": "/uploads/lots/b4149465-1e4e-450b-9b7e-fe02bf47ee05.png",
+        "currentBid": 50,
+        "bidIncrement": 20,
+        "bidHistory": [],
+        "endTime": "2025-08-07T12:32:18.342Z",
+        "createdAt": "2025-08-07T12:23:18.352Z",
+        "sellerEmail": null,
+        "lotNumber": 5,
+        "condition": "Good"
+      },
+      {
+        "id": "e3c5a701-671a-4a7f-a4e1-35215d751027",
+        "title": "bakkie",
+        "description": "4x4 d4d ",
+        "startPrice": 55000,
+        "image": "/uploads/lots/80574070-f2fe-494f-8cbc-120bd942375d.png",
+        "currentBid": 55000,
+        "bidIncrement": 500,
+        "bidHistory": [],
+        "endTime": "2025-08-09T08:50",
+        "createdAt": "2025-08-08T06:50:55.141Z",
+        "sellerEmail": null,
+        "lotNumber": 6,
+        "condition": "Good"
+      }
+    ],
+    "depositRequired": false,
+    "depositAmount": 0,
+    "createdAt": "2025-07-23T12:16:02.326Z",
+    "viewCount": 59
+  },
+  {
+    "id": "5b2d777c-8e46-409a-93ad-f6b4be20b03b",
+    "title": "gbfgb",
+    "description": "dgfbdfgbgfbdfgb",
+    "location": "dgfbdgfb",
+    "startTime": "2025-08-12T14:24",
+    "endTime": "2025-08-14T14:24",
+    "increment": 10,
+    "depositRequired": false,
+    "depositAmount": 0,
+    "auctionImage": null,
+    "lots": [],
+    "createdAt": "2025-08-06T12:24:54.128Z"
+  }
+]

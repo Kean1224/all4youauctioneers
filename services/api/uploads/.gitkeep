@@ -1,0 +1,3 @@
+# Keep this file to ensure the uploads directory exists in git
+# Actual uploads will be stored here in development
+# In production, consider using cloud storage like AWS S3 or Cloudinary

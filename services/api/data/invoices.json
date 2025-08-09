@@ -1,0 +1,31 @@
+[
+  {
+    "id": "INV-2025-001",
+    "buyerEmail": "keanmartin75@gmail.com",
+    "lotTitle": "Antique Vase Collection",
+    "lotId": "lot1",
+    "auctionId": "1",
+    "totalAmount": 2500,
+    "paymentStatus": "pending",
+    "createdAt": "2025-08-04T10:00:00.000Z",
+    "status": "paid",
+    "paidAt": "2025-08-06T13:36:54.620Z",
+    "paymentNotes": ""
+  },
+  {
+    "id": "INV-2025-002",
+    "buyerEmail": "buyer@example.com",
+    "lotTitle": "Vintage Watch",
+    "lotId": "lot2",
+    "auctionId": "1",
+    "totalAmount": 1850,
+    "paymentStatus": "paid",
+    "paymentDate": "2025-08-03T14:30:00.000Z",
+    "paymentMethod": "bank_transfer",
+    "paymentReference": "TXN123456789",
+    "createdAt": "2025-08-03T09:00:00.000Z",
+    "status": "paid",
+    "paidAt": "2025-08-06T13:36:55.589Z",
+    "paymentNotes": ""
+  }
+]

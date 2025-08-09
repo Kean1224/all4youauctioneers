@@ -1,0 +1,48 @@
+{
+  "name": "ALL4YOU Auctioneers",
+  "short_name": "ALL4YOU",
+  "description": "South Africa's trusted auction platform - Bid, buy, and sell with confidence",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#39FF14",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["business", "shopping"],
+  "icons": [
+    {
+      "src": "/images/default-auction.jpg",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/images/default-auction.jpg",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Browse Auctions",
+      "short_name": "Auctions",
+      "description": "View current and upcoming auctions",
+      "url": "/auctions"
+    },
+    {
+      "name": "Sell Item",
+      "short_name": "Sell",
+      "description": "List an item for auction",
+      "url": "/sell"
+    },
+    {
+      "name": "My Account",
+      "short_name": "Account", 
+      "description": "Manage your account and bids",
+      "url": "/account"
+    }
+  ],
+  "prefer_related_applications": false
+}

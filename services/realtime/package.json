@@ -1,0 +1,25 @@
+{
+  "name": "all4you-realtime-service",
+  "version": "1.0.0",
+  "description": "Realtime WebSocket service for All4You Auctioneers - auction bot and live bidding",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "echo 'No build step required for Realtime Service'",
+    "test": "echo 'No test specified'"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^4.18.2",
+    "ws": "^8.18.3"
+  },
+  "keywords": ["websocket", "realtime", "auction", "bidding", "microservices"],
+  "author": "All4You Auctions",
+  "license": "ISC"
+}
