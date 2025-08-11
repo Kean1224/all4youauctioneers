@@ -586,7 +586,7 @@ export default function ModernRegistrationForm() {
                   {/* Proof of Address Upload */}
                   <div>
                     <label className="block text-sm font-inter font-medium text-secondary-700 mb-2">
-                      Proof of Address (Utility Bill or Bank Statement) *
+                      Proof of Address (Utility Bill or Municipal Account) *
                     </label>
                     <div className="relative">
                       <input
@@ -606,7 +606,7 @@ export default function ModernRegistrationForm() {
                             <span className="text-sm font-inter text-secondary-700">
                               {files.proofOfAddress ? files.proofOfAddress.name : 'Click to upload proof of address'}
                             </span>
-                            <p className="text-xs text-secondary-500 mt-1">Utility bill, bank statement, or municipal account</p>
+                            <p className="text-xs text-secondary-500 mt-1">Utility bill or municipal account (not older than 3 months)</p>
                           </div>
                         </div>
                       </label>
