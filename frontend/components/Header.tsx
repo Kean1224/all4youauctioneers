@@ -244,53 +244,53 @@ export default function Header() {
 
         {/* MOBILE NAV */}
         {menuOpen && (
-          <div className="md:hidden fixed inset-0 w-screen h-screen bg-black/95 backdrop-blur-md z-[9999] flex flex-col">
+          <div className="md:hidden fixed inset-0 w-screen h-screen bg-black z-[9999] flex flex-col">
             {/* Close button and header */}
-            <div className="flex justify-between items-center p-6 pt-8 border-b border-white/20">
-              <span className="text-white text-2xl font-bold">Menu</span>
+            <div className="flex justify-between items-center p-6 pt-8 border-b-2 border-white bg-gradient-to-r from-yellow-500 to-orange-500">
+              <span className="text-white text-2xl font-bold drop-shadow-lg">Menu</span>
               <button
                 onClick={() => setMenuOpen(false)}
-                className="text-white text-3xl hover:text-yellow-400 transition-all duration-200 p-2"
+                className="text-white text-3xl hover:text-red-300 transition-all duration-200 p-2 hover:bg-black/30 rounded-full"
               >
                 ✕
               </button>
             </div>
 
             {/* Scrollable menu content */}
-            <div className="flex-1 overflow-y-auto px-6 py-6">
-              <div className="space-y-4 max-w-sm mx-auto">
+            <div className="flex-1 overflow-y-auto px-6 py-6 bg-gray-900">
+              <div className="space-y-3 max-w-sm mx-auto">
                 
                 {/* General Links */}
-                <Link href="/terms" className="block w-full px-6 py-4 bg-gray-800/80 text-white rounded-xl transition-all duration-200 hover:bg-gray-700/80 hover:scale-[1.02] text-lg font-bold border-2 border-gray-600/50 text-center" onClick={() => setMenuOpen(false)}>
-                  📋 Terms
+                <Link href="/terms" className="block w-full px-6 py-4 bg-slate-700 text-white rounded-lg transition-all duration-200 hover:bg-slate-600 text-lg font-semibold border border-slate-500 text-center shadow-lg" onClick={() => setMenuOpen(false)}>
+                  📋 Terms & Conditions
                 </Link>
-                <Link href="/contact" className="block w-full px-6 py-4 bg-gray-800/80 text-white rounded-xl transition-all duration-200 hover:bg-gray-700/80 hover:scale-[1.02] text-lg font-bold border-2 border-gray-600/50 text-center" onClick={() => setMenuOpen(false)}>
-                  📞 Contact
+                <Link href="/contact" className="block w-full px-6 py-4 bg-slate-700 text-white rounded-lg transition-all duration-200 hover:bg-slate-600 text-lg font-semibold border border-slate-500 text-center shadow-lg" onClick={() => setMenuOpen(false)}>
+                  📞 Contact Us
                 </Link>
                 
                 {/* User-only links */}
                 {isLoggedIn && (
                   <>
-                    <Link href="/auctions" className="block w-full px-6 py-4 bg-yellow-600/90 text-white rounded-xl transition-all duration-200 hover:bg-yellow-700/90 hover:scale-[1.02] text-lg font-bold shadow-lg border-2 border-yellow-400/50 text-center" onClick={() => setMenuOpen(false)}>
-                      🏛️ Auctions
+                    <Link href="/auctions" className="block w-full px-6 py-4 bg-yellow-600 text-white rounded-lg transition-all duration-200 hover:bg-yellow-700 text-lg font-semibold shadow-lg border border-yellow-500 text-center" onClick={() => setMenuOpen(false)}>
+                      🏛️ Live Auctions
                     </Link>
-                    <Link href="/auctions/past" className="block w-full px-6 py-4 bg-yellow-500/90 text-white rounded-xl transition-all duration-200 hover:bg-yellow-600/90 hover:scale-[1.02] text-lg font-bold shadow-lg border-2 border-yellow-400/50 text-center" onClick={() => setMenuOpen(false)}>
+                    <Link href="/auctions/past" className="block w-full px-6 py-4 bg-orange-600 text-white rounded-lg transition-all duration-200 hover:bg-orange-700 text-lg font-semibold shadow-lg border border-orange-500 text-center" onClick={() => setMenuOpen(false)}>
                       📜 Past Auctions
                     </Link>
-                    <Link href="/watchlist" className="block w-full px-6 py-4 bg-pink-600/90 text-white rounded-xl transition-all duration-200 hover:bg-pink-700/90 hover:scale-[1.02] text-lg font-bold shadow-lg border-2 border-pink-400/50 text-center" onClick={() => setMenuOpen(false)}>
-                      ❤️ Watchlist
+                    <Link href="/watchlist" className="block w-full px-6 py-4 bg-pink-600 text-white rounded-lg transition-all duration-200 hover:bg-pink-700 text-lg font-semibold shadow-lg border border-pink-500 text-center" onClick={() => setMenuOpen(false)}>
+                      ❤️ My Watchlist
                     </Link>
-                    <Link href="/account/buyer" className="block w-full px-6 py-4 bg-blue-700/90 text-white rounded-xl transition-all duration-200 hover:bg-blue-800/90 hover:scale-[1.02] text-lg font-bold shadow-lg border-2 border-blue-400/50 text-center" onClick={() => setMenuOpen(false)}>
-                      🛒 Buyer Invoices
+                    <Link href="/account/buyer" className="block w-full px-6 py-4 bg-blue-600 text-white rounded-lg transition-all duration-200 hover:bg-blue-700 text-lg font-semibold shadow-lg border border-blue-500 text-center" onClick={() => setMenuOpen(false)}>
+                      🛒 Buyer Account
                     </Link>
-                    <Link href="/account/seller" className="block w-full px-6 py-4 bg-blue-700/90 text-white rounded-xl transition-all duration-200 hover:bg-blue-800/90 hover:scale-[1.02] text-lg font-bold shadow-lg border-2 border-blue-400/50 text-center" onClick={() => setMenuOpen(false)}>
-                      💰 Seller Invoices
+                    <Link href="/account/seller" className="block w-full px-6 py-4 bg-indigo-600 text-white rounded-lg transition-all duration-200 hover:bg-indigo-700 text-lg font-semibold shadow-lg border border-indigo-500 text-center" onClick={() => setMenuOpen(false)}>
+                      💰 Seller Account
                     </Link>
-                    <Link href="/my-auctions/invoices" className="block w-full px-6 py-4 bg-gray-700/90 text-white rounded-xl transition-all duration-200 hover:bg-gray-800/90 hover:scale-[1.02] text-lg font-bold shadow-lg border-2 border-gray-500/50 text-center" onClick={() => setMenuOpen(false)}>
+                    <Link href="/my-auctions/invoices" className="block w-full px-6 py-4 bg-purple-600 text-white rounded-lg transition-all duration-200 hover:bg-purple-700 text-lg font-semibold shadow-lg border border-purple-500 text-center" onClick={() => setMenuOpen(false)}>
                       📊 My Auctions
                     </Link>
-                    <Link href="/sell" className="block w-full px-6 py-4 bg-green-600/90 text-white rounded-xl transition-all duration-200 hover:bg-green-700/90 hover:scale-[1.02] font-bold shadow-lg border-2 border-green-400/50 text-lg text-center" onClick={() => setMenuOpen(false)}>
-                      💎 Sell Item
+                    <Link href="/sell" className="block w-full px-6 py-4 bg-green-600 text-white rounded-lg transition-all duration-200 hover:bg-green-700 font-semibold shadow-lg border border-green-500 text-lg text-center" onClick={() => setMenuOpen(false)}>
+                      💎 Sell an Item
                     </Link>
                   </>
                 )}
@@ -298,24 +298,27 @@ export default function Header() {
                 {/* Admin links */}
                 {isAdmin && (
                   <>
-                    <Link href="/admin/inbox" className="block w-full px-6 py-4 bg-red-700/90 text-white rounded-xl transition-all duration-200 hover:bg-red-800/90 hover:scale-[1.02] text-lg font-bold border-2 border-red-500/50 text-center" onClick={() => setMenuOpen(false)}>
+                    <div className="pt-2 mt-2 border-t border-yellow-400">
+                      <p className="text-yellow-400 font-bold text-center mb-3 text-sm uppercase tracking-wide">Admin Panel</p>
+                    </div>
+                    <Link href="/admin/inbox" className="block w-full px-6 py-4 bg-red-700 text-white rounded-lg transition-all duration-200 hover:bg-red-800 text-lg font-semibold border border-red-600 text-center shadow-lg" onClick={() => setMenuOpen(false)}>
                       🔧 Admin Inbox
                     </Link>
-                    <Link href="/admin/refunds" className="block w-full px-6 py-4 bg-orange-700/90 text-white rounded-xl transition-all duration-200 hover:bg-orange-800/90 hover:scale-[1.02] text-lg font-bold border-2 border-orange-500/50 text-center" onClick={() => setMenuOpen(false)}>
+                    <Link href="/admin/refunds" className="block w-full px-6 py-4 bg-red-600 text-white rounded-lg transition-all duration-200 hover:bg-red-700 text-lg font-semibold border border-red-500 text-center shadow-lg" onClick={() => setMenuOpen(false)}>
                       💸 Refunds
                     </Link>
                   </>
                 )}
 
                 {/* Authentication Section */}
-                <div className="pt-6 mt-6 border-t-2 border-white/20">
+                <div className="pt-6 mt-6 border-t-2 border-yellow-500">
                   {!isLoggedIn ? (
-                    <div className="space-y-4">
-                      <Link href="/login" className="block w-full px-6 py-5 bg-yellow-700/90 text-white rounded-xl transition-all duration-200 hover:bg-yellow-800/90 hover:scale-[1.02] text-xl font-bold border-2 border-yellow-600/50 text-center shadow-lg" onClick={() => setMenuOpen(false)}>
+                    <div className="space-y-3">
+                      <Link href="/login" className="block w-full px-6 py-5 bg-blue-700 text-white rounded-lg transition-all duration-200 hover:bg-blue-800 text-xl font-bold border border-blue-600 text-center shadow-lg" onClick={() => setMenuOpen(false)}>
                         🔐 Login
                       </Link>
-                      <Link href="/register" className="block w-full px-6 py-5 bg-gradient-to-r from-yellow-600 to-orange-500 text-white rounded-xl transition-all duration-200 hover:from-yellow-700 hover:to-orange-600 hover:scale-[1.02] text-xl font-bold border-2 border-yellow-400/50 text-center shadow-lg" onClick={() => setMenuOpen(false)}>
-                        ✨ Register
+                      <Link href="/register" className="block w-full px-6 py-5 bg-gradient-to-r from-yellow-600 to-orange-600 text-white rounded-lg transition-all duration-200 hover:from-yellow-700 hover:to-orange-700 text-xl font-bold border border-yellow-500 text-center shadow-lg" onClick={() => setMenuOpen(false)}>
+                        ✨ Register Now
                       </Link>
                     </div>
                   ) : (
@@ -329,7 +332,7 @@ export default function Header() {
                         setMenuOpen(false);
                         window.location.href = '/';
                       }}
-                      className="w-full px-6 py-5 bg-red-700/90 text-white rounded-xl transition-all duration-200 hover:bg-red-800/90 hover:scale-[1.02] font-bold border-2 border-red-600/50 text-center text-xl shadow-lg"
+                      className="w-full px-6 py-5 bg-red-700 text-white rounded-lg transition-all duration-200 hover:bg-red-800 font-bold border border-red-600 text-center text-xl shadow-lg"
                     >
                       🚪 Logout
                     </button>
