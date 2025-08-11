@@ -24,6 +24,7 @@ import {
   UserGroupIcon,
   ShoppingBagIcon
 } from '@heroicons/react/24/outline';
+import { getApiUrl } from '../../lib/api';
 import { getToken } from '../../utils/auth';
 
 type DashboardStats = {
@@ -116,7 +117,7 @@ export default function ModernAdminDashboard() {
 
       // Fetch real data from API endpoints
       try {
-        const usersRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`, { headers });
+        const usersRes = await fetch(`${getApiUrl()}/api/users`, { headers });
         if (usersRes.ok) {
           const usersData = await usersRes.json();
           users = Array.isArray(usersData) ? usersData : [];
@@ -126,7 +127,7 @@ export default function ModernAdminDashboard() {
       }
 
       try {
-        const auctionsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions`, { headers });
+        const auctionsRes = await fetch(`${getApiUrl()}/api/auctions`, { headers });
         if (auctionsRes.ok) {
           const auctionsData = await auctionsRes.json();
           auctions = Array.isArray(auctionsData) ? auctionsData : [];
@@ -136,7 +137,7 @@ export default function ModernAdminDashboard() {
       }
 
       try {
-        const offersRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sell-item/admin/all`, { headers });
+        const offersRes = await fetch(`${getApiUrl()}/api/sell-item/admin/all`, { headers });
         if (offersRes.ok) {
           const offersData = await offersRes.json();
           offers = Array.isArray(offersData) ? offersData : [];

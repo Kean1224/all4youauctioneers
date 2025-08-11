@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { getApiUrl } from '../lib/api';
 import Notification from './Notification';
 // Custom Add to Home Screen prompt for PWA
 function AddToHomeScreenPrompt() {
@@ -69,7 +70,7 @@ export default function Header() {
       headers['Authorization'] = `Bearer ${storedToken}`;
     }
 
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/session`, { 
+    fetch(`${getApiUrl()}/api/auth/session`, { 
       headers,
       credentials: 'include' 
     })

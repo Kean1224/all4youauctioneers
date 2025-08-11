@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import { getApiUrl } from "../../../lib/api";
 import AdminSidebar from "../../../components/AdminSidebar";
 
 export default function AdminAuctionDepositsPage() {
@@ -8,7 +9,7 @@ export default function AdminAuctionDepositsPage() {
   const [deposits, setDeposits] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions`)
+    fetch(`${getApiUrl()}/api/auctions`)
       .then((res) => res.json())
       .then(setAuctions);
   }, []);

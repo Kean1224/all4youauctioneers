@@ -161,7 +161,8 @@ export default function ModernSellPage() {
       images.forEach((image) => {
         submissionData.append('images', image.file);
       });
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/sell-item/submit`, {
+      const { getApiUrl } = await import('../../lib/api');
+      const response = await fetch(`${getApiUrl()}/api/sell-item/submit`, {
         method: 'POST',
         body: submissionData,
         headers: {

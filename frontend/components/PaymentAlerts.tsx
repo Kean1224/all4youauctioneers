@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { getApiUrl } from '../lib/api';
 
 interface PaymentAlert {
   pendingInvoices: number;
@@ -19,7 +20,7 @@ export default function PaymentAlerts() {
 
   const fetchPaymentAlerts = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/summary`, {
+      const response = await fetch(`${getApiUrl()}/api/payments/summary`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}` }
       });
       

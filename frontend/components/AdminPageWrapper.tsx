@@ -51,7 +51,8 @@ export default function AdminPageWrapper({
         }
 
         // Verify with backend
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-admin`, {
+        const { getApiUrl } = await import('../lib/api');
+        const response = await fetch(`${getApiUrl()}/api/auth/verify-admin`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

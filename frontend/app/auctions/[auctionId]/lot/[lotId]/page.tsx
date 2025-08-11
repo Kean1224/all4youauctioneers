@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import { getApiUrl } from '../../../../../lib/api';
 
 export default function LotDetailPage() {
   const params = useParams();
@@ -33,7 +34,7 @@ export default function LotDetailPage() {
     const fetchData = async () => {
       try {
         // Fetch auction and lots
-        const auctionResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions`);
+        const auctionResponse = await fetch(`${getApiUrl()}/api/auctions`);
         if (!auctionResponse.ok) throw new Error('Failed to fetch auctions');
         
         const auctions = await auctionResponse.json();
@@ -87,7 +88,7 @@ export default function LotDetailPage() {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/lots/${auctionId}/${lotId}/bid`, {
+      const response = await fetch(`${getApiUrl()}/api/lots/${auctionId}/${lotId}/bid`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({ 
@@ -180,7 +181,7 @@ export default function LotDetailPage() {
   const imageUrl = lot.imageUrl?.startsWith('http') 
     ? lot.imageUrl 
     : lot.imageUrl?.startsWith('/uploads')
-    ? `${process.env.NEXT_PUBLIC_API_URL}${lot.imageUrl}`
+    ? `${getApiUrl()}${lot.imageUrl}`
     : lot.imageUrl || '/placeholder-lot.svg';
   const lotNumber = auction?.lots?.findIndex((l: any) => l.id === lotId) + 1;
   const timeLeft = (() => {

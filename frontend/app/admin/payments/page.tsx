@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { getApiUrl } from '../../../lib/api';
 import AdminSidebar from '../../../components/AdminSidebar';
 import { motion } from 'framer-motion';
 
@@ -92,13 +93,13 @@ export default function AdminPaymentsPage() {
     setLoading(true);
     try {
       const [invoicesRes, depositsRes, summaryRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/invoices`, {
+        fetch(`${getApiUrl()}/api/payments/invoices`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}` }
         }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/deposits`, {
+        fetch(`${getApiUrl()}/api/payments/deposits`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}` }
         }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/summary`, {
+        fetch(`${getApiUrl()}/api/payments/summary`, {
           headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}` }
         })
       ]);
@@ -121,7 +122,7 @@ export default function AdminPaymentsPage() {
         ? `/api/payments/invoices/${paymentModal.id}/mark-paid`
         : `/api/payments/deposits/${paymentModal.id}/mark-paid`;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+      const response = await fetch(`${getApiUrl()}${endpoint}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -151,7 +152,7 @@ export default function AdminPaymentsPage() {
         ? `/api/payments/invoices/${id}/mark-unpaid`
         : `/api/payments/deposits/${id}/mark-unpaid`;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}${endpoint}`, {
+      const response = await fetch(`${getApiUrl()}${endpoint}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}` }
       });

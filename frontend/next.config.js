@@ -4,14 +4,14 @@ const nextConfig = {
   output: 'standalone', // For static hosting deployment
   
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000',
-    NEXT_PUBLIC_REALTIME_URL: process.env.NEXT_PUBLIC_REALTIME_URL || 'ws://localhost:5001',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://api-d7nd.onrender.com',
+    NEXT_PUBLIC_REALTIME_URL: process.env.NEXT_PUBLIC_REALTIME_URL || 'wss://all4youws-bxjj.onrender.com',
   },
   
   async rewrites() {
     // Only proxy in development - let production handle direct API calls
     if (process.env.NODE_ENV === 'development') {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-d7nd.onrender.com';
       return [
         {
           source: '/api/:path*',

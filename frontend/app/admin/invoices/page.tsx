@@ -2,6 +2,7 @@
 
 
 import React, { useEffect, useState } from 'react';
+import { getApiUrl } from '../../../lib/api';
 import AdminSidebar from '../../../components/AdminSidebar';
 import ModernAdminLayout from '../../../components/ModernAdminLayout';
 
@@ -46,7 +47,7 @@ function AdminInvoicesPage() {
 
   const fetchInvoices = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/invoices/admin/all`);
+      const res = await fetch(`${getApiUrl()}/api/invoices/admin/all`);
       const data = await res.json();
       // data shape: { invoices, stats }
       const invoicesArr = Array.isArray(data.invoices) ? data.invoices : [];
@@ -144,7 +145,7 @@ function AdminInvoicesPage() {
                           if (!inv.paid) {
                             // Mark as paid in backend (admin endpoint)
                             try {
-                              const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/invoices/admin/${inv.id}/mark-paid`, {
+                              const res = await fetch(`${getApiUrl()}/api/invoices/admin/${inv.id}/mark-paid`, {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({}),
@@ -209,7 +210,7 @@ function AdminInvoicesPage() {
                   onClick={async () => {
                     if (!selectedInvoice.paid) {
                       try {
-                        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/invoices/${selectedInvoice.id}/paid`, {
+                        const res = await fetch(`${getApiUrl()}/api/invoices/${selectedInvoice.id}/paid`, {
                           method: 'PUT',
                           headers: { 'Content-Type': 'application/json' },
                         });

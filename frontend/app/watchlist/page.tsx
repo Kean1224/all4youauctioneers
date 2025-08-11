@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { getApiUrl } from '../../lib/api';
 import SmartBreadcrumbs from '../components/SmartBreadcrumbs';
 import ContextAwarePageHeader from '../components/ContextAwarePageHeader';
 import NavigationHelper from '../components/NavigationHelper';
@@ -60,13 +61,13 @@ export default function WatchlistPage() {
     const fetchAllLots = async () => {
       try {
         // Fetch from all auctions
-        const auctionsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions`);
+        const auctionsResponse = await fetch(`${getApiUrl()}/api/auctions`);
         if (auctionsResponse.ok) {
           const auctions = await auctionsResponse.json();
           let allLots: Lot[] = [];
           
           for (const auction of auctions) {
-            const lotsResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions/${auction.id}/lots`);
+            const lotsResponse = await fetch(`${getApiUrl()}/api/auctions/${auction.id}/lots`);
             if (lotsResponse.ok) {
               const lotsData = await lotsResponse.json();
               const lotsWithAuction = lotsData.lots.map((lot: any, index: number) => {
@@ -185,18 +186,18 @@ export default function WatchlistPage() {
                       <img 
                         src={
                           lot.image ? 
-                            (lot.image.startsWith('/uploads') ? `${process.env.NEXT_PUBLIC_API_URL}${lot.image}` : `${process.env.NEXT_PUBLIC_API_URL}/uploads/lots/${lot.image}`) :
+                            (lot.image.startsWith('/uploads') ? `${getApiUrl()}${lot.image}` : `${getApiUrl()}/uploads/lots/${lot.image}`) :
                           lot.imageUrl ? 
-                            (lot.imageUrl.startsWith('/uploads') ? `${process.env.NEXT_PUBLIC_API_URL}${lot.imageUrl}` : `${process.env.NEXT_PUBLIC_API_URL}/uploads/lots/${lot.imageUrl}`) :
+                            (lot.imageUrl.startsWith('/uploads') ? `${getApiUrl()}${lot.imageUrl}` : `${getApiUrl()}/uploads/lots/${lot.imageUrl}`) :
                           '/placeholder.jpg'
                         } 
                         alt={lot.title}
                         className="w-full h-full object-cover cursor-pointer transition-transform duration-300 group-hover:scale-105"
                         onClick={() => {
                           const imgSrc = lot.image ? 
-                            (lot.image.startsWith('/uploads') ? `${process.env.NEXT_PUBLIC_API_URL}${lot.image}` : `${process.env.NEXT_PUBLIC_API_URL}/uploads/lots/${lot.image}`) :
+                            (lot.image.startsWith('/uploads') ? `${getApiUrl()}${lot.image}` : `${getApiUrl()}/uploads/lots/${lot.image}`) :
                             lot.imageUrl ? 
-                              (lot.imageUrl.startsWith('/uploads') ? `${process.env.NEXT_PUBLIC_API_URL}${lot.imageUrl}` : `${process.env.NEXT_PUBLIC_API_URL}/uploads/lots/${lot.imageUrl}`) :
+                              (lot.imageUrl.startsWith('/uploads') ? `${getApiUrl()}${lot.imageUrl}` : `${getApiUrl()}/uploads/lots/${lot.imageUrl}`) :
                             '/placeholder.jpg';
                           window.open(imgSrc, '_blank');
                         }}

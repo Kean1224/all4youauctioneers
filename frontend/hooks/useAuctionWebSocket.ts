@@ -79,7 +79,7 @@ export function useAuctionWebSocket({
     return null;
   }, []);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async () => {
     const email = getUserEmail();
     if (!email) {
       setError('User not authenticated');
@@ -87,7 +87,8 @@ export function useAuctionWebSocket({
     }
 
     try {
-      const wsUrl = process.env.NEXT_PUBLIC_REALTIME_URL || 'ws://localhost:5001';
+      const { getRealtimeUrl } = await import('../lib/api');
+      const wsUrl = getRealtimeUrl();
       wsRef.current = new WebSocket(wsUrl);
 
       wsRef.current.onopen = () => {

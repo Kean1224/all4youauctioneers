@@ -117,7 +117,7 @@ router.post('/:auctionId/end', verifyAdmin, async (req, res) => {
       // 🧾 AUTO-GENERATE INVOICE FOR WINNER
       try {
         // Create invoice automatically
-        const invoiceResponse = await fetch(`${process.env.BASE_URL || 'http://localhost:5000'}/api/invoices/generate`, {
+        const invoiceResponse = await fetch(`${process.env.BASE_URL || 'https://api-d7nd.onrender.com'}/api/invoices/generate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ router.post('/:auctionId/end', verifyAdmin, async (req, res) => {
     // After all lots ended, auto-generate and email invoices
     try {
       const fetch = require('node-fetch');
-      const apiUrl = process.env.API_INTERNAL_URL || `http://localhost:3001/api/invoices/email-invoices/${auctionId}`;
+      const apiUrl = process.env.API_INTERNAL_URL || `https://api-d7nd.onrender.com/api/invoices/email-invoices/${auctionId}`;
       await fetch(apiUrl, { method: 'POST' });
     } catch (e) {
       console.error('Failed to auto-email invoices:', e);

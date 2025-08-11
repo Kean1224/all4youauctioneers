@@ -24,6 +24,7 @@ import {
   ShoppingBagIcon
 } from '@heroicons/react/24/outline';
 import { getToken } from '../../utils/auth';
+import { getApiUrl } from '../../lib/api';
 import AdminUserManagement from '../../components/AdminUserManagement';
 
 type DashboardStats = {
@@ -79,9 +80,9 @@ export default function ModernAdminDashboard() {
       
       // In a real app, these would be actual API calls
       const [users, auctions, offers] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`).then(res => res.json()).catch(() => []),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/auctions`).then(res => res.json()).catch(() => []),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/sell-item`).then(res => res.json()).catch(() => [])
+        fetch(`${getApiUrl()}/users`).then(res => res.json()).catch(() => []),
+        fetch(`${getApiUrl()}/auctions`).then(res => res.json()).catch(() => []),
+        fetch(`${getApiUrl()}/sell-item`).then(res => res.json()).catch(() => [])
       ]);
 
       const lots = auctions.reduce((acc: number, auction: any) => acc + (auction.lots?.length || 0), 0);

@@ -21,7 +21,8 @@ export default function ContactPage() {
     e.preventDefault();
     setStatus('');
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+      const { getApiUrl } = await import('../../lib/api');
+      const apiUrl = getApiUrl();
       const res = await fetch(`${apiUrl}/api/contact`, {
         method: "POST",
         headers: {

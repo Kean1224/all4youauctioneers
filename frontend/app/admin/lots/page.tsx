@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getApiUrl } from '../../../lib/api';
 import AdminSidebar from '../../../components/AdminSidebar';
 import ModernAdminLayout from '../../../components/ModernAdminLayout';
 
@@ -88,8 +89,8 @@ export default function AdminLotsPage() {
       // Fetch all auctions (both active and completed for admin view)
       const headers = getAdminHeaders();
       const [activeResponse, pastResponse] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions`, { headers }),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions/past`, { headers })
+        fetch(`${getApiUrl()}/api/auctions`, { headers }),
+        fetch(`${getApiUrl()}/api/auctions/past`, { headers })
       ]);
       
       let allAuctions: Auction[] = [];
@@ -130,7 +131,7 @@ export default function AdminLotsPage() {
 
   const fetchUsers = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`, {
+      const res = await fetch(`${getApiUrl()}/api/users`, {
         headers: getAdminHeaders()
       });
       if (!res.ok) {
@@ -188,7 +189,7 @@ export default function AdminLotsPage() {
         formData.append('condition', form.condition);
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/lots/${selectedAuctionId}`, {
+      const response = await fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}`, {
         method: 'POST',
         headers: {
           ...(localStorage.getItem('admin_jwt') && { 'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}` })
@@ -238,7 +239,7 @@ export default function AdminLotsPage() {
     if (!confirm(message)) return;
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/lots/${auctionId}/${lotId}`, { 
+      const response = await fetch(`${getApiUrl()}/api/lots/${auctionId}/${lotId}`, { 
         method: 'DELETE',
         headers: getAdminHeaders()
       });
@@ -495,7 +496,7 @@ export default function AdminLotsPage() {
                         <div className="flex flex-col items-end gap-2 mt-2">
                           {lot.image && (
                             <img
-                              src={`${process.env.NEXT_PUBLIC_API_URL}${lot.image}`}
+                              src={`${getApiUrl()}${lot.image}`}
                               alt={lot.title}
                               className="w-24 h-20 object-cover rounded border border-green-200 bg-white"
                             />

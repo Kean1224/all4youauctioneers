@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { getApiUrl } from '../../../lib/api';
 import { getToken } from '../../../utils/auth';
 
 type Invoice = {
@@ -27,7 +28,7 @@ export default function BuyerInvoicesPage() {
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       setUserEmail(payload.email);
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/invoices/buyer/${encodeURIComponent(payload.email)}`)
+      fetch(`${getApiUrl()}/api/invoices/buyer/${encodeURIComponent(payload.email)}`)
         .then(res => res.json())
         .then(data => setInvoices(data));
     } catch {
@@ -37,7 +38,7 @@ export default function BuyerInvoicesPage() {
 
   const handleDownload = () => {
     if (!userEmail) return;
-    window.open(`${process.env.NEXT_PUBLIC_API_URL}/invoices/buyer/${encodeURIComponent(userEmail)}/pdf`, '_blank');
+    window.open(`${getApiUrl()}/invoices/buyer/${encodeURIComponent(userEmail)}/pdf`, '_blank');
   };
 
   const handleEmail = async () => {
@@ -47,7 +48,7 @@ export default function BuyerInvoicesPage() {
     const auctionId = invoices[0]?.auctionTitle || invoices[0]?.auctionId;
     if (!auctionId) return setStatus('No auction ID found.');
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/invoices/email-invoices/${encodeURIComponent(auctionId)}`, {
+      const res = await fetch(`${getApiUrl()}/api/invoices/email-invoices/${encodeURIComponent(auctionId)}`, {
         method: 'POST',
       });
       const data = await res.json();

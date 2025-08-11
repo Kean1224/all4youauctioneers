@@ -100,7 +100,7 @@ router.get('/health', async (req, res) => {
       const realtimeClient = require('../../utils/realtime-client');
       const isAvailable = await realtimeClient.checkRealtimeService();
       healthData.services.websocket = isAvailable ? 'active' : 'unavailable';
-      healthData.services.websocketService = process.env.REALTIME_SERVICE_URL || 'http://localhost:5001';
+      healthData.services.websocketService = process.env.REALTIME_SERVICE_URL || 'https://all4youws-bxjj.onrender.com';
     } catch (e) {
       healthData.services.websocket = 'error';
     }

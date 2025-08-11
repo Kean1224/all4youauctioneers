@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getApiUrl } from '../lib/api';
 
 export function useAdminAuth() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -32,7 +33,7 @@ export function useAdminAuth() {
         }
 
         // Then, verify with backend to ensure token is still valid
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-admin`, {
+        const response = await fetch(`${getApiUrl()}/api/auth/verify-admin`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

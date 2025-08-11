@@ -37,7 +37,8 @@ function LoginForm() {
     }
 
     try {
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/admin-login`;
+      const { getApiUrl } = await import('../../../lib/api');
+      const apiUrl = `${getApiUrl()}/api/auth/admin-login`;
       console.log('Attempting admin login to:', apiUrl);
       console.log('Credentials:', { email, password: password ? '***' : 'empty' });
       

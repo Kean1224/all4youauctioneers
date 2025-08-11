@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { getApiUrl } from '../../../lib/api';
 
 // Helper to get token from localStorage (if needed)
 function getToken() {
@@ -26,7 +27,7 @@ interface Invoice {
 }
 // Helper to request deposit refund
 async function requestRefund(auctionId: string, email: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/refunds/${auctionId}/${encodeURIComponent(email)}`, {
+  const res = await fetch(`${getApiUrl()}/refunds/${auctionId}/${encodeURIComponent(email)}`, {
     method: 'POST',
   });
   return res.json();
@@ -55,10 +56,10 @@ export default function MyAuctionsInvoicesPage() {
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
       setUserEmail(payload.email);
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/buyer/${encodeURIComponent(payload.email)}`)
+      fetch(`${getApiUrl()}/invoices/buyer/${encodeURIComponent(payload.email)}`)
         .then(res => res.json())
         .then(data => setBuyerInvoices(data));
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/seller/${encodeURIComponent(payload.email)}`)
+      fetch(`${getApiUrl()}/invoices/seller/${encodeURIComponent(payload.email)}`)
         .then(res => res.json())
         .then(data => setSellerInvoices(data));
     } catch {
@@ -69,14 +70,14 @@ export default function MyAuctionsInvoicesPage() {
   // Download PDF for a specific auction
   const handleDownload = (type: "buyer" | "seller", auction: string) => {
     if (!userEmail) return;
-    window.open(`${process.env.NEXT_PUBLIC_API_URL}/invoices/${type}/${encodeURIComponent(userEmail)}/auction/${encodeURIComponent(auction)}/pdf`, "_blank");
+    window.open(`${getApiUrl()}/invoices/${type}/${encodeURIComponent(userEmail)}/auction/${encodeURIComponent(auction)}/pdf`, "_blank");
   };
 
   // Email all invoices for a specific auction
   const handleEmail = async (auction: string) => {
     setStatus("Sending...");
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/email-invoices/${encodeURIComponent(auction)}`, {
+      const res = await fetch(`${getApiUrl()}/invoices/email-invoices/${encodeURIComponent(auction)}`, {
         method: "POST",
       });
       const data = await res.json();

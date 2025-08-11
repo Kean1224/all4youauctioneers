@@ -49,7 +49,10 @@ export default function DashboardPage() {
       }
 
       // Fetch user profile
-      const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/profile`, {
+      const { getApiUrl } = await import('../../lib/api');
+      const apiUrl = getApiUrl();
+      
+      const userResponse = await fetch(`${apiUrl}/api/users/profile`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -61,7 +64,7 @@ export default function DashboardPage() {
       }
 
       // Fetch FICA status
-      const ficaResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/fica-status`, {
+      const ficaResponse = await fetch(`${apiUrl}/api/users/fica-status`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

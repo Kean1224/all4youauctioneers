@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { getApiUrl } from '../../../lib/api';
 // Backend status indicator
 function BackendStatus() {
   const [status, setStatus] = useState<'checking' | 'ok' | 'fail'>('checking');
@@ -8,7 +9,7 @@ function BackendStatus() {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
     
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/ping`, {
+    fetch(`${getApiUrl()}/api/ping`, {
       signal: controller.signal,
       method: 'GET',
       credentials: 'include',
@@ -86,7 +87,7 @@ export default function AdminUsersPage() {
   const [depositActionLoading, setDepositActionLoading] = useState<string>('');
 
   const fetchUsers = async (token: string) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`, {
+    const res = await fetch(`${getApiUrl()}/api/users`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -96,7 +97,7 @@ export default function AdminUsersPage() {
     setUsers(data);
   };
   const fetchAuctions = async (token: string) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions`, {
+    const res = await fetch(`${getApiUrl()}/api/auctions`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -122,7 +123,7 @@ export default function AdminUsersPage() {
       console.log('JWT token from localStorage:', token ? 'present' : 'missing');
       console.log('Toggling suspend for:', email, 'current status:', suspended);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/suspend/${encodeURIComponent(email)}`, {
+      const response = await fetch(`${getApiUrl()}/api/users/suspend/${encodeURIComponent(email)}`, {
         method: 'PUT',
         headers: getAdminHeaders(),
         body: JSON.stringify({ suspended: !suspended }),
@@ -148,7 +149,7 @@ export default function AdminUsersPage() {
   };
 
   const approveFica = async (email: string) => {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/fica/${encodeURIComponent(email)}`, {
+    await fetch(`${getApiUrl()}/api/users/fica/${encodeURIComponent(email)}`, {
       method: 'PUT',
       headers: getAdminHeaders(),
     });
@@ -158,7 +159,7 @@ export default function AdminUsersPage() {
   // Admin marks deposit as returned or in progress
   const handleDepositStatus = async (email: string, auctionId: string, status: 'in_progress' | 'returned') => {
     setDepositActionLoading(email + auctionId + status);
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/deposits/return`, {
+    await fetch(`${getApiUrl()}/api/deposits/return`, {
       method: 'PUT',
       headers: getAdminHeaders(),
       body: JSON.stringify({ email, auctionId, status }),
@@ -170,7 +171,7 @@ export default function AdminUsersPage() {
   // Admin approves pending deposit
   const approveDeposit = async (email: string, auctionId: string) => {
     setDepositActionLoading(email + auctionId + 'approve');
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/deposits/${auctionId}/${encodeURIComponent(email)}`, {
+    await fetch(`${getApiUrl()}/api/deposits/${auctionId}/${encodeURIComponent(email)}`, {
       method: 'PUT',
       headers: getAdminHeaders(),
       body: JSON.stringify({ status: 'approved' }),
@@ -184,7 +185,7 @@ export default function AdminUsersPage() {
     if (!window.confirm('Are you sure you want to delete this user? This cannot be undone.')) return;
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/${encodeURIComponent(email)}`, {
+      const response = await fetch(`${getApiUrl()}/api/users/${encodeURIComponent(email)}`, {
         method: 'DELETE',
         headers: getAdminHeaders(),
       });
@@ -247,7 +248,7 @@ export default function AdminUsersPage() {
                           <>
                             {user.idDocument && (
                               <a
-                                href={`${process.env.NEXT_PUBLIC_API_URL}/uploads/fica/${user.idDocument}`}
+                                href={`${getApiUrl()}/uploads/fica/${user.idDocument}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-400 underline mr-2"
@@ -257,7 +258,7 @@ export default function AdminUsersPage() {
                             )}
                             {user.proofOfAddress && (
                               <a
-                                href={`${process.env.NEXT_PUBLIC_API_URL}/uploads/fica/${user.proofOfAddress}`}
+                                href={`${getApiUrl()}/uploads/fica/${user.proofOfAddress}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-400 underline mr-2"

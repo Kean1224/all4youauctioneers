@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getApiUrl } from '../../../lib/api';
 
 export default function SellerInvoicesPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -13,7 +14,7 @@ export default function SellerInvoicesPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices/seller/${encodeURIComponent(sellerEmail)}`);
+      const res = await fetch(`${getApiUrl()}/invoices/seller/${encodeURIComponent(sellerEmail)}`);
       if (!res.ok) throw new Error("No invoices found");
       const data = await res.json();
       setInvoices(data);
@@ -27,7 +28,7 @@ export default function SellerInvoicesPage() {
 
   const downloadPDF = () => {
     if (!sellerEmail) return;
-    window.open(`${process.env.NEXT_PUBLIC_API_URL}/invoices/seller/${encodeURIComponent(sellerEmail)}/pdf`, "_blank");
+    window.open(`${getApiUrl()}/invoices/seller/${encodeURIComponent(sellerEmail)}/pdf`, "_blank");
   };
 
   return (

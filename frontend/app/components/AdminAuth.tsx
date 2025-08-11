@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { getApiUrl } from '../../lib/api';
 
 interface AdminAuthProps {
   children: React.ReactNode;
@@ -26,7 +27,7 @@ export default function AdminAuth({ children, fallbackUrl = '/admin/login' }: Ad
       }
 
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/verify-admin`, {
+        const response = await fetch(`${getApiUrl()}/api/auth/verify-admin`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

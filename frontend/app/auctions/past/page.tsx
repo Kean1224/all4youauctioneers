@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { getApiUrl } from '../../../lib/api';
 import SmartBreadcrumbs from '../../components/SmartBreadcrumbs';
 import ContextAwarePageHeader from '../../components/ContextAwarePageHeader';
 import NavigationHelper from '../../components/NavigationHelper';
@@ -44,7 +45,7 @@ export default function PastAuctionsPage() {
 
     const fetchPastAuctions = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions/past`);
+        const response = await fetch(`${getApiUrl()}/api/auctions/past`);
         if (response.ok) {
           const data = await response.json();
           setAuctions(data);

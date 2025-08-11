@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { getApiUrl } from '../../../lib/api';
 import AdminPageWrapper from '../../../components/AdminPageWrapper';
 
 interface RefundRequest {
@@ -19,7 +20,7 @@ export default function AdminRefundsPage() {
 
   useEffect(() => {
     const adminToken = localStorage.getItem('admin_jwt');
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/refunds/`, {
+    fetch(`${getApiUrl()}/api/refunds/`, {
       credentials: 'include',
       headers: {
         'Authorization': adminToken ? `Bearer ${adminToken}` : ''
@@ -40,7 +41,7 @@ export default function AdminRefundsPage() {
     setActionStatus("");
     try {
       const adminToken = localStorage.getItem('admin_jwt');
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/refunds/${auctionId}/${encodeURIComponent(email)}`, {
+      const res = await fetch(`${getApiUrl()}/api/refunds/${auctionId}/${encodeURIComponent(email)}`, {
         method: 'PUT',
         headers: { 
           'Content-Type': 'application/json',

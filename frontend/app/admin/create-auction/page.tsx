@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { getApiUrl } from '../../../lib/api';
 import AdminSidebar from '../../../components/AdminSidebar';
 
 interface PendingItem {
@@ -45,7 +46,7 @@ export default function CreateAuctionPage() {
   // Fetch pending items that can be assigned to auctions
   const fetchPendingItems = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/pending-items`, {
+      const response = await fetch(`${getApiUrl()}/api/pending-items`, {
         headers: getAdminHeaders()
       });
       
@@ -141,7 +142,7 @@ export default function CreateAuctionPage() {
         formData.append('auctionImage', auctionImage);
       }
 
-      const auctionResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions`, {
+      const auctionResponse = await fetch(`${getApiUrl()}/api/auctions`, {
         method: 'POST',
         body: formData,
       });
@@ -182,7 +183,7 @@ export default function CreateAuctionPage() {
             lotFormData.append(`images`, image);
           });
 
-          const lotResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/lots/${auctionId}`, {
+          const lotResponse = await fetch(`${getApiUrl()}/api/lots/${auctionId}`, {
             method: 'POST',
             body: lotFormData, // Send as FormData instead of JSON
           });
@@ -389,7 +390,7 @@ export default function CreateAuctionPage() {
                         <div className="flex-1 min-w-0">
                           {item.imageUrl && (
                             <img 
-                              src={`${process.env.NEXT_PUBLIC_API_URL}${item.imageUrl}`}
+                              src={`${getApiUrl()}${item.imageUrl}`}
                               alt={item.title}
                               className="w-full h-32 object-cover rounded-lg mb-2"
                             />

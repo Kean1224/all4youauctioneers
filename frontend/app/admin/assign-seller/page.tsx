@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { getApiUrl } from '../../../lib/api';
 import ModernAdminLayout from '../../../components/ModernAdminLayout';
 
 export default function AssignSellerPage() {
@@ -13,10 +14,10 @@ export default function AssignSellerPage() {
   const [status, setStatus] = useState('');
 
   useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions`)
+    fetch(`${getApiUrl()}/api/auctions`)
       .then(res => res.json())
       .then(setAuctions);
-    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`)
+    fetch(`${getApiUrl()}/api/users`)
       .then(res => res.json())
       .then(data => setUsers(data.filter((u: any) => u.role !== 'admin' && !u.suspended)));
   }, []);

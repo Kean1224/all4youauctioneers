@@ -34,7 +34,7 @@ router.post('/forgot-password', async (req, res) => {
   const expiresAt = Date.now() + 1000 * 60 * 60; // 1 hour
   saveResetToken(email, token, expiresAt);
   if (sendMail) {
-    const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+    const resetUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.all4youauctions.co.za'}/reset-password?token=${token}`;
     await sendMail({
       to: email,
       subject: 'Password Reset Request',
@@ -137,7 +137,7 @@ router.post('/register', uploadFica.fields([
     
     // Send verification email
     if (sendMail) {
-      const verificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+      const verificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.all4youauctions.co.za'}/verify-email?token=${verificationToken}`;
       
       try {
         await sendMail({
@@ -274,7 +274,7 @@ router.post('/resend-verification', async (req, res) => {
     
     // Send new verification email
     if (sendMail) {
-      const verificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/verify-email?token=${newToken}`;
+      const verificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.all4youauctions.co.za'}/verify-email?token=${newToken}`;
       
       await sendMail({
         to: email,

@@ -17,6 +17,7 @@ import {
   ExclamationTriangleIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
+import { getApiUrl } from '../lib/api';
 
 interface User {
   email: string;
@@ -61,7 +62,7 @@ export default function AdminUserManagement() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users`, {
+      const response = await fetch(`${getApiUrl()}/api/users`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
         }
@@ -81,7 +82,7 @@ export default function AdminUserManagement() {
   const approveUser = async (email: string) => {
     try {
       setActionLoading(email);
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/fica/${encodeURIComponent(email)}`, {
+      const response = await fetch(`${getApiUrl()}/api/users/fica/${encodeURIComponent(email)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +107,7 @@ export default function AdminUserManagement() {
       setActionLoading(rejectionModal.user.email);
       
       // Reject user with reason using dedicated endpoint
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/users/reject/${encodeURIComponent(rejectionModal.user.email)}`, {
+      const response = await fetch(`${getApiUrl()}/api/users/reject/${encodeURIComponent(rejectionModal.user.email)}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -465,7 +466,7 @@ export default function AdminUserManagement() {
                           <div>
                             <p className="text-xs text-gray-400 mb-2">{doc.file}</p>
                             <a
-                              href={`${process.env.NEXT_PUBLIC_API_URL}/uploads/fica/${doc.file}`}
+                              href={`${getApiUrl()}/uploads/fica/${doc.file}`}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-blue-400 hover:text-blue-300 text-sm underline"

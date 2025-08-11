@@ -27,7 +27,7 @@ export function middleware(request: NextRequest) {
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
       "style-src 'self' 'unsafe-inline'; " +
       "img-src 'self' data: https:; " +
-      "connect-src 'self' " + (process.env.NEXT_PUBLIC_API_URL || '') + "; " +
+      "connect-src 'self' https://api-d7nd.onrender.com wss://all4youws-bxjj.onrender.com; " +
       "frame-ancestors 'none';"
     );
     
