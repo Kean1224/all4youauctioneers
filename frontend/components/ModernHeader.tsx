@@ -197,9 +197,9 @@ export default function ModernHeader({
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="fixed top-0 left-0 h-full w-80 bg-white shadow-2xl z-50 lg:hidden"
+              className="fixed top-0 left-0 h-full w-80 bg-gradient-to-b from-gray-900 to-black shadow-2xl z-50 lg:hidden"
             >
-              <div className="flex flex-col h-full p-6 bg-white">
+              <div className="flex flex-col h-full p-6 bg-gradient-to-b from-gray-900 to-black">
                 {/* Mobile Logo */}
                 <div className="flex items-center justify-between mb-6">
                   <div className="w-[120px] h-[40px] bg-primary-500 rounded-lg flex items-center justify-center font-sora font-bold text-secondary-800 text-lg">
@@ -207,7 +207,7 @@ export default function ModernHeader({
                   </div>
                   <button
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="p-3 text-gray-800 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                    className="p-3 text-white hover:bg-red-600 hover:text-white rounded-lg transition-all duration-200 border border-gray-600"
                   >
                     <XMarkIcon className="w-8 h-8" />
                   </button>
@@ -237,26 +237,9 @@ export default function ModernHeader({
                   ))}
                 </nav>
 
-                {/* Mobile Actions */}
-                <div className="space-y-3 mb-6 flex-shrink-0">
-                  <button className="w-full flex items-center space-x-3 py-4 px-4 bg-purple-600 text-white hover:bg-purple-700 hover:text-yellow-300 rounded-lg transition-all duration-200 font-bold text-lg shadow-md border border-purple-500">
-                    <MagnifyingGlassIcon className="w-6 h-6" />
-                    <span className="font-inter">Search</span>
-                  </button>
-                  
-                  <button className="w-full flex items-center space-x-3 py-4 px-4 bg-orange-600 text-white hover:bg-orange-700 hover:text-yellow-300 rounded-lg transition-all duration-200 font-bold text-lg shadow-md border border-orange-500">
-                    <BellIcon className="w-6 h-6" />
-                    <span className="font-inter">Notifications</span>
-                    {notificationCount > 0 && (
-                      <span className="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold shadow-lg">
-                        {notificationCount > 9 ? '9+' : notificationCount}
-                      </span>
-                    )}
-                  </button>
-                </div>
 
                 {/* Mobile Auth */}
-                <div className="mt-auto pt-6 border-t-2 border-gray-300 flex-shrink-0">
+                <div className="pt-4 border-t-2 border-yellow-400 flex-shrink-0">
                   {isLoggedIn ? (
                     <div className="space-y-3">
                       <div className="flex items-center space-x-3 py-2 px-4">
@@ -266,8 +249,8 @@ export default function ModernHeader({
                           </span>
                         </div>
                         <div>
-                          <p className="text-gray-800 font-inter font-bold text-lg">{userEmail.split('@')[0]}</p>
-                          <p className="text-gray-600 text-base">{userEmail}</p>
+                          <p className="text-white font-inter font-bold text-lg">{userEmail.split('@')[0]}</p>
+                          <p className="text-gray-300 text-base">{userEmail}</p>
                         </div>
                       </div>
                       <button 
