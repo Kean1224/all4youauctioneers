@@ -9,14 +9,17 @@ const nextConfig = {
   },
   
   async rewrites() {
-    // Proxy API calls to the API service
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${apiUrl}/api/:path*`,
-      },
-    ];
+    // Only proxy in development - let production handle direct API calls
+    if (process.env.NODE_ENV === 'development') {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+      return [
+        {
+          source: '/api/:path*',
+          destination: `${apiUrl}/api/:path*`,
+        },
+      ];
+    }
+    return [];
   },
   
   async headers() {

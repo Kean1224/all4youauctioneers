@@ -151,7 +151,8 @@ export default function ModernRegistrationForm() {
       if (files.proofOfAddress) registrationData.append('proofOfAddress', files.proofOfAddress);
       if (files.bankStatement) registrationData.append('bankStatement', files.bankStatement);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.all4youauctions.co.za';
+      const { getApiUrl } = await import('../lib/api');
+      const apiUrl = getApiUrl();
       const response = await fetch(`${apiUrl}/api/auth/register`, {
         method: 'POST',
         body: registrationData,

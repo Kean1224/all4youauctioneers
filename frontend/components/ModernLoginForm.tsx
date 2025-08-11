@@ -20,7 +20,8 @@ export default function ModernLoginForm() {
     setError('');
     
     try {
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`;
+      const { getApiUrl } = await import('../lib/api');
+      const apiUrl = `${getApiUrl()}/api/auth/login`;
       
       const res = await fetch(apiUrl, {
         method: 'POST',
