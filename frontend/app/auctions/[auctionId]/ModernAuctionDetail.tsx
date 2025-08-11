@@ -648,6 +648,54 @@ export default function AuctionDetailPage() {
       return;
     }
 
+    // Check if user is approved for bidding
+    try {
+      const token = localStorage.getItem('token');
+      const ficaResponse = await fetch(`${API_URL}/api/users/fica-status`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (ficaResponse.ok) {
+        const ficaData = await ficaResponse.json();
+        if (!ficaData.ficaApproved) {
+          setNotifications((prev) => [
+            ...prev,
+            {
+              id: Date.now() + Math.random(),
+              message: '❌ Your account must be approved by admin before you can place bids. Please wait for approval.',
+              type: 'error',
+              timestamp: Date.now(),
+            },
+          ]);
+          return;
+        }
+      } else {
+        setNotifications((prev) => [
+          ...prev,
+          {
+            id: Date.now() + Math.random(),
+            message: '⚠️ Unable to verify account status. Please try again.',
+            type: 'warning',
+            timestamp: Date.now(),
+          },
+        ]);
+        return;
+      }
+    } catch (error) {
+      setNotifications((prev) => [
+        ...prev,
+        {
+          id: Date.now() + Math.random(),
+          message: '⚠️ Unable to verify account status. Please check your connection.',
+          type: 'warning',
+          timestamp: Date.now(),
+        },
+      ]);
+      return;
+    }
+
     // Find the lot to get its details
     const lot = auction?.lots.find(l => l.id === lotId);
     if (!lot) return;

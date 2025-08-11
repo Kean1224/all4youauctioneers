@@ -38,7 +38,6 @@ interface RegistrationForm {
 interface FileUploads {
   idDocument: File | null;
   proofOfAddress: File | null;
-  bankStatement: File | null;
 }
 
 export default function ModernRegistrationForm() {
@@ -68,8 +67,7 @@ export default function ModernRegistrationForm() {
 
   const [files, setFiles] = useState<FileUploads>({
     idDocument: null,
-    proofOfAddress: null,
-    bankStatement: null
+    proofOfAddress: null
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,7 +95,7 @@ export default function ModernRegistrationForm() {
       case 3:
         return !!(formData.idNumber && formData.address && formData.city && formData.postalCode);
       case 4:
-        return !!(files.idDocument && files.proofOfAddress && files.bankStatement);
+        return !!(files.idDocument && files.proofOfAddress);
       case 5:
         return formData.termsAccepted && formData.privacyAccepted;
       default:
@@ -149,7 +147,6 @@ export default function ModernRegistrationForm() {
       // Add files with correct field names
       if (files.idDocument) registrationData.append('idDocument', files.idDocument);
       if (files.proofOfAddress) registrationData.append('proofOfAddress', files.proofOfAddress);
-      if (files.bankStatement) registrationData.append('bankStatement', files.bankStatement);
 
       const { getApiUrl } = await import('../lib/api');
       const apiUrl = getApiUrl();
@@ -622,41 +619,6 @@ export default function ModernRegistrationForm() {
                     )}
                   </div>
 
-                  {/* Bank Statement Upload */}
-                  <div>
-                    <label className="block text-sm font-inter font-medium text-secondary-700 mb-2">
-                      Bank Statement (Last 3 Months) *
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="file"
-                        id="bankStatement"
-                        accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={(e) => handleFileChange(e, 'bankStatement')}
-                        className="hidden"
-                      />
-                      <label
-                        htmlFor="bankStatement"
-                        className="flex items-center justify-center w-full px-4 py-6 border-2 border-dashed border-secondary-300 rounded-xl cursor-pointer hover:border-primary-400 transition-colors bg-white/60 backdrop-blur-sm"
-                      >
-                        <div className="text-center">
-                          <DocumentArrowUpIcon className="mx-auto h-12 w-12 text-secondary-400" />
-                          <div className="mt-2">
-                            <span className="text-sm font-inter text-secondary-700">
-                              {files.bankStatement ? files.bankStatement.name : 'Click to upload bank statement'}
-                            </span>
-                            <p className="text-xs text-secondary-500 mt-1">Recent bank statement (last 3 months)</p>
-                          </div>
-                        </div>
-                      </label>
-                    </div>
-                    {files.bankStatement && (
-                      <p className="mt-2 text-sm text-green-600 flex items-center">
-                        <CheckCircleIcon className="w-4 h-4 mr-1" />
-                        {files.bankStatement.name}
-                      </p>
-                    )}
-                  </div>
                 </div>
               )}
 
@@ -701,12 +663,6 @@ export default function ModernRegistrationForm() {
                           <p className="text-sm text-green-600 flex items-center">
                             <CheckCircleIcon className="w-4 h-4 mr-1" />
                             Proof of Address: {files.proofOfAddress.name}
-                          </p>
-                        )}
-                        {files.bankStatement && (
-                          <p className="text-sm text-green-600 flex items-center">
-                            <CheckCircleIcon className="w-4 h-4 mr-1" />
-                            Bank Statement: {files.bankStatement.name}
                           </p>
                         )}
                       </div>
