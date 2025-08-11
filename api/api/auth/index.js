@@ -184,32 +184,30 @@ router.post('/register', uploadFica.fields([
 // POST /api/auth/verify-email
 router.post('/verify-email', async (req, res) => {
   const { token } = req.body;
-  
+  console.log(`[VERIFY-EMAIL] Received token:`, token);
   if (!token) {
+    console.log('[VERIFY-EMAIL] No token provided');
     return res.status(400).json({ error: 'Verification token required.' });
   }
-  
   try {
     // Get pending user by token
     const pendingUser = getPendingUserByToken(token);
-    
+    console.log(`[VERIFY-EMAIL] Pending user found:`, pendingUser ? pendingUser.email : null);
     if (!pendingUser) {
+      console.log('[VERIFY-EMAIL] Invalid or expired token');
       return res.status(400).json({ error: 'Invalid or expired verification token.' });
     }
-    
     // Create the verified user
     const newUser = createVerifiedUser(pendingUser);
-    
+    console.log(`[VERIFY-EMAIL] User created:`, newUser.email);
     // Remove from pending users
     removePendingUser(token);
-    
     // Issue JWT for immediate login
     const jwtToken = jwt.sign(
       { email: newUser.email, name: newUser.name, role: 'user' }, 
       JWT_SECRET, 
       { expiresIn: JWT_EXPIRES_IN }
     );
-    
     res.json({
       status: 'success',
       message: 'Email verified successfully! Welcome to All4You Auctions.',
