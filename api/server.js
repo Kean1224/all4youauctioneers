@@ -97,13 +97,11 @@ const sellItemRouter = require('./api/sell-item/index');
 const usersRouter = require('./api/users/index');
 const systemStatusRouter = require('./api/system/status');
 const refundsRouter = require('./api/refunds/index');
-const registrationRouter = require('./api/auth/registration');
 
 // 🔗 Connect routes
 app.use('/api/deposits', depositsRouter);
 app.use('/api/auctions', auctionsRouter);
 app.use('/api/auth', authRouter);
-app.use('/api/auth', registrationRouter);
 app.use('/api/fica', ficaRouter);
 app.use('/api/pending-items', pendingItemsRouter);
 app.use('/api/pending-users', pendingUsersRouter);

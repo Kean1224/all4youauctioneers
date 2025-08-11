@@ -46,6 +46,8 @@ export default function ModernRegistrationForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [registrationStatus, setRegistrationStatus] = useState<'email_verification' | 'awaiting_approval'>('email_verification');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -196,9 +198,17 @@ export default function ModernRegistrationForm() {
       const data = await response.json();
 
       if (response.ok) {
-        setSuccess(true);
-        // Don't redirect immediately - show success message and let user check email
-        // User should click the verification link from their email to complete registration
+        if (data.directRegistration) {
+          // Direct admin approval system
+          setSuccess(true);
+          setSuccessMessage(data.message);
+          setRegistrationStatus('awaiting_approval');
+        } else {
+          // Old email verification system (fallback)
+          setSuccess(true);
+          setSuccessMessage('Please check your email for verification instructions.');
+          setRegistrationStatus('email_verification');
+        }
       } else {
         setError(data.error || data.message || 'Registration failed');
       }
@@ -250,9 +260,29 @@ export default function ModernRegistrationForm() {
             Registration Successful!
           </h2>
           <p className="text-secondary-600 font-inter mb-6">
-            Please check your email for verification instructions.
+            {successMessage || 'Please check your email for verification instructions.'}
           </p>
-          <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent mx-auto"></div>
+          {registrationStatus === 'awaiting_approval' ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+              <div className="flex items-center">
+                <CheckCircleIcon className="w-5 h-5 text-amber-600 mr-2" />
+                <span className="text-amber-800 font-medium">Account Created - Awaiting Admin Approval</span>
+              </div>
+              <p className="text-amber-700 text-sm mt-2">
+                Your account and documents have been submitted for review. You will be able to login and participate in auctions once approved by our admin team.
+              </p>
+            </div>
+          ) : (
+            <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary-500 border-t-transparent mx-auto"></div>
+          )}
+          <div className="mt-6">
+            <Link
+              href="/login"
+              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-secondary-800 font-inter font-bold rounded-xl hover:from-primary-400 hover:to-primary-500 transition-all duration-200"
+            >
+              Go to Login
+            </Link>
+          </div>
         </div>
       </motion.div>
     );
