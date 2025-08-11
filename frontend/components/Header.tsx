@@ -129,7 +129,7 @@ export default function Header() {
             </span>
           </Link>
 
-          {/* DESKTOP NAV */}
+          {/* DESKTOP NAV - Hidden on mobile */}
           <nav className="hidden md:flex gap-8 text-sm font-semibold items-center">
             <Link href="/terms" className={`${isActive('/terms')} px-3 py-2 rounded-full transition-all duration-200 hover:bg-white/20 hover:backdrop-blur-sm`}>
               📋 Terms
@@ -166,17 +166,20 @@ export default function Header() {
                     📄 Invoices <span className={`text-xs transform transition-transform duration-200 ${accountDropdown ? 'rotate-180' : ''}`}>▾</span>
                   </button>
                   {accountDropdown && (
-                    <div className="absolute right-0 bg-white text-gray-800 shadow-xl rounded-lg mt-2 py-2 w-56 z-[60] border border-gray-200 animate-in fade-in-0 zoom-in-95 duration-200">
+                    <div className="absolute right-0 bg-slate-800 text-white shadow-2xl rounded-lg mt-2 py-3 w-64 z-[70] border-2 border-yellow-400 animate-in fade-in-0 zoom-in-95 duration-200">
+                      <div className="bg-yellow-500 text-black text-center py-2 rounded-t-md mb-2 font-bold">
+                        📄 Invoice Options
+                      </div>
                       <Link
                         href="/account/buyer"
-                        className="block px-4 py-3 hover:bg-blue-50 transition-colors border-b border-gray-100 text-sm"
+                        className="block px-6 py-4 hover:bg-blue-600 hover:text-white transition-all duration-200 border-b border-slate-600 text-lg font-semibold bg-slate-700 rounded mx-2 mb-2"
                         onClick={() => setAccountDropdown(false)}
                       >
                         🛒 Buyer Invoices
                       </Link>
                       <Link
                         href="/account/seller"
-                        className="block px-4 py-3 hover:bg-blue-50 transition-colors text-sm"
+                        className="block px-6 py-4 hover:bg-green-600 hover:text-white transition-all duration-200 text-lg font-semibold bg-slate-700 rounded mx-2"
                         onClick={() => setAccountDropdown(false)}
                       >
                         💰 Seller Invoices
