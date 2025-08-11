@@ -80,8 +80,7 @@ const JWT_EXPIRES_IN = '7d';
 // POST /api/auth/register (now with email verification)
 router.post('/register', uploadFica.fields([
   { name: 'proofOfAddress', maxCount: 1 },
-  { name: 'idDocument', maxCount: 1 },
-  { name: 'bankStatement', maxCount: 1 }
+  { name: 'idDocument', maxCount: 1 }
 ]), async (req, res) => {
   console.log('Register request body:', req.body);
   console.log('Register request files:', req.files);
@@ -114,7 +113,6 @@ router.post('/register', uploadFica.fields([
     // Handle FICA files
     const proofOfAddress = req.files && req.files['proofOfAddress'] ? req.files['proofOfAddress'][0].filename : null;
     const idDocument = req.files && req.files['idDocument'] ? req.files['idDocument'][0].filename : null;
-    const bankStatement = req.files && req.files['bankStatement'] ? req.files['bankStatement'][0].filename : null;
     
     // Create pending user data
     const pendingUserData = {
@@ -128,8 +126,7 @@ router.post('/register', uploadFica.fields([
       city: city || '',
       postalCode: postalCode || '',
       idDocument: idDocument,
-      proofOfAddress: proofOfAddress,
-      bankStatement: bankStatement
+      proofOfAddress: proofOfAddress
     };
     
     // Save pending user and get verification token
@@ -400,6 +397,78 @@ router.get('/session', (req, res) => {
     res.json({ isLoggedIn: true, email: payload.email, role: payload.role, isAdmin: payload.role === 'admin' });
   } catch {
     res.json({ isLoggedIn: false });
+  }
+});
+
+// Admin endpoint to manually add missing users based on uploaded files
+router.post('/admin/create-users-from-uploads', async (req, res) => {
+  try {
+    const uploadsPath = path.join(__dirname, '../../uploads/fica');
+    const files = fs.readdirSync(uploadsPath);
+    
+    // Group files by timestamp to identify user registrations
+    const userGroups = {};
+    
+    files.forEach(file => {
+      const match = file.match(/^(idDocument|proofOfAddress)-(\d+)-/);
+      if (match) {
+        const [, type, timestamp] = match;
+        if (!userGroups[timestamp]) {
+          userGroups[timestamp] = {};
+        }
+        userGroups[timestamp][type] = file;
+      }
+    });
+    
+    console.log('Found user groups:', userGroups);
+    
+    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+    let newUsersCount = 0;
+    
+    // Create users for complete registrations (both ID and proof of address)
+    for (const [timestamp, files] of Object.entries(userGroups)) {
+      if (files.idDocument && files.proofOfAddress) {
+        // Create a temporary email based on timestamp
+        const tempEmail = `user${timestamp}@temp.com`;
+        const tempPassword = `temp${timestamp}`;
+        const hashedPassword = await bcrypt.hash(tempPassword, 10);
+        
+        // Check if user already exists
+        if (!users.find(u => u.email === tempEmail)) {
+          const newUser = {
+            email: tempEmail,
+            password: hashedPassword,
+            name: `User ${timestamp}`,
+            ficaApproved: false,
+            suspended: false,
+            registeredAt: new Date(parseInt(timestamp)).toISOString(),
+            emailVerified: false,
+            idDocument: files.idDocument,
+            proofOfAddress: files.proofOfAddress,
+            watchlist: [],
+            deposits: [],
+            tempUser: true // Mark as temporary
+          };
+          
+          users.push(newUser);
+          newUsersCount++;
+          
+          console.log(`Created temp user: ${tempEmail} with password: ${tempPassword}`);
+        }
+      }
+    }
+    
+    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+    
+    res.json({ 
+      success: true, 
+      message: `Created ${newUsersCount} temporary users`,
+      userGroups 
+    });
+    
+  } catch (error) {
+    console.error('Error creating users from uploads:', error);
+    res.status(500).json({ error: 'Failed to create users from uploads' });
   }
 });
 

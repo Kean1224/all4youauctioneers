@@ -86,7 +86,10 @@ function createVerifiedUser(pendingUser) {
     watchlist: [],
     idDocument: pendingUser.idDocument,
     proofOfAddress: pendingUser.proofOfAddress,
-    bankStatement: pendingUser.bankStatement
+    idNumber: pendingUser.idNumber || '',
+    address: pendingUser.address || '',
+    city: pendingUser.city || '',
+    postalCode: pendingUser.postalCode || ''
   };
   
   users.push(newUser);
