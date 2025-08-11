@@ -96,7 +96,7 @@ function LotCard({
         {images.length > 0 ? (
           <>
             <Image
-              src={images[0].startsWith('http') ? images[0] : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${images[0]}`}
+              src={images[0].startsWith('http') ? images[0] : `${API_URL}${images[0]}`}
               alt={lot.title || 'Auction Lot Image'}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-700"
@@ -273,13 +273,14 @@ function scrollToNotifications() {
 import BidNotifications from '../../components/BidNotifications';
 // WebSocket URL for local development (adjust if needed)
 // Make sure to set NEXT_PUBLIC_WS_URL in your .env.local for production or custom setups
-const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:5051';
+// Import API utilities for production URLs
+import { getApiUrl, getRealtimeUrl } from '../../../lib/api';
+
+const WS_URL = getRealtimeUrl();
+const API_URL = getApiUrl();
 
 console.log('WebSocket URL:', WS_URL); // Debug log
-
-// API URL for local development
-// Make sure to set NEXT_PUBLIC_API_URL in your .env.local for production or custom setups
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+console.log('API URL:', API_URL); // Debug log
 // Enhanced Timer component for each lot with different display formats
 function LotTimer({ endTime, lotNumber }: { endTime: string; lotNumber: number }) {
   const [timeLeft, setTimeLeft] = useState<string>('');
@@ -964,7 +965,7 @@ export default function AuctionDetailPage() {
       <div className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-black flex items-center justify-center">
         <div className="text-center">
           <div className="bg-yellow-400 text-black px-6 py-4 rounded-lg font-semibold shadow-lg mb-6">
-            <span className="text-lg">Warning: <b>NEXT_PUBLIC_API_URL</b> is not set. Using <b>http://localhost:5000</b> for API calls. Set this in your <b>.env.local</b> for custom or production environments.</span>
+            <span className="text-lg">Using API URL: <b>{API_URL}</b> for auction data and WebSocket: <b>{WS_URL}</b> for real-time updates.</span>
           </div>
         </div>
       </div>
@@ -1044,7 +1045,7 @@ export default function AuctionDetailPage() {
       <div className="relative h-96 overflow-hidden rounded-b-3xl shadow-2xl">
         {auctionImage && auctionImage.trim() !== "" ? (
           <Image
-            src={auctionImage.startsWith('http') ? auctionImage : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${auctionImage}`}
+            src={auctionImage.startsWith('http') ? auctionImage : `${API_URL}${auctionImage}`}
             alt={`${auction.title} - Auction Banner`}
             fill
             className="object-cover w-full h-full"
@@ -1222,7 +1223,7 @@ export default function AuctionDetailPage() {
                       src={
                         imageModal.images[imageModal.currentIndex]?.startsWith('http') 
                           ? imageModal.images[imageModal.currentIndex]
-                          : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${imageModal.images[imageModal.currentIndex]}`
+                          : `${API_URL}${imageModal.images[imageModal.currentIndex]}`
                       }
                       alt={`${imageModal.lotTitle} - Image ${imageModal.currentIndex + 1}`}
                       width={800}
@@ -1262,7 +1263,7 @@ export default function AuctionDetailPage() {
                             src={
                               img.startsWith('http') 
                                 ? img
-                                : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${img}`
+                                : `${API_URL}${img}`
                             }
                             alt={`Thumbnail ${idx + 1}`}
                             width={64}
