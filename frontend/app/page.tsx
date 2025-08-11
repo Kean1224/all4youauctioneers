@@ -39,23 +39,21 @@ export default function HomePage() {
       }
 
       // Fetch session data
-      fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/session`, { 
-        headers,
-        credentials: 'include' 
-      })
+      import('../lib/api').then(({ getApiUrl }) => {
+        fetch(`${getApiUrl()}/api/auth/session`, { 
+          headers,
+          credentials: 'include' 
+        })
         .then(res => res.json())
         .then(data => {
           if (data.email) {
             setIsLoggedIn(true);
             setUserEmail(data.email);
-            setUserName(data.email.split('@')[0]);
-          } else if (!storedEmail) {
-            setIsLoggedIn(false);
-            setUserEmail('');
-            setUserName('');
+            setUserName(data.firstName || data.email.split('@')[0]);
           }
         })
-        .catch(() => {
+        .catch(err => console.error('Session check failed:', err));
+      }).catch(() => {
           // If session check fails but we have stored email, assume logged in
           if (storedEmail) {
             setIsLoggedIn(true);
@@ -71,7 +69,8 @@ export default function HomePage() {
 
   const fetchFeaturedAuctions = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions`);
+      const { getApiUrl } = await import('../lib/api');
+      const response = await fetch(`${getApiUrl()}/api/auctions`);
       if (response.ok) {
         const auctions = await response.json();
         // Take first 4 auctions as featured

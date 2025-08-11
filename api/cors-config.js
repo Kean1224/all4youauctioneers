@@ -9,6 +9,7 @@ module.exports = cors({
     // Render deployment URLs
     'https://all4you-frontend.onrender.com',
     'https://all4you-backend.onrender.com',
+    'https://all4youauctioneers.onrender.com',
     // Legacy Render URLs (keep for compatibility)
     'https://groot-cvb5.onrender.com',
     'https://groot-1.onrender.com',

@@ -30,7 +30,8 @@ export default function AuctionsPage() {
 
     const fetchAuctions = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auctions`);
+        const { getApiUrl } = await import('../../lib/api');
+        const response = await fetch(`${getApiUrl()}/api/auctions`);
         if (response.ok) {
           const data = await response.json();
           setAuctions(data);
