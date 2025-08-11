@@ -129,52 +129,25 @@ router.post('/register', uploadFica.fields([
       proofOfAddress: proofOfAddress
     };
     
-    // DIRECT ADMIN APPROVAL SYSTEM - Skip email verification entirely
-    // Create the user directly for admin review and approval
-    
-    const newUser = {
-      email: email,
-      password: hashed, // Already hashed
-      name: name,
-      firstName: firstName || name.split(' ')[0] || 'Unknown',
-      lastName: lastName || name.split(' ').slice(1).join(' ') || 'User',
-      cell: pendingUserData.cell || '',
-      idNumber: pendingUserData.idNumber || '',
-      address: pendingUserData.address || '',
-      city: pendingUserData.city || '',
-      postalCode: pendingUserData.postalCode || '',
-      ficaApproved: false, // Requires admin approval
-      suspended: false,
-      registeredAt: new Date().toISOString(),
-      emailVerified: true, // Skip email verification step
-      emailVerifiedAt: new Date().toISOString(),
-      watchlist: [],
-      deposits: [],
-      idDocument: pendingUserData.idDocument,
-      proofOfAddress: pendingUserData.proofOfAddress,
-      awaitingApproval: true, // Flag for admin review
-      registrationComplete: true,
-      note: `Direct registration on ${new Date().toISOString()} - awaiting admin FICA document approval`
-    };
-    
-    // Read existing users and add new user
-    const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
-    users.push(newUser);
-    fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-    
-    console.log('✅ User created directly for admin approval:', email, 'with documents:', {
-      idDocument: newUser.idDocument,
-      proofOfAddress: newUser.proofOfAddress
-    });
-    
-    res.json({ 
-      status: 'awaiting_approval',
+    // Save as pending user and send verification email
+    const verificationToken = savePendingUser(pendingUserData);
+    if (sendMail) {
+      const verificationUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.all4youauctions.co.za'}/verify-email?token=${verificationToken}`;
+      await sendMail({
+        to: email,
+        subject: 'Verify Your Email - All4You Auctions',
+        text: `Welcome to All4You Auctions! Please verify your email by clicking this link: ${verificationUrl}`,
+        html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;"><h2 style="color: #d97706;">Welcome to All4You Auctions!</h2><p>Hi ${name},</p><p>Thank you for registering with All4You Auctions. Please verify your email address to complete your registration.</p><div style="text-align: center; margin: 30px 0;"><a href="${verificationUrl}" style="background-color: #d97706; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-weight: bold;">Verify Email Address</a></div><p><strong>Important:</strong> This verification link will expire in 24 hours.</p><p>If you didn't create this account, please ignore this email.</p><p>Best regards,<br>All4You Auctions Team</p></div>`
+      });
+      console.log('📧 Verification email sent to:', email);
+    }
+    res.json({
+      status: 'email_verification',
       success: true,
-      message: 'Registration successful! Your account has been created with your documents uploaded. Our admin team will review and approve your account within 24 hours. You will be able to login and participate in auctions once approved.',
+      message: 'Registration successful! Please check your email to verify your account. After verification, your documents will be reviewed by our admin team.',
       email: email,
-      directRegistration: true
+      verificationRequired: true
     });
-    
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Registration failed. Please try again.' });
