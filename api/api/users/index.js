@@ -352,9 +352,35 @@ router.delete('/:email', verifyAdmin, (req, res) => {
   const email = decodeURIComponent(req.params.email);
   const idx = users.findIndex(u => u.email === email);
   if (idx === -1) return res.status(404).json({ error: 'User not found' });
+  
   const [deleted] = users.splice(idx, 1);
+  
+  // Clean up user's FICA documents if they exist
+  const documentsToDelete = [];
+  if (deleted.idDocument) documentsToDelete.push(deleted.idDocument);
+  if (deleted.proofOfAddress) documentsToDelete.push(deleted.proofOfAddress);
+  if (deleted.bankStatement) documentsToDelete.push(deleted.bankStatement);
+  
+  documentsToDelete.forEach(filename => {
+    const filePath = path.join(uploadDir, filename);
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`✅ Deleted FICA document: ${filename}`);
+      }
+    } catch (error) {
+      console.log(`⚠️  Could not delete file ${filename}:`, error.message);
+    }
+  });
+  
   writeUsers(users);
-  res.json({ message: 'User deleted', user: deleted });
+  console.log(`✅ User ${email} deleted successfully${documentsToDelete.length > 0 ? ` with ${documentsToDelete.length} documents` : ''}`);
+  
+  res.json({ 
+    message: 'User deleted successfully', 
+    user: deleted,
+    documentsDeleted: documentsToDelete.length 
+  });
 });
 
 module.exports = router;

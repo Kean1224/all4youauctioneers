@@ -15,7 +15,8 @@ import {
   IdentificationIcon,
   HomeIcon,
   ExclamationTriangleIcon,
-  ArrowPathIcon
+  ArrowPathIcon,
+  TrashIcon
 } from '@heroicons/react/24/outline';
 import { getApiUrl } from '../lib/api';
 
@@ -57,6 +58,13 @@ export default function AdminUserManagement() {
 
   useEffect(() => {
     fetchUsers();
+    
+    // Auto-refresh users every 30 seconds to catch new registrations
+    const interval = setInterval(() => {
+      fetchUsers();
+    }, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const fetchUsers = async () => {
@@ -124,6 +132,36 @@ export default function AdminUserManagement() {
       }
     } catch (error) {
       console.error('Error rejecting user:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const deleteUser = async (email: string) => {
+    if (!confirm(`Are you sure you want to permanently delete user ${email}? This user will be able to register again with the same email address.`)) {
+      return;
+    }
+    
+    try {
+      setActionLoading(email);
+      const response = await fetch(`${getApiUrl()}/api/users/${encodeURIComponent(email)}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (response.ok) {
+        fetchUsers();
+        // Show success message
+        alert(`User ${email} has been permanently deleted and can now register again.`);
+      } else {
+        const data = await response.json();
+        alert(`Failed to delete user: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      alert('Failed to delete user. Please try again.');
     } finally {
       setActionLoading(null);
     }
@@ -343,6 +381,21 @@ export default function AdminUserManagement() {
                           </button>
                         </>
                       )}
+                      
+                      {/* Delete button - always available for all users */}
+                      <button
+                        onClick={() => deleteUser(user.email)}
+                        disabled={actionLoading === user.email}
+                        className="flex items-center gap-1 px-3 py-1 bg-gray-600/20 text-gray-400 rounded-lg hover:bg-red-600/30 hover:text-red-400 transition-colors disabled:opacity-50"
+                        title="Delete user permanently - they can register again"
+                      >
+                        {actionLoading === user.email ? (
+                          <div className="w-4 h-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+                        ) : (
+                          <TrashIcon className="w-4 h-4" />
+                        )}
+                        Delete
+                      </button>
                       
                       {user.rejectionReason && (
                         <span className="text-xs text-gray-400 italic">Can re-upload documents</span>
