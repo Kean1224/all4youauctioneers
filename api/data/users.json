@@ -30,5 +30,35 @@
     "registeredAt": "2025-08-03T10:00:00.000Z",
     "watchlist": [],
     "deposits": []
+  },
+  {
+    "email": "user1754541545@temp.com",
+    "password": "$2b$10$temphashedpasswordplaceholder",
+    "name": "New User 1",
+    "ficaApproved": false,
+    "suspended": false,
+    "registeredAt": "2025-08-11T10:00:00.000Z",
+    "emailVerified": false,
+    "idDocument": "idDocument-1754541545598-859900588.png",
+    "proofOfAddress": "proofOfAddress-1754541545605-282289680.png",
+    "watchlist": [],
+    "deposits": [],
+    "tempUser": true,
+    "note": "Created from orphaned uploads - needs proper email and password reset"
+  },
+  {
+    "email": "user1754541802@temp.com", 
+    "password": "$2b$10$temphashedpasswordplaceholder",
+    "name": "New User 2",
+    "ficaApproved": false,
+    "suspended": false,
+    "registeredAt": "2025-08-11T10:05:00.000Z",
+    "emailVerified": false,
+    "idDocument": "idDocument-1754541802735-481942850.png",
+    "proofOfAddress": "proofOfAddress-1754541802748-292936165.png",
+    "watchlist": [],
+    "deposits": [],
+    "tempUser": true,
+    "note": "Created from orphaned uploads - needs proper email and password reset"
   }
 ]

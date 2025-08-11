@@ -10,7 +10,8 @@
       "Bash(rmdir:*)",
       "Bash(rm:*)",
       "Bash(node:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
