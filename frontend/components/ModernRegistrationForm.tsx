@@ -72,6 +72,17 @@ export default function ModernRegistrationForm() {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
+    
+    // For ID number, only allow digits
+    if (name === 'idNumber') {
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 13);
+      setFormData(prev => ({
+        ...prev,
+        [name]: digitsOnly
+      }));
+      return;
+    }
+    
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
@@ -86,14 +97,41 @@ export default function ModernRegistrationForm() {
     }));
   };
 
+  // Password validation helper
+  const validatePassword = (password: string): boolean => {
+    const minLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    
+    return minLength && hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar;
+  };
+
+  // ID number validation helper (South African ID format: 13 digits)
+  const validateIdNumber = (idNumber: string): boolean => {
+    return /^\d{13}$/.test(idNumber);
+  };
+
   const validateStep = (stepNumber: number): boolean => {
     switch (stepNumber) {
       case 1:
         return !!(formData.firstName && formData.lastName && formData.email && formData.phone);
       case 2:
-        return !!(formData.password && formData.confirmPassword && formData.password === formData.confirmPassword);
+        return !!(
+          formData.password && 
+          formData.confirmPassword && 
+          formData.password === formData.confirmPassword &&
+          validatePassword(formData.password)
+        );
       case 3:
-        return !!(formData.idNumber && formData.address && formData.city && formData.postalCode);
+        return !!(
+          formData.idNumber && 
+          formData.address && 
+          formData.city && 
+          formData.postalCode &&
+          validateIdNumber(formData.idNumber)
+        );
       case 4:
         return !!(files.idDocument && files.proofOfAddress);
       case 5:
@@ -447,15 +485,29 @@ export default function ModernRegistrationForm() {
                     {formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword && (
                       <p className="text-red-500 text-sm mt-1 font-inter">Passwords do not match</p>
                     )}
+                    {formData.password && !validatePassword(formData.password) && (
+                      <p className="text-red-500 text-sm mt-1 font-inter">Password does not meet requirements</p>
+                    )}
                   </div>
 
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                     <h4 className="font-inter font-medium text-blue-800 mb-2">Password Requirements:</h4>
-                    <ul className="text-sm text-blue-700 font-inter space-y-1">
-                      <li>• At least 8 characters long</li>
-                      <li>• Include uppercase and lowercase letters</li>
-                      <li>• Include at least one number</li>
-                      <li>• Include at least one special character</li>
+                    <ul className="text-sm font-inter space-y-1">
+                      <li className={`flex items-center ${formData.password?.length >= 8 ? 'text-green-600' : 'text-blue-700'}`}>
+                        {formData.password?.length >= 8 ? '✅' : '•'} At least 8 characters long
+                      </li>
+                      <li className={`flex items-center ${/[A-Z]/.test(formData.password) ? 'text-green-600' : 'text-blue-700'}`}>
+                        {/[A-Z]/.test(formData.password) ? '✅' : '•'} Include uppercase letters
+                      </li>
+                      <li className={`flex items-center ${/[a-z]/.test(formData.password) ? 'text-green-600' : 'text-blue-700'}`}>
+                        {/[a-z]/.test(formData.password) ? '✅' : '•'} Include lowercase letters
+                      </li>
+                      <li className={`flex items-center ${/\d/.test(formData.password) ? 'text-green-600' : 'text-blue-700'}`}>
+                        {/\d/.test(formData.password) ? '✅' : '•'} Include at least one number
+                      </li>
+                      <li className={`flex items-center ${/[!@#$%^&*(),.?":{}|<>]/.test(formData.password) ? 'text-green-600' : 'text-blue-700'}`}>
+                        {/[!@#$%^&*(),.?":{}|<>]/.test(formData.password) ? '✅' : '•'} Include at least one special character (!@#$%^&*)
+                      </li>
                     </ul>
                   </div>
                 </div>
@@ -480,10 +532,26 @@ export default function ModernRegistrationForm() {
                         value={formData.idNumber}
                         onChange={handleInputChange}
                         required
-                        className="w-full pl-10 pr-3 py-3 border border-secondary-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-inter text-secondary-800 placeholder-secondary-400 bg-white/80 backdrop-blur-sm"
-                        placeholder="ID number"
+                        maxLength={13}
+                        className={`w-full pl-10 pr-3 py-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-inter text-secondary-800 placeholder-secondary-400 bg-white/80 backdrop-blur-sm ${
+                          formData.idNumber && !validateIdNumber(formData.idNumber) 
+                            ? 'border-red-300' 
+                            : 'border-secondary-200'
+                        }`}
+                        placeholder="13-digit ID number"
                       />
                     </div>
+                    {formData.idNumber && !validateIdNumber(formData.idNumber) && (
+                      <p className="text-red-500 text-sm mt-1 font-inter">
+                        ID number must be exactly 13 digits
+                      </p>
+                    )}
+                    {formData.idNumber && validateIdNumber(formData.idNumber) && (
+                      <p className="text-green-600 text-sm mt-1 font-inter flex items-center">
+                        <CheckCircleIcon className="w-4 h-4 mr-1" />
+                        Valid ID number format
+                      </p>
+                    )}
                   </div>
 
                   <div>
