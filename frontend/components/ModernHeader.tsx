@@ -228,7 +228,7 @@ export default function ModernHeader({
                         className={`block py-4 px-4 rounded-lg font-inter font-bold text-xl transition-all duration-200 ${
                           pathname === item.href
                             ? 'bg-blue-500 text-white shadow-lg'
-                            : 'text-gray-800 hover:bg-gray-100 hover:text-blue-600'
+                            : 'bg-slate-700 text-white hover:bg-slate-600 hover:text-yellow-300 shadow-md border border-slate-600'
                         }`}
                       >
                         {item.name}
@@ -239,12 +239,12 @@ export default function ModernHeader({
 
                 {/* Mobile Actions */}
                 <div className="space-y-3 mb-6 flex-shrink-0">
-                  <button className="w-full flex items-center space-x-3 py-4 px-4 text-gray-800 hover:bg-gray-100 hover:text-blue-600 rounded-lg transition-all duration-200 font-bold text-lg">
+                  <button className="w-full flex items-center space-x-3 py-4 px-4 bg-purple-600 text-white hover:bg-purple-700 hover:text-yellow-300 rounded-lg transition-all duration-200 font-bold text-lg shadow-md border border-purple-500">
                     <MagnifyingGlassIcon className="w-6 h-6" />
                     <span className="font-inter">Search</span>
                   </button>
                   
-                  <button className="w-full flex items-center space-x-3 py-4 px-4 text-gray-800 hover:bg-gray-100 hover:text-blue-600 rounded-lg transition-all duration-200 font-bold text-lg">
+                  <button className="w-full flex items-center space-x-3 py-4 px-4 bg-orange-600 text-white hover:bg-orange-700 hover:text-yellow-300 rounded-lg transition-all duration-200 font-bold text-lg shadow-md border border-orange-500">
                     <BellIcon className="w-6 h-6" />
                     <span className="font-inter">Notifications</span>
                     {notificationCount > 0 && (
@@ -280,7 +280,7 @@ export default function ModernHeader({
                   ) : (
                     <div className="space-y-3">
                       <Link href="/login" onClick={() => setIsMobileMenuOpen(false)}>
-                        <button className="w-full py-4 px-4 text-gray-800 border-2 border-gray-800 rounded-lg hover:bg-gray-800 hover:text-white transition-all duration-200 font-inter font-bold text-xl shadow-md">
+                        <button className="w-full py-4 px-4 bg-green-600 text-white border-2 border-green-500 rounded-lg hover:bg-green-700 hover:text-yellow-300 transition-all duration-200 font-inter font-bold text-xl shadow-md">
                           Login
                         </button>
                       </Link>
