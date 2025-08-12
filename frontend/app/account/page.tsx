@@ -96,76 +96,65 @@ export default function AccountDashboard() {
     try {
       setLoading(true);
       
-      // Mock user data - replace with actual API calls
-      setUser({
-        id: '1',
-        email: email,
-        name: 'John Doe',
-        role: 'buyer',
-        memberSince: '2023-01-15',
-        totalBids: 47,
-        totalWins: 12,
-        totalSales: 0,
-        rating: 4.8
+      // Fetch real user data from API
+      const { getApiUrl } = await import('../../lib/api');
+      const token = getToken();
+      
+      const response = await fetch(`${getApiUrl()}/api/users/${encodeURIComponent(email)}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
-
-      // Mock auctions data
-      setAuctions([
-        {
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setUser({
+          id: userData.email,
+          email: userData.email,
+          name: userData.name || 'User',
+          role: 'buyer',
+          memberSince: userData.registeredAt,
+          totalBids: 0, // TODO: Calculate from bids API
+          totalWins: 0, // TODO: Calculate from bids API
+          totalSales: 0, // TODO: Calculate from sales API
+          rating: 5.0 // TODO: Calculate from reviews API
+        });
+      } else {
+        console.error('Failed to fetch user data');
+        setUser({
           id: '1',
-          title: 'Estate Auction - Antique Furniture',
-          startDate: '2024-01-20T10:00:00Z',
-          endDate: '2024-01-20T18:00:00Z',
-          status: 'live',
-          currentBid: 2500,
-          totalLots: 45
-        },
-        {
-          id: '2',
-          title: 'Vintage Car Collection',
-          startDate: '2024-01-25T09:00:00Z',
-          endDate: '2024-01-25T17:00:00Z',
-          status: 'upcoming',
-          totalLots: 12
-        }
-      ]);
+          email: email,
+          name: 'User',
+          role: 'buyer',
+          memberSince: new Date().toISOString(),
+          totalBids: 0,
+          totalWins: 0,
+          totalSales: 0,
+          rating: 5.0
+        });
+      }
 
-      // Mock bids data
-      setBids([
-        {
-          id: '1',
-          auctionId: '1',
-          auctionTitle: 'Estate Auction',
-          lotNumber: 15,
-          bidAmount: 450,
-          timestamp: '2024-01-20T14:30:00Z',
-          status: 'winning',
-          itemTitle: 'Antique Oak Dining Table'
-        },
-        {
-          id: '2',
-          auctionId: '1',
-          auctionTitle: 'Estate Auction',
-          lotNumber: 8,
-          bidAmount: 120,
-          timestamp: '2024-01-20T13:15:00Z',
-          status: 'outbid',
-          itemTitle: 'Victorian Lamp Set'
+      // Fetch real auctions data
+      try {
+        const auctionsResponse = await fetch(`${getApiUrl()}/api/auctions`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        if (auctionsResponse.ok) {
+          const auctionsData = await auctionsResponse.json();
+          setAuctions(auctionsData || []);
+        } else {
+          setAuctions([]);
         }
-      ]);
+      } catch (error) {
+        console.error('Failed to fetch auctions:', error);
+        setAuctions([]);
+      }
 
-      // Mock watchlist data
-      setWatchlist([
-        {
-          id: '1',
-          auctionId: '1',
-          auctionTitle: 'Estate Auction',
-          lotNumber: 22,
-          itemTitle: 'Vintage Jewelry Collection',
-          currentBid: 300,
-          endTime: '2024-01-20T16:30:00Z'
-        }
-      ]);
+      // Initialize empty arrays for bids and watchlist (real data will come from future APIs)
+      setBids([]);
+      setWatchlist([]);
 
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -327,6 +316,13 @@ export default function AccountDashboard() {
                   {/* Recent Activity */}
                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
                     <h3 className="text-xl font-bold text-white mb-6">Recent Bids</h3>
+                    {bids.length === 0 ? (
+                      <div className="text-center py-8">
+                        <TrophyIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-400">No bids yet</p>
+                        <p className="text-gray-500 text-sm">Start bidding on auctions to see your activity here</p>
+                      </div>
+                    ) : (
                     <div className="space-y-4">
                       {bids.slice(0, 3).map((bid) => (
                         <div key={bid.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
@@ -341,7 +337,7 @@ export default function AccountDashboard() {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-green-400 font-bold">${bid.bidAmount}</p>
+                            <p className="text-green-400 font-bold">R{bid.bidAmount}</p>
                             <p className="text-gray-400 text-sm">{new Date(bid.timestamp).toLocaleDateString()}</p>
                           </div>
                         </div>
@@ -355,11 +351,19 @@ export default function AccountDashboard() {
                         View All Bids
                       </button>
                     )}
+                    )}
                   </div>
 
                   {/* Active Auctions */}
                   <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6">
                     <h3 className="text-xl font-bold text-white mb-6">Active Auctions</h3>
+                    {auctions.filter(auction => auction.status === 'live' || auction.status === 'upcoming').length === 0 ? (
+                      <div className="text-center py-8">
+                        <ClockIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-400">No active auctions</p>
+                        <p className="text-gray-500 text-sm">Check back later for upcoming auctions</p>
+                      </div>
+                    ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {auctions.filter(auction => auction.status === 'live' || auction.status === 'upcoming').map((auction) => (
                         <div key={auction.id} className="p-4 bg-white/5 rounded-xl border border-white/5">
@@ -372,7 +376,7 @@ export default function AccountDashboard() {
                           <div className="space-y-2 text-sm text-gray-400">
                             <p>Lots: {auction.totalLots}</p>
                             {auction.currentBid && (
-                              <p>Current High: <span className="text-green-400 font-bold">${auction.currentBid}</span></p>
+                              <p>Current High: <span className="text-green-400 font-bold">R{auction.currentBid}</span></p>
                             )}
                             <p>Ends: {new Date(auction.endDate).toLocaleDateString()}</p>
                           </div>
@@ -388,6 +392,7 @@ export default function AccountDashboard() {
                         </div>
                       ))}
                     </div>
+                    )}
                   </div>
                 </motion.div>
               )}
@@ -417,7 +422,7 @@ export default function AccountDashboard() {
                             <p className="text-gray-400 text-sm">Ends: {new Date(item.endTime).toLocaleString()}</p>
                           </div>
                           <div className="text-right">
-                            <p className="text-green-400 font-bold">${item.currentBid}</p>
+                            <p className="text-green-400 font-bold">R{item.currentBid}</p>
                             <p className="text-gray-400 text-sm">Current Bid</p>
                           </div>
                         </div>
@@ -451,7 +456,7 @@ export default function AccountDashboard() {
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-green-400 font-bold">${bid.bidAmount}</p>
+                          <p className="text-green-400 font-bold">R{bid.bidAmount}</p>
                           <p className="text-gray-400 text-sm">Your Bid</p>
                         </div>
                       </div>
