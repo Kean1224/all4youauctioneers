@@ -24,7 +24,7 @@ if (GmailOAuth2Service) gmailOAuth2 = new GmailOAuth2Service();
 if (SendGridService) sendGridService = new SendGridService();
 
 // Configure fallback SMTP transport (Gmail with app password)
-const transporter = nodemailer.createTransporter({
+const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
   port: parseInt(process.env.SMTP_PORT) || 587,
   secure: false,
