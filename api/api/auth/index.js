@@ -121,6 +121,6 @@ router.post('/admin-login', adminLogin);
 
 // Import and use admin verification
 const verifyAdmin = require('./verify-admin');
-router.get('/verify-admin', verifyAdmin);
+router.post('/verify-admin', verifyAdmin);
 
 module.exports = router;
