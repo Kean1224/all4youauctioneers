@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
   service: 'gmail', // or your SMTP provider
   auth: {
     user: 'admin@all4youauctions.co.za',
-    pass: 'YOUR_APP_PASSWORD' // Use environment variable in production!
+    pass: process.env.GMAIL_APP_PASSWORD || 'YOUR_APP_PASSWORD' // Use environment variable
   }
 });
 
