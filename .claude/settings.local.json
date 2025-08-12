@@ -12,7 +12,20 @@
       "Bash(node:*)",
       "Bash(npm run build:*)",
       "Bash(curl:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(git push:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git commit:*)",
+      "Bash(find:*)",
+      "Bash(npm start)",
+      "Bash(taskkill:*)",
+      "Bash(cmd.exe:*)",
+      "Bash(PORT=5001 npm start)",
+      "Bash(cat:*)",
+      "Bash(sed:*)",
+      "Bash(PORT=3001 npm start)",
+      "Bash(npm run dev:*)",
+      "Bash(PORT=5002 npm start)"
     ],
     "deny": []
   }

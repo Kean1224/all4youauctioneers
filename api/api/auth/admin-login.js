@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 // Use a strong secret in production!
-const SECRET = process.env.JWT_SECRET || 'dev_secret_key';
+const SECRET = process.env.JWT_SECRET || 'supersecretkey';
 
 // Admin credentials - will be hashed on first use
 const ADMIN_CREDENTIALS = [

@@ -119,4 +119,8 @@ router.post('/login', async (req, res) => {
 const adminLogin = require('./admin-login');
 router.post('/admin-login', adminLogin);
 
+// Import and use admin verification
+const verifyAdmin = require('./verify-admin');
+router.get('/verify-admin', verifyAdmin);
+
 module.exports = router;
