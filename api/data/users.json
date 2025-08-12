@@ -1,1 +1,13 @@
-[]
+[
+  {
+    "email": "demo@example.com",
+    "password": "$2b$12$JYjN0TLddpdNB8j1JqIuYuTdG5tSZj.GI26K3vCMJFeVH9j4PRARK",
+    "name": "Demo User",
+    "ficaApproved": true,
+    "suspended": false,
+    "registeredAt": "2025-08-12T16:43:56.001Z",
+    "idDocument": "demo_id.pdf",
+    "proofOfAddress": "demo_proof.pdf",
+    "watchlist": []
+  }
+]
