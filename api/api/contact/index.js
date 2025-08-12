@@ -6,14 +6,8 @@ const router = express.Router();
 
 const CONTACT_INBOX_PATH = path.join(__dirname, '../../data/contact_inbox.json');
 
-// Setup nodemailer transporter (configure with your SMTP details)
-const transporter = nodemailer.createTransport({
-  service: 'gmail', // or your SMTP provider
-  auth: {
-    user: 'admin@all4youauctions.co.za',
-    pass: process.env.GMAIL_APP_PASSWORD || 'YOUR_APP_PASSWORD' // Use environment variable
-  }
-});
+// Use the centralized mailer for consistency
+const { sendMail } = require('../../utils/mailer');
 
 // POST /api/contact - receive contact form submission
 router.post('/', (req, res) => {
@@ -35,9 +29,8 @@ router.post('/', (req, res) => {
   inbox.unshift(entry);
   fs.writeFileSync(CONTACT_INBOX_PATH, JSON.stringify(inbox, null, 2));
 
-  // Send email to admin
-  transporter.sendMail({
-    from: 'admin@all4youauctions.co.za',
+  // Send email to admin using centralized mailer
+  sendMail({
     to: 'admin@all4youauctions.co.za',
     subject: `Contact Form Submission from ${name}`,
     text: `Name: ${name}\nEmail: ${email}\nMessage: ${message}`,
@@ -50,13 +43,12 @@ router.post('/', (req, res) => {
       <hr>
       <p><small>Sent via all4youauctions.co.za contact form</small></p>
     `
-  }, (err, info) => {
-    if (err) {
-      console.log('Email send error:', err);
-      // Still return success even if email fails (form data is saved)
-      return res.json({ success: true, note: 'Message saved, email delivery pending' });
-    }
+  }).then(() => {
     res.json({ success: true, note: 'Message sent and email delivered' });
+  }).catch((err) => {
+    console.log('Email send error:', err);
+    // Still return success even if email fails (form data is saved)
+    res.json({ success: true, note: 'Message saved, email delivery pending' });
   });
 });
 

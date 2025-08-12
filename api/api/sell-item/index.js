@@ -483,6 +483,329 @@ router.get('/image/:itemId/:imageFilename', (req, res) => {
   }
 });
 
+// 💰 Admin make direct purchase offer (Admin only)
+router.post('/admin/:itemId/direct-offer', verifyAdmin, async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { offerAmount, offerType, notes } = req.body;
+
+    // Validation
+    if (!offerAmount || !offerType || !['purchase', 'counter_offer'].includes(offerType)) {
+      return res.status(400).json({ 
+        error: 'Offer amount and valid offer type (purchase/counter_offer) required' 
+      });
+    }
+
+    const sellItems = readSellItems();
+    const itemIndex = sellItems.findIndex(item => item.id === itemId);
+
+    if (itemIndex === -1) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    const item = sellItems[itemIndex];
+
+    if (!['pending', 'approved'].includes(item.status)) {
+      return res.status(400).json({ error: 'Item must be pending or approved for direct offers' });
+    }
+
+    // Update item with admin offer
+    sellItems[itemIndex] = {
+      ...item,
+      status: offerType === 'purchase' ? 'admin_purchased' : 'counter_offered',
+      adminOffer: {
+        amount: parseFloat(offerAmount),
+        type: offerType,
+        notes: notes || '',
+        offeredAt: new Date().toISOString(),
+        offeredBy: req.user.email
+      },
+      reviewedAt: new Date().toISOString(),
+      reviewedBy: req.user.email
+    };
+
+    writeSellItems(sellItems);
+
+    // Send email notification to seller
+    const emailSubject = offerType === 'purchase' ? 
+      `Direct Purchase Offer - ${item.itemTitle}` :
+      `Counter Offer - ${item.itemTitle}`;
+
+    const statusColor = offerType === 'purchase' ? '#059669' : '#d97706';
+    const statusMessage = offerType === 'purchase' ? 
+      '🎉 Great news! We would like to purchase your item directly!' :
+      '💰 We have a counter offer for your item.';
+
+    try {
+      await sendMail({
+        to: item.submittedBy,
+        subject: emailSubject,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: ${statusColor};">💰 ${offerType === 'purchase' ? 'Direct Purchase Offer' : 'Counter Offer'}</h2>
+            <p>${statusMessage}</p>
+            
+            <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h3>Item Details:</h3>
+              <p><strong>Title:</strong> ${item.itemTitle}</p>
+              <p><strong>Your Asking Price:</strong> R${item.askingPrice.toLocaleString()}</p>
+              <p><strong>Our Offer:</strong> <span style="color: ${statusColor}; font-weight: bold; font-size: 1.2em;">R${parseFloat(offerAmount).toLocaleString()}</span></p>
+              <p><strong>Offer Type:</strong> ${offerType === 'purchase' ? 'Direct Purchase' : 'Counter Offer'}</p>
+              <p><strong>Offered by:</strong> ${req.user.email}</p>
+              <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+            
+            ${notes ? `
+            <div style="background: #fffbeb; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h4>Additional Notes:</h4>
+              <p>${notes}</p>
+            </div>
+            ` : ''}
+            
+            <div style="background: ${offerType === 'purchase' ? '#f0fdf4' : '#fefce8'}; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h4 style="color: ${offerType === 'purchase' ? '#059669' : '#a16207'};">Next Steps:</h4>
+              <p style="color: ${offerType === 'purchase' ? '#059669' : '#a16207'};">
+                ${offerType === 'purchase' ? 
+                  '• Please reply to this email to accept this direct purchase offer<br>• Once accepted, we will arrange payment and collection<br>• Payment will be processed within 2-3 business days' :
+                  '• Please consider our counter offer<br>• Reply to this email to accept, decline, or negotiate further<br>• We aim to reach a mutually beneficial agreement'
+                }
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 20px 0;">
+              <p style="font-size: 0.9em; color: #666;">
+                To respond, simply reply to this email or contact us directly.
+              </p>
+            </div>
+            
+            <p>Thank you for choosing ALL4YOU AUCTIONEERS.</p>
+            
+            <p>Best regards,<br><strong>ALL4YOU AUCTIONEERS Team</strong></p>
+          </div>
+        `,
+        text: `
+${offerType === 'purchase' ? 'Direct Purchase Offer' : 'Counter Offer'} - ${item.itemTitle}
+
+${statusMessage}
+
+Item: ${item.itemTitle}
+Your Asking Price: R${item.askingPrice.toLocaleString()}
+Our Offer: R${parseFloat(offerAmount).toLocaleString()}
+Type: ${offerType === 'purchase' ? 'Direct Purchase' : 'Counter Offer'}
+
+${notes ? `Notes: ${notes}` : ''}
+
+${offerType === 'purchase' ? 
+  'Please reply to accept this direct purchase offer. Payment and collection will be arranged upon acceptance.' :
+  'Please consider our counter offer and reply with your decision.'
+}
+
+- ALL4YOU AUCTIONEERS Team
+        `
+      });
+    } catch (emailError) {
+      console.error('Failed to send offer email:', emailError);
+    }
+
+    res.json({ 
+      message: `${offerType === 'purchase' ? 'Direct purchase offer' : 'Counter offer'} sent successfully`,
+      item: sellItems[itemIndex]
+    });
+
+  } catch (error) {
+    console.error('Error making direct offer:', error);
+    res.status(500).json({ error: 'Failed to make offer' });
+  }
+});
+
+// 📝 User respond to admin offer
+router.post('/:itemId/respond-offer', authenticateToken, async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { response, userNotes } = req.body;
+
+    // Validation
+    if (!response || !['accept', 'decline', 'negotiate'].includes(response)) {
+      return res.status(400).json({ 
+        error: 'Valid response required: accept, decline, or negotiate' 
+      });
+    }
+
+    const sellItems = readSellItems();
+    const itemIndex = sellItems.findIndex(item => item.id === itemId);
+
+    if (itemIndex === -1) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    const item = sellItems[itemIndex];
+
+    // Check if user owns this item
+    if (item.submittedBy !== req.user.email) {
+      return res.status(403).json({ error: 'You can only respond to offers on your own items' });
+    }
+
+    if (!['counter_offered', 'admin_purchased'].includes(item.status)) {
+      return res.status(400).json({ error: 'No pending offer to respond to' });
+    }
+
+    // Update item based on response
+    const newStatus = response === 'accept' ? 
+      (item.adminOffer.type === 'purchase' ? 'sold' : 'accepted_counter') :
+      response === 'decline' ? 'offer_declined' : 'negotiating';
+
+    sellItems[itemIndex] = {
+      ...item,
+      status: newStatus,
+      userResponse: {
+        response,
+        notes: userNotes || '',
+        respondedAt: new Date().toISOString()
+      },
+      finalSalePrice: response === 'accept' ? item.adminOffer.amount : null
+    };
+
+    writeSellItems(sellItems);
+
+    // Send email notification to admin
+    const responseMessages = {
+      accept: '✅ Offer Accepted',
+      decline: '❌ Offer Declined', 
+      negotiate: '💬 User Wants to Negotiate'
+    };
+
+    try {
+      await sendMail({
+        to: 'admin@all4youauctions.co.za',
+        subject: `${responseMessages[response]} - ${item.itemTitle}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: ${response === 'accept' ? '#059669' : response === 'decline' ? '#dc2626' : '#d97706'};">
+              ${responseMessages[response]}
+            </h2>
+            <p>The seller has responded to your offer.</p>
+            
+            <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h3>Item & Offer Details:</h3>
+              <p><strong>Item:</strong> ${item.itemTitle}</p>
+              <p><strong>Seller:</strong> ${item.submittedBy}</p>
+              <p><strong>Original Asking Price:</strong> R${item.askingPrice.toLocaleString()}</p>
+              <p><strong>Your Offer:</strong> R${item.adminOffer.amount.toLocaleString()}</p>
+              <p><strong>Offer Type:</strong> ${item.adminOffer.type === 'purchase' ? 'Direct Purchase' : 'Counter Offer'}</p>
+              <p><strong>Response:</strong> <strong style="color: ${response === 'accept' ? '#059669' : response === 'decline' ? '#dc2626' : '#d97706'};">${response.toUpperCase()}</strong></p>
+              <p><strong>Response Date:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+            
+            ${userNotes ? `
+            <div style="background: #fffbeb; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h4>Seller's Notes:</h4>
+              <p>${userNotes}</p>
+            </div>
+            ` : ''}
+            
+            ${response === 'accept' ? `
+            <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h4 style="color: #059669;">🎉 Next Steps:</h4>
+              <p style="color: #059669;">
+                • Arrange payment processing (R${item.adminOffer.amount.toLocaleString()})<br>
+                • Schedule item collection/delivery<br>
+                • Update item status to 'sold' once completed<br>
+                • Send completion confirmation to seller
+              </p>
+            </div>
+            ` : response === 'negotiate' ? `
+            <div style="background: #fefce8; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h4 style="color: #a16207;">💬 Negotiation Requested:</h4>
+              <p style="color: #a16207;">
+                The seller would like to negotiate further. Consider their notes above and decide if you want to make a revised offer.
+              </p>
+            </div>
+            ` : `
+            <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h4 style="color: #dc2626;">Offer Declined:</h4>
+              <p style="color: #dc2626;">
+                The seller has declined your offer. You may choose to make a revised offer or proceed with auction listing.
+              </p>
+            </div>
+            `}
+            
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="${process.env.FRONTEND_URL}/admin/sell-items" 
+                 style="background: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                📋 View Item Details
+              </a>
+            </div>
+            
+            <p>Best regards,<br><strong>System Notification</strong></p>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Failed to send response notification email:', emailError);
+    }
+
+    // Send confirmation email to user
+    try {
+      await sendMail({
+        to: item.submittedBy,
+        subject: `Offer Response Confirmed - ${item.itemTitle}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #059669;">✅ Response Received</h2>
+            <p>Thank you for your response to our offer.</p>
+            
+            <div style="background: #f9fafb; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h3>Your Response:</h3>
+              <p><strong>Item:</strong> ${item.itemTitle}</p>
+              <p><strong>Our Offer:</strong> R${item.adminOffer.amount.toLocaleString()}</p>
+              <p><strong>Your Response:</strong> <strong>${response.toUpperCase()}</strong></p>
+              <p><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+            
+            ${response === 'accept' ? `
+            <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h4 style="color: #059669;">🎉 Congratulations!</h4>
+              <p style="color: #059669;">
+                Your offer has been accepted! We will contact you within 1-2 business days to arrange payment and collection details.
+              </p>
+            </div>
+            ` : response === 'negotiate' ? `
+            <div style="background: #fefce8; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h4 style="color: #a16207;">💬 Negotiation in Progress:</h4>
+              <p style="color: #a16207;">
+                We have received your request to negotiate. Our team will review and may respond with a revised offer.
+              </p>
+            </div>
+            ` : `
+            <div style="background: #fef2f2; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h4 style="color: #dc2626;">Offer Declined:</h4>
+              <p style="color: #dc2626;">
+                Your item will remain available for potential auction listing or future offers.
+              </p>
+            </div>
+            `}
+            
+            <p>Thank you for using ALL4YOU AUCTIONEERS.</p>
+            
+            <p>Best regards,<br><strong>ALL4YOU AUCTIONEERS Team</strong></p>
+          </div>
+        `
+      });
+    } catch (emailError) {
+      console.error('Failed to send user confirmation email:', emailError);
+    }
+
+    res.json({ 
+      message: `Response recorded successfully`,
+      item: sellItems[itemIndex]
+    });
+
+  } catch (error) {
+    console.error('Error responding to offer:', error);
+    res.status(500).json({ error: 'Failed to record response' });
+  }
+});
+
 // 🏷️ Assign item to auction (Admin only)
 router.post('/admin/:itemId/assign-auction', verifyAdmin, async (req, res) => {
   try {
