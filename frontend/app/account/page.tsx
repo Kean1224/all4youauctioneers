@@ -351,7 +351,7 @@ export default function AccountDashboard() {
                         View All Bids
                       </button>
                     )}
-                    )}
+                  )}
                   </div>
 
                   {/* Active Auctions */}
