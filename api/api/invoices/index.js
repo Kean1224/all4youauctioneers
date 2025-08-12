@@ -451,7 +451,83 @@ router.get('/download/:invoiceId', async (req, res) => {
   }
 });
 
-// 📊 Get user's invoices
+// 📊 Get buyer invoices (frontend compatibility)
+router.get('/buyer/:email', authenticateToken, (req, res) => {
+  try {
+    const { email } = req.params;
+    const requestingUser = req.user.email;
+    
+    // Only allow users to see their own invoices or admins to see any
+    if (requestingUser !== email && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const invoices = readInvoices();
+    const buyerInvoices = invoices.filter(inv => 
+      inv.type === 'buyer' && inv.userEmail === email
+    );
+
+    // Remove file paths from response
+    const safeInvoices = buyerInvoices.map(inv => ({
+      id: inv.id,
+      invoiceNumber: inv.invoiceNumber,
+      type: inv.type,
+      auctionId: inv.auctionId,
+      auctionTitle: inv.auctionTitle,
+      total: inv.total,
+      status: inv.status,
+      createdAt: inv.createdAt,
+      dueDate: inv.dueDate,
+      itemCount: inv.items.length
+    }));
+
+    res.json(safeInvoices);
+
+  } catch (error) {
+    console.error('Error getting buyer invoices:', error);
+    res.status(500).json({ error: 'Failed to get buyer invoices' });
+  }
+});
+
+// 📊 Get seller invoices (frontend compatibility)
+router.get('/seller/:email', authenticateToken, (req, res) => {
+  try {
+    const { email } = req.params;
+    const requestingUser = req.user.email;
+    
+    // Only allow users to see their own invoices or admins to see any
+    if (requestingUser !== email && !req.user.isAdmin) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    const invoices = readInvoices();
+    const sellerInvoices = invoices.filter(inv => 
+      inv.type === 'seller' && (inv.sellerEmail === email || inv.userEmail === email)
+    );
+
+    // Remove file paths from response
+    const safeInvoices = sellerInvoices.map(inv => ({
+      id: inv.id,
+      invoiceNumber: inv.invoiceNumber,
+      type: inv.type,
+      auctionId: inv.auctionId,
+      auctionTitle: inv.auctionTitle,
+      total: inv.total,
+      status: inv.status,
+      createdAt: inv.createdAt,
+      dueDate: inv.dueDate,
+      itemCount: inv.items.length
+    }));
+
+    res.json(safeInvoices);
+
+  } catch (error) {
+    console.error('Error getting seller invoices:', error);
+    res.status(500).json({ error: 'Failed to get seller invoices' });
+  }
+});
+
+// 📊 Get user's invoices (legacy endpoint)
 router.get('/user/:userEmail', authenticateToken, (req, res) => {
   try {
     const { userEmail } = req.params;
@@ -511,7 +587,43 @@ router.get('/admin/all', verifyAdmin, (req, res) => {
   }
 });
 
-// ✅ Mark invoice as paid (Admin only)
+// ✅ Mark invoice as paid (frontend compatibility)
+router.put('/:invoiceId/paid', verifyAdmin, async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    const { paymentDate, notes } = req.body;
+
+    const invoices = readInvoices();
+    const invoiceIndex = invoices.findIndex(inv => inv.id === invoiceId);
+
+    if (invoiceIndex === -1) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    const invoice = invoices[invoiceIndex];
+    
+    // Update invoice status
+    invoices[invoiceIndex] = {
+      ...invoice,
+      status: 'paid',
+      paidAt: paymentDate || new Date().toISOString(),
+      paymentNotes: notes || ''
+    };
+
+    writeInvoices(invoices);
+
+    res.json({ 
+      message: 'Invoice marked as paid successfully',
+      invoice: invoices[invoiceIndex]
+    });
+
+  } catch (error) {
+    console.error('Error marking invoice as paid:', error);
+    res.status(500).json({ error: 'Failed to mark invoice as paid' });
+  }
+});
+
+// ✅ Mark invoice as paid (Admin only - legacy endpoint)
 router.post('/admin/:invoiceId/mark-paid', verifyAdmin, async (req, res) => {
   try {
     const { invoiceId } = req.params;

@@ -42,7 +42,8 @@ export default function AdminAuctionsPage() {
 
   const fetchAuctions = async () => {
     try {
-      const res = await fetch("/api/auctions");
+      const { getApiUrl } = await import('../../../lib/api');
+      const res = await fetch(`${getApiUrl()}/api/auctions`);
       const data = await res.json();
       setAuctions(data);
     } catch (e) {
@@ -63,7 +64,8 @@ export default function AdminAuctionsPage() {
       formData.append("depositRequired", String(form.depositRequired));
       formData.append("depositAmount", String(form.depositAmount));
       if (selectedImage) formData.append("image", selectedImage);
-      const res = await fetch("/api/auctions", {
+      const { getApiUrl } = await import('../../../lib/api');
+      const res = await fetch(`${getApiUrl()}/api/auctions`, {
         method: "POST",
         body: formData,
       });
@@ -87,7 +89,8 @@ export default function AdminAuctionsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this auction?")) return;
-    await fetch(`/api/auctions/${id}`, { method: "DELETE" });
+    const { getApiUrl } = await import('../../../lib/api');
+    await fetch(`${getApiUrl()}/api/auctions/${id}`, { method: "DELETE" });
     fetchAuctions();
   };
 

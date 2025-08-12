@@ -132,7 +132,33 @@ router.get('/', (req, res) => {
   res.json(usersWithDeposits);
 });
 
-// ✅ GET single user
+// ✅ GET current user profile (authenticated user's own profile)
+router.get('/profile', authenticateToken, (req, res) => {
+  const users = readUsers();
+  const user = users.find(u => u.email === req.user.email);
+  if (!user) return res.status(404).json({ error: 'User profile not found' });
+  
+  // Return safe profile data without sensitive info
+  const { password, ...safeUser } = user;
+  res.json(safeUser);
+});
+
+// ✅ GET current user FICA status
+router.get('/fica-status', authenticateToken, (req, res) => {
+  const users = readUsers();
+  const user = users.find(u => u.email === req.user.email);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+  
+  res.json({
+    ficaApproved: user.ficaApproved || false,
+    ficaStatus: user.ficaApproved ? 'approved' : 'pending',
+    rejectionReason: user.rejectionReason || null,
+    rejectedAt: user.rejectedAt || null,
+    resubmittedAt: user.resubmittedAt || null
+  });
+});
+
+// ✅ GET single user by email
 router.get('/:email', (req, res) => {
   const users = readUsers();
   const email = decodeURIComponent(req.params.email);

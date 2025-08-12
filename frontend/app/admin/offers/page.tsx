@@ -28,7 +28,8 @@ export default function AdminOffersPage() {
 
   const fetchOffers = async () => {
     try {
-      const response = await fetch('/api/sell-item/admin/all', {
+      const { getApiUrl } = await import('../../../lib/api');
+      const response = await fetch(`${getApiUrl()}/api/sell-item/admin/all`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}`
         }
@@ -50,7 +51,8 @@ export default function AdminOffersPage() {
 
   const handleStatusUpdate = async (offerId: string, newStatus: 'approved' | 'rejected') => {
     try {
-      const response = await fetch(`/api/sell-item/admin/update-status`, {
+      const { getApiUrl } = await import('../../../lib/api');
+      const response = await fetch(`${getApiUrl()}/api/sell-item/admin/update-status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

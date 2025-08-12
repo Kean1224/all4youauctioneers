@@ -24,7 +24,7 @@ export default function AssignSellerPage() {
 
   useEffect(() => {
     if (selectedAuctionId) {
-      fetch(`/api/lots/${selectedAuctionId}`)
+      fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}`)
         .then(res => res.json())
         .then(setLots);
     } else {
@@ -35,7 +35,7 @@ export default function AssignSellerPage() {
   const handleAssign = async () => {
     if (!selectedAuctionId || !selectedLotId || !selectedSeller) return;
     setStatus('');
-    const res = await fetch(`/api/lots/${selectedAuctionId}/${selectedLotId}/assign-seller`, {
+    const res = await fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}/${selectedLotId}/assign-seller`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sellerEmail: selectedSeller })

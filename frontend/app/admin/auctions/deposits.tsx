@@ -16,18 +16,18 @@ export default function AdminAuctionDepositsPage() {
 
   useEffect(() => {
     if (!selectedAuction) return;
-    fetch(`/api/deposits/auction/${selectedAuction}`)
+    fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`)
       .then((res) => res.json())
       .then(setDeposits);
   }, [selectedAuction]);
 
   const handleApprove = async (email: string) => {
-    await fetch(`/api/deposits/${selectedAuction}/${email}`, {
+    await fetch(`${getApiUrl()}/api/deposits/${selectedAuction}/${email}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "approved" }),
     });
-    fetch(`/api/deposits/auction/${selectedAuction}`)
+    fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`)
       .then((res) => res.json())
       .then(setDeposits);
   };
