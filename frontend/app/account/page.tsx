@@ -323,35 +323,37 @@ export default function AccountDashboard() {
                         <p className="text-gray-500 text-sm">Start bidding on auctions to see your activity here</p>
                       </div>
                     ) : (
-                    <div className="space-y-4">
-                      {bids.slice(0, 3).map((bid) => (
-                        <div key={bid.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
-                          <div className="flex items-center gap-4">
-                            <div className={`flex items-center gap-2 ${getStatusColor(bid.status)}`}>
-                              {getStatusIcon(bid.status)}
-                              <span className="text-sm font-medium capitalize">{bid.status}</span>
+                    <>
+                      <div className="space-y-4">
+                        {bids.slice(0, 3).map((bid) => (
+                          <div key={bid.id} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
+                            <div className="flex items-center gap-4">
+                              <div className={`flex items-center gap-2 ${getStatusColor(bid.status)}`}>
+                                {getStatusIcon(bid.status)}
+                                <span className="text-sm font-medium capitalize">{bid.status}</span>
+                              </div>
+                              <div>
+                                <p className="text-white font-medium">{bid.itemTitle}</p>
+                                <p className="text-gray-400 text-sm">Lot #{bid.lotNumber} • {bid.auctionTitle}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="text-white font-medium">{bid.itemTitle}</p>
-                              <p className="text-gray-400 text-sm">Lot #{bid.lotNumber} • {bid.auctionTitle}</p>
+                            <div className="text-right">
+                              <p className="text-green-400 font-bold">R{bid.bidAmount}</p>
+                              <p className="text-gray-400 text-sm">{new Date(bid.timestamp).toLocaleDateString()}</p>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <p className="text-green-400 font-bold">R{bid.bidAmount}</p>
-                            <p className="text-gray-400 text-sm">{new Date(bid.timestamp).toLocaleDateString()}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {bids.length > 3 && (
-                      <button
-                        onClick={() => setActiveTab('bids')}
-                        className="w-full mt-4 text-green-400 hover:text-green-300 transition-colors"
-                      >
-                        View All Bids
-                      </button>
+                        ))}
+                      </div>
+                      {bids.length > 3 && (
+                        <button
+                          onClick={() => setActiveTab('bids')}
+                          className="w-full mt-4 text-green-400 hover:text-green-300 transition-colors"
+                        >
+                          View All Bids
+                        </button>
+                      )}
+                    </>
                     )}
-                  )}
                   </div>
 
                   {/* Active Auctions */}
