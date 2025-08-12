@@ -1,8 +1,75 @@
 const express = require('express');
 const { testConnection, sendMail } = require('../utils/mailer');
+const { testConnection: testReliable, sendMail: sendReliable, getServiceStatus } = require('../utils/reliable-mailer');
 const router = express.Router();
 
-// Test SMTP connection and send test email
+// Test all email services
+router.post('/test-all-email-services', async (req, res) => {
+  try {
+    console.log('🧪 Testing all email services...');
+    
+    // Get service status
+    const serviceStatus = getServiceStatus();
+    console.log('📊 Service Status:', serviceStatus);
+    
+    // Test all services
+    const testResults = await testReliable();
+    console.log('🔍 Test Results:', testResults);
+    
+    // Try sending with reliable mailer
+    console.log('📧 Sending test email with reliable mailer...');
+    const result = await sendReliable({
+      to: 'admin@all4youauctions.co.za',
+      subject: '✅ Multi-Service Email Test Success!',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #059669;">🚀 Reliable Email System Active!</h2>
+          <p>Your multi-service email system is working perfectly!</p>
+          
+          <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <h3>Service Status:</h3>
+            <p><strong>Total Services:</strong> ${serviceStatus.totalServices}</p>
+            <p><strong>Working Service:</strong> ${serviceStatus.lastWorkingService || 'Testing...'}</p>
+            <p><strong>Test Time:</strong> ${new Date().toISOString()}</p>
+          </div>
+          
+          <div style="background: #fffbeb; padding: 15px; border-radius: 8px; margin: 15px 0;">
+            <h4>Available Services:</h4>
+            ${serviceStatus.services.map(s => `
+              <p>• ${s.name} (Priority: ${s.priority}) - ${testResults[s.name] ? '✅ Working' : '❌ Failed'}</p>
+            `).join('')}
+          </div>
+          
+          <p><strong>No more Gmail app password issues!</strong> 🎉</p>
+          <p>Best regards,<br><strong>Reliable Email System</strong></p>
+        </div>
+      `,
+      text: `Multi-Service Email Test Success! Total Services: ${serviceStatus.totalServices}, Working: ${serviceStatus.lastWorkingService || 'Testing...'}`
+    });
+
+    res.json({ 
+      success: true, 
+      message: 'Multi-service email test successful',
+      serviceStatus,
+      testResults,
+      emailResult: {
+        messageId: result.messageId,
+        serviceUsed: serviceStatus.lastWorkingService
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Multi-service email test failed:', error);
+    
+    res.status(500).json({ 
+      error: 'Multi-service email test failed', 
+      details: error.message,
+      serviceStatus: getServiceStatus()
+    });
+  }
+});
+
+// Test SMTP connection and send test email (original)
 router.post('/test-email', async (req, res) => {
   try {
     console.log('🧪 Testing email configuration...');
