@@ -123,4 +123,14 @@ router.post('/admin-login', adminLogin);
 const verifyAdmin = require('./verify-admin');
 router.post('/verify-admin', verifyAdmin);
 
+// Test endpoint to verify deployment
+router.get('/test-deployment', (req, res) => {
+  res.json({ 
+    status: 'deployed', 
+    timestamp: new Date().toISOString(),
+    message: 'verify-admin POST endpoint is available',
+    version: '2.0'
+  });
+});
+
 module.exports = router;
