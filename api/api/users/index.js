@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const authenticateToken = require('../../middleware/auth');
 const router = express.Router();
@@ -53,25 +54,47 @@ function writeUsers(data) {
 }
 
 // Ensure demo user exists
-function ensureDemoUser() {
+async function ensureDemoUser() {
   const users = readUsers();
   const demoExists = users.some(u => u.email === 'demo@example.com');
 
   if (!demoExists) {
-    const demoUser = {
-      email: 'demo@example.com',
-      password: 'demo123',
-      name: 'Demo User',
-      ficaApproved: true,
-      suspended: false,
-      registeredAt: new Date().toISOString(),
-      idDocument: 'demo_id.pdf',
-      proofOfAddress: 'demo_proof.pdf',
-      watchlist: []
-    };
-    users.push(demoUser);
-    writeUsers(users);
-    console.log('✅ Demo user added.');
+    try {
+      // Hash the demo password
+      const saltRounds = 12;
+      const hashedPassword = await bcrypt.hash('demo123', saltRounds);
+      
+      const demoUser = {
+        email: 'demo@example.com',
+        password: hashedPassword,
+        name: 'Demo User',
+        ficaApproved: true,
+        suspended: false,
+        registeredAt: new Date().toISOString(),
+        idDocument: 'demo_id.pdf',
+        proofOfAddress: 'demo_proof.pdf',
+        watchlist: []
+      };
+      users.push(demoUser);
+      writeUsers(users);
+      console.log('✅ Demo user added with hashed password.');
+    } catch (error) {
+      console.error('Error creating demo user:', error);
+    }
+  } else {
+    // Check if existing demo user needs password migration
+    const demoUser = users.find(u => u.email === 'demo@example.com');
+    if (demoUser && !demoUser.password.startsWith('$2a$') && !demoUser.password.startsWith('$2b$')) {
+      try {
+        const saltRounds = 12;
+        const hashedPassword = await bcrypt.hash(demoUser.password, saltRounds);
+        demoUser.password = hashedPassword;
+        writeUsers(users);
+        console.log('✅ Demo user password migrated to bcrypt.');
+      } catch (error) {
+        console.error('Error migrating demo user password:', error);
+      }
+    }
   }
 }
 ensureDemoUser();
@@ -171,7 +194,7 @@ router.get('/:email', (req, res) => {
 router.post('/register', upload.fields([
   { name: 'idDocument', maxCount: 1 },
   { name: 'proofOfAddress', maxCount: 1 }
-]), (req, res) => {
+]), async (req, res) => {
   const { email, password, name } = req.body;
 
   if (!email || !password || !name || !req.files.idDocument || !req.files.proofOfAddress) {
@@ -183,20 +206,32 @@ router.post('/register', upload.fields([
     return res.status(409).json({ error: 'Email already exists' });
   }
 
-  const newUser = {
-    email,
-    password,
-    name,
-    ficaApproved: false,
-    suspended: false,
-    registeredAt: new Date().toISOString(),
-    idDocument: req.files.idDocument[0].filename,
-    proofOfAddress: req.files.proofOfAddress[0].filename
-  };
+  try {
+    // Hash the password with bcrypt
+    const saltRounds = 12;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-  users.push(newUser);
-  writeUsers(users);
-  res.status(201).json({ message: 'User registered', user: newUser });
+    const newUser = {
+      email,
+      password: hashedPassword,
+      name,
+      ficaApproved: false,
+      suspended: false,
+      registeredAt: new Date().toISOString(),
+      idDocument: req.files.idDocument[0].filename,
+      proofOfAddress: req.files.proofOfAddress[0].filename
+    };
+
+    users.push(newUser);
+    writeUsers(users);
+    
+    // Return user data without password hash
+    const { password: _, ...userWithoutPassword } = newUser;
+    res.status(201).json({ message: 'User registered', user: userWithoutPassword });
+  } catch (error) {
+    console.error('Error hashing password during registration:', error);
+    res.status(500).json({ error: 'Registration failed. Please try again.' });
+  }
 });
 
 // ✅ PUT: Approve FICA

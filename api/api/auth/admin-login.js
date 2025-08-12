@@ -1,23 +1,47 @@
 const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
 
 // Use a strong secret in production!
 const SECRET = process.env.JWT_SECRET || 'dev_secret_key';
 
-
-// Allow multiple admin credentials
+// Admin credentials - will be hashed on first use
 const ADMIN_CREDENTIALS = [
   { email: 'Keanmartin75@gmail.com', password: 'Tristan@89' },
   { email: 'admin@admin.com', password: 'admin123' }
 ];
 
-module.exports = (req, res) => {
+module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
+  
   const { email, password } = req.body;
-  const isValid = ADMIN_CREDENTIALS.some(
-    (admin) => admin.email === email && admin.password === password
-  );
+  
+  // Find admin by email
+  const admin = ADMIN_CREDENTIALS.find(a => a.email === email);
+  
+  let isValid = false;
+  if (admin) {
+    try {
+      // Check if password is already hashed
+      if (admin.password.startsWith('$2a$') || admin.password.startsWith('$2b$')) {
+        // Use bcrypt to compare hashed password
+        isValid = await bcrypt.compare(password, admin.password);
+      } else {
+        // Plain text comparison - hash it for future use
+        isValid = admin.password === password;
+        if (isValid) {
+          // Hash the password for future use (optional optimization)
+          const hashedPassword = await bcrypt.hash(admin.password, 12);
+          admin.password = hashedPassword;
+          console.log(`[SECURITY] Admin password for ${email} has been hashed for future use`);
+        }
+      }
+    } catch (error) {
+      console.error('Error comparing admin password:', error);
+      isValid = false;
+    }
+  }
   if (isValid) {
     // Security logging
     const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
