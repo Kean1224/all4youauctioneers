@@ -27,5 +27,31 @@
     "status": "paid",
     "paidAt": "2025-08-06T13:36:55.589Z",
     "paymentNotes": ""
+  },
+  {
+    "id": "BUY-9737BD0B-BDFA-4EC3-BDF5-3862BC5699AD-1755075339363",
+    "invoiceNumber": "BUY-9737BD0B-BDFA-4EC3-BDF5-3862BC5699AD-1755075339363",
+    "type": "buyer",
+    "auctionId": "9737bd0b-bdfa-4ec3-bdf5-3862bc5699ad",
+    "auctionTitle": "Test Auction",
+    "userEmail": "demo@example.com",
+    "items": [
+      {
+        "lotId": "673e89fd-e890-4d05-a26c-eb12f0fc88ee",
+        "lotNumber": 1,
+        "title": "Test Lot",
+        "winningBid": 120,
+        "commission": 18
+      }
+    ],
+    "subtotal": 138,
+    "vat": 20.7,
+    "total": 158.7,
+    "status": "paid",
+    "createdAt": "2025-08-13T08:55:39.363Z",
+    "dueDate": "2025-08-20T08:55:39.363Z",
+    "pdfPath": "C:\\Users\\keanm\\OneDrive\\Desktop\\all4you\\api\\uploads\\invoices\\invoice_BUY-9737BD0B-BDFA-4EC3-BDF5-3862BC5699AD-1755075339363.pdf",
+    "paidAt": "2025-08-13T09:00:00.000Z",
+    "paymentNotes": "Test payment processed"
   }
 ]

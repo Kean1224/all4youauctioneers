@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "id": "9737bd0b-bdfa-4ec3-bdf5-3862bc5699ad",
+    "title": "Test Auction",
+    "description": "Integration test auction",
+    "location": "Test Location",
+    "startTime": "2025-08-13T10:00:00.000Z",
+    "endTime": "2025-08-13T15:00:00.000Z",
+    "increment": 10,
+    "depositRequired": false,
+    "depositAmount": 0,
+    "auctionImage": null,
+    "lots": [
+      {
+        "id": "673e89fd-e890-4d05-a26c-eb12f0fc88ee",
+        "title": "Test Lot",
+        "description": "Test lot for bidding",
+        "startPrice": 100,
+        "image": "",
+        "currentBid": 120,
+        "bidIncrement": 10,
+        "bidHistory": [
+          {
+            "bidderEmail": "demo@example.com",
+            "amount": 120,
+            "time": "2025-08-13T08:55:13.522Z"
+          }
+        ],
+        "endTime": "2025-08-13T08:59:47.353Z",
+        "createdAt": "2025-08-13T08:54:47.396Z",
+        "sellerEmail": "demo@example.com",
+        "lotNumber": 1,
+        "condition": "Good",
+        "autoBids": []
+      }
+    ],
+    "createdAt": "2025-08-13T08:54:38.944Z",
+    "registeredUsers": [
+      "demo@example.com"
+    ]
+  }
+]

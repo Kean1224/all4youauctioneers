@@ -5,7 +5,11 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
+const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  console.error('🚨 CRITICAL: JWT_SECRET environment variable not set!');
+  console.error('Generate a strong secret with: openssl rand -base64 64');
+  process.exit(1);
+})();
 const usersPath = path.join(__dirname, '../users/../../data/users.json');
 
 // Helper function to read users
@@ -191,7 +195,11 @@ router.get('/session', (req, res) => {
   }
 
   const jwt = require('jsonwebtoken');
-  const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
+  const JWT_SECRET = process.env.JWT_SECRET || (() => {
+  console.error('🚨 CRITICAL: JWT_SECRET environment variable not set!');
+  console.error('Generate a strong secret with: openssl rand -base64 64');
+  process.exit(1);
+})();
   
   try {
     const user = jwt.verify(token, JWT_SECRET);

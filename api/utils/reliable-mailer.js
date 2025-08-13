@@ -1,12 +1,11 @@
 const nodemailer = require('nodemailer');
 
 // Import email service classes
-let GmailOAuth2Service, SendGridService;
+let GmailOAuth2Service;
 try {
   GmailOAuth2Service = require('./gmail-oauth');
-  SendGridService = require('./sendgrid-service');
 } catch (e) {
-  console.log('⚠️ Advanced email services not available, using basic SMTP');
+  console.log('⚠️ Gmail OAuth2 service not available, using basic SMTP');
 }
 
 console.log('🔧 Configuring Multi-Service Email System...');
@@ -16,12 +15,10 @@ console.log('SMTP User:', process.env.SMTP_USER);
 console.log('SMTP From:', process.env.SMTP_FROM);
 console.log('SMTP Password Set:', !!process.env.SMTP_PASS);
 console.log('Gmail OAuth2 Available:', !!(process.env.GMAIL_CLIENT_ID && process.env.GMAIL_REFRESH_TOKEN));
-console.log('SendGrid Available:', !!process.env.SENDGRID_API_KEY);
 
 // Initialize email services
-let gmailOAuth2, sendGridService;
+let gmailOAuth2;
 if (GmailOAuth2Service) gmailOAuth2 = new GmailOAuth2Service();
-if (SendGridService) sendGridService = new SendGridService();
 
 // Configure fallback SMTP transport (Gmail with app password)
 const transporter = nodemailer.createTransport({
@@ -44,7 +41,6 @@ const transporter = nodemailer.createTransport({
 
 // Email service priority order
 const EMAIL_SERVICES = {
-  SENDGRID: 'sendgrid',
   GMAIL_OAUTH2: 'gmail_oauth2',
   SMTP_FALLBACK: 'smtp_fallback'
 };
@@ -58,30 +54,21 @@ class ReliableMailer {
   initializeServices() {
     const services = [];
     
-    // Priority 1: SendGrid (most reliable)
-    if (process.env.SENDGRID_API_KEY && sendGridService) {
-      services.push({
-        name: EMAIL_SERVICES.SENDGRID,
-        service: sendGridService,
-        priority: 1
-      });
-    }
-    
-    // Priority 2: Gmail OAuth2 (never expires)
+    // Priority 1: Gmail OAuth2 (never expires)
     if (process.env.GMAIL_CLIENT_ID && process.env.GMAIL_REFRESH_TOKEN && gmailOAuth2) {
       services.push({
         name: EMAIL_SERVICES.GMAIL_OAUTH2,
         service: gmailOAuth2,
-        priority: 2
+        priority: 1
       });
     }
     
-    // Priority 3: SMTP with app password (fallback)
+    // Priority 2: SMTP with app password (fallback)
     if (process.env.SMTP_PASS) {
       services.push({
         name: EMAIL_SERVICES.SMTP_FALLBACK,
         service: { sendMail: this.sendSMTPMail.bind(this), testConnection: this.testSMTPConnection.bind(this) },
-        priority: 3
+        priority: 2
       });
     }
     
@@ -91,7 +78,7 @@ class ReliableMailer {
 
   async sendSMTPMail({ to, subject, text, html, attachments }) {
     const result = await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'admin@all4youauctions.co.za',
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'admin@all4youauctions.co.za',
       to,
       subject,
       text,

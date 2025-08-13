@@ -52,7 +52,7 @@ async function sendMail({ to, subject, text, html, attachments }) {
     console.log(`📧 Subject: ${subject}`);
     
     const result = await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'admin@all4youauctions.co.za',
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || 'admin@all4youauctions.co.za',
       to,
       subject,
       text,

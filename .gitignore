@@ -38,8 +38,19 @@ coverage/
 
 # OS generated files
 .DS_Store
-api/data/*.json
+# Keep essential data files for production deployment
+!api/data/auctions.json
 !api/data/users.json
+!api/data/invoices.json
+!api/data/auctionDeposits.json
+# Ignore user-generated content but keep structure
+api/data/contact_inbox.json
+api/data/item_offers.json
+api/data/pending_items.json
+api/data/pending_users.json
+api/data/refundRequests.json
+api/data/user.json
+api/data/*backup*.json
 .DS_Store?
 ._*
 .Spotlight-V100

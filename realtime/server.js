@@ -7,7 +7,7 @@ const cors = require('./cors-config');
 
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.REALTIME_PORT || 5001;
+const PORT = process.env.PORT || process.env.REALTIME_PORT || 5001;
 
 // Apply CORS for HTTP endpoints
 app.use(cors);

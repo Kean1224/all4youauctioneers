@@ -25,7 +25,18 @@
       "Bash(sed:*)",
       "Bash(PORT=3001 npm start)",
       "Bash(npm run dev:*)",
-      "Bash(PORT=5002 npm start)"
+      "Bash(PORT=5002 npm start)",
+      "Bash(npm install:*)",
+      "Bash(openssl rand:*)",
+      "Bash(npm test)",
+      "Bash(npm uninstall:*)",
+      "Bash(SET JWT_SECRET=test-jwt-secret-for-integration-testing-only-must-be-changed-in-production)",
+      "Bash(SET ADMIN_EMAIL=admin@test.com)",
+      "Bash(SET ADMIN_PASSWORD=TestAdmin123!)",
+      "Bash(SET SMTP_FROM=test@example.com)",
+      "Bash(PORT=8080 npm start)",
+      "Bash(PORT=8081 npm start)",
+      "Bash(PORT=3005 npm start)"
     ],
     "deny": []
   }

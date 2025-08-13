@@ -1,5 +1,9 @@
 const jwt = require('jsonwebtoken');
-const SECRET = process.env.JWT_SECRET || 'supersecretkey';
+const SECRET = process.env.JWT_SECRET || (() => {
+  console.error('🚨 CRITICAL: JWT_SECRET environment variable not set!');
+  console.error('Generate a strong secret with: openssl rand -base64 64');
+  process.exit(1);
+})();
 
 // Security log function
 const logSecurityEvent = (event, details) => {

@@ -2,12 +2,21 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 // Use a strong secret in production!
-const SECRET = process.env.JWT_SECRET || 'supersecretkey';
+const SECRET = process.env.JWT_SECRET || (() => {
+  console.error('🚨 CRITICAL: JWT_SECRET environment variable not set!');
+  console.error('Generate a strong secret with: openssl rand -base64 64');
+  process.exit(1);
+})();
 
-// Admin credentials - will be hashed on first use
+// Admin credentials - load from environment variables
 const ADMIN_CREDENTIALS = [
-  { email: 'Keanmartin75@gmail.com', password: 'Tristan@89' },
-  { email: 'admin@admin.com', password: 'admin123' }
+  { 
+    email: process.env.ADMIN_EMAIL || 'admin@all4youauctions.com', 
+    password: process.env.ADMIN_PASSWORD || (() => {
+      console.error('🚨 CRITICAL: ADMIN_PASSWORD environment variable not set!');
+      process.exit(1);
+    })()
+  }
 ];
 
 module.exports = async (req, res) => {

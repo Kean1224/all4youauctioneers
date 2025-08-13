@@ -10,7 +10,21 @@ services:
         value: production
       - key: PORT
         value: 5000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_SECRET
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://all4youauctions.vercel.app
+      - key: BASE_URL
+        value: https://all4you-api-gateway.onrender.com
+      - key: API_INTERNAL_URL
+        value: https://all4you-api-gateway.onrender.com
       - key: REALTIME_SERVICE_URL
         value: https://all4you-realtime-service.onrender.com
+      - key: UPLOAD_MAX_SIZE
+        value: 5242880
+      - key: FILE_STORAGE_PATH
+        value: /tmp/uploads
     healthCheckPath: /health
     autoDeploy: true

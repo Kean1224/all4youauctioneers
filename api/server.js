@@ -16,6 +16,9 @@ const {
   csrfProtection
 } = require('./middleware/security');
 
+// 📊 Import performance monitoring
+const performanceMonitor = require('./middleware/performance-monitor');
+
 const app = express();
 // Trust the first proxy (needed for correct IP detection behind Render, Heroku, etc.)
 app.set('trust proxy', 1);
@@ -23,6 +26,7 @@ const PORT = process.env.PORT || 5000;
 
 // 🔒 Apply security middleware first
 app.use(securityConfig); // Helmet security headers
+app.use(performanceMonitor.middleware()); // Performance monitoring
 app.use(securityLogger); // Security logging
 app.use(sanitizeInput); // Input sanitization
 
@@ -51,12 +55,21 @@ app.get('/api/ping', (req, res) => {
   });
 });
 
-// Health check for deployment platforms
+// Health check for deployment platforms with performance metrics
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
+  const healthStatus = performanceMonitor.getHealthStatus();
+  res.json({
+    status: healthStatus.status,
     timestamp: new Date().toISOString(),
-    service: 'API Gateway'
+    service: 'API Gateway',
+    version: '1.0.0',
+    uptime: Math.floor(healthStatus.uptime / 1000), // seconds
+    performance: {
+      memory: healthStatus.memory,
+      requests: healthStatus.requests,
+      errors: healthStatus.errors,
+      connections: healthStatus.connections
+    }
   });
 });
 
@@ -143,16 +156,39 @@ function validateEnvironment() {
   }
 }
 
-// Start the API server
-app.listen(PORT, () => {
-  console.log(`🚀 API Gateway running on port ${PORT}`);
-  console.log(`✅ Registration system with FICA uploads: ENABLED`);
-  console.log(`✅ User management system: ENABLED`);
-  console.log(`✅ Email verification system: ENABLED`);
-  console.log(`🔗 Ready to communicate with realtime service`);
+// Initialize data and storage on startup
+const DataInitializer = require('./utils/data-init');
+const storageManager = require('./utils/storage');
+
+// Start the API server with proper initialization
+app.listen(PORT, async () => {
+  console.log(`🚀 API Gateway starting on port ${PORT}...`);
   
-  // Validate environment security
-  validateEnvironment();
+  try {
+    // Initialize data files
+    const dataInit = new DataInitializer();
+    await dataInit.initializeDataFiles();
+    await dataInit.validateDataIntegrity();
+    
+    // Initialize storage directories
+    storageManager.ensureUploadDirs();
+    
+    // Validate environment security
+    validateEnvironment();
+    
+    // System ready
+    console.log(`✅ Registration system with FICA uploads: ENABLED`);
+    console.log(`✅ User management system: ENABLED`);
+    console.log(`✅ Email verification system: ENABLED`);
+    console.log(`✅ Data persistence layer: INITIALIZED`);
+    console.log(`✅ File storage system: CONFIGURED`);
+    console.log(`🔗 Ready to communicate with realtime service`);
+    console.log(`🎉 All4You API Gateway is LIVE and ready for production!`);
+    
+  } catch (error) {
+    console.error('❌ Server initialization failed:', error);
+    process.exit(1);
+  }
 });
 
 module.exports = app;
