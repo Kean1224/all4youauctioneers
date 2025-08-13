@@ -14,7 +14,7 @@ export default function BuyerInvoicesPage() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`${getApiUrl()}/invoices/buyer/${encodeURIComponent(buyerEmail)}`);
+      const res = await fetch(`${getApiUrl()}/api/invoices/buyer/${encodeURIComponent(buyerEmail)}`);
       if (!res.ok) throw new Error("No invoices found");
       const data = await res.json();
       setInvoices(data);

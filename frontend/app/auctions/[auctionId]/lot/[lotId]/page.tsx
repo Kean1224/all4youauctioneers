@@ -88,8 +88,8 @@ export default function LotDetailPage() {
       if (token) {
         headers['Authorization'] = `Bearer ${token}`;
       }
-      const response = await fetch(`${getApiUrl()}/api/lots/${auctionId}/${lotId}/bid`, {
-        method: 'PUT',
+      const response = await fetch(`${getApiUrl()}/api/lots/${lotId}/bid`, {
+        method: 'POST',
         headers,
         body: JSON.stringify({ 
           bidderEmail: userEmail,
