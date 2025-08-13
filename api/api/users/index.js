@@ -153,8 +153,14 @@ router.post('/register', upload.fields([
 ]), async (req, res) => {
   const { email, password, name } = req.body;
 
-  if (!email || !password || !name || !req.files.idDocument || !req.files.proofOfAddress) {
-    return res.status(400).json({ error: 'Missing required fields or documents.' });
+  // Check for required text fields
+  if (!email || !password || !name) {
+    return res.status(400).json({ error: 'Missing required fields: email, password, or name.' });
+  }
+
+  // Check for required file uploads
+  if (!req.files || !req.files.idDocument || !req.files.proofOfAddress) {
+    return res.status(400).json({ error: 'Missing required documents: ID document and proof of address are required.' });
   }
 
   const users = readUsers();
