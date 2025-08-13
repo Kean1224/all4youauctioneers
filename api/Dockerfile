@@ -17,13 +17,13 @@ RUN mkdir -p uploads/auctions uploads/deposits uploads/fica uploads/invoices upl
 RUN chown -R node:node /app
 USER node
 
-EXPOSE 5000
+EXPOSE 10000
 
 ENV NODE_ENV=production
-ENV PORT=5000
+ENV PORT=10000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:10000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 CMD ["node", "server.js"]

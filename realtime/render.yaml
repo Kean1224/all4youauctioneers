@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: all4you-realtime-service
+    name: all4youws-bxjj
     runtime: node
     plan: starter
     buildCommand: npm install
@@ -9,6 +9,6 @@ services:
       - key: NODE_ENV
         value: production
       - key: REALTIME_PORT
-        value: 5001
+        value: 10000
     healthCheckPath: /health
     autoDeploy: true

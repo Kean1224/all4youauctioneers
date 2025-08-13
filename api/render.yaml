@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: all4you-api-gateway
+    name: api-d7nd
     runtime: node
     plan: starter
     buildCommand: npm install
@@ -9,7 +9,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 5000
+        value: 10000
       - key: JWT_SECRET
         generateValue: true
       - key: ADMIN_SECRET
@@ -17,11 +17,11 @@ services:
       - key: FRONTEND_URL
         value: https://all4youauctions.vercel.app
       - key: BASE_URL
-        value: https://all4you-api-gateway.onrender.com
+        value: https://api-d7nd.onrender.com
       - key: API_INTERNAL_URL
-        value: https://all4you-api-gateway.onrender.com
+        value: https://api-d7nd.onrender.com
       - key: REALTIME_SERVICE_URL
-        value: https://all4you-realtime-service.onrender.com
+        value: https://all4youws-bxjj.onrender.com
       - key: UPLOAD_MAX_SIZE
         value: 5242880
       - key: FILE_STORAGE_PATH

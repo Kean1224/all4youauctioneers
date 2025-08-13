@@ -14,13 +14,13 @@ COPY . .
 RUN chown -R node:node /app
 USER node
 
-EXPOSE 5001
+EXPOSE 10000
 
 ENV NODE_ENV=production
-ENV REALTIME_PORT=5001
+ENV REALTIME_PORT=10000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:5001/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:10000/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
 CMD ["node", "server.js"]
