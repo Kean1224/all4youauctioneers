@@ -1,1 +1,12 @@
-[]
+[
+  {
+    "email": "testuser@example.com",
+    "password": "$2b$12$PbCNP6pj4z7vhytyLp.ifOKfKBmpsWSGHkDNi9IR8wsr72of0JzTK",
+    "name": "Test User",
+    "ficaApproved": false,
+    "suspended": false,
+    "registeredAt": "2025-08-13T15:27:28.401Z",
+    "idDocument": "testuser_example_com-id.png",
+    "proofOfAddress": "testuser_example_com-proof.png"
+  }
+]

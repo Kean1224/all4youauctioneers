@@ -151,7 +151,7 @@ router.post('/register', upload.fields([
   { name: 'idDocument', maxCount: 1 },
   { name: 'proofOfAddress', maxCount: 1 }
 ]), async (req, res) => {
-  const { email, password, name } = req.body;
+  const { email, password, name, phone, idNumber, address, city, postalCode } = req.body;
 
   // Check for required text fields
   if (!email || !password || !name) {
@@ -177,11 +177,17 @@ router.post('/register', upload.fields([
       email,
       password: hashedPassword,
       name,
+      phone: phone || '',
+      idNumber: idNumber || '',
+      address: address || '',
+      city: city || '',
+      postalCode: postalCode || '',
       ficaApproved: false,
       suspended: false,
       registeredAt: new Date().toISOString(),
       idDocument: req.files.idDocument[0].filename,
-      proofOfAddress: req.files.proofOfAddress[0].filename
+      proofOfAddress: req.files.proofOfAddress[0].filename,
+      watchlist: []
     };
 
     users.push(newUser);

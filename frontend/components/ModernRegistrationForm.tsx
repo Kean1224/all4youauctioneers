@@ -170,19 +170,17 @@ export default function ModernRegistrationForm() {
     try {
       const registrationData = new FormData();
       
-      // Add form data with correct field names for backend
-      registrationData.append('firstName', formData.firstName);
-      registrationData.append('lastName', formData.lastName);
+      // Add required fields for backend (API expects: email, password, name)
       registrationData.append('email', formData.email);
-      registrationData.append('phone', formData.phone);
       registrationData.append('password', formData.password);
+      registrationData.append('name', `${formData.firstName} ${formData.lastName}`);
+      
+      // Add optional fields for future use
+      registrationData.append('phone', formData.phone);
       registrationData.append('idNumber', formData.idNumber);
       registrationData.append('address', formData.address);
       registrationData.append('city', formData.city);
       registrationData.append('postalCode', formData.postalCode);
-      registrationData.append('termsAccepted', formData.termsAccepted.toString());
-      registrationData.append('privacyAccepted', formData.privacyAccepted.toString());
-      registrationData.append('marketingConsent', formData.marketingConsent.toString());
 
       // Add files with correct field names
       if (files.idDocument) registrationData.append('idDocument', files.idDocument);
@@ -190,7 +188,7 @@ export default function ModernRegistrationForm() {
 
       const { getApiUrl } = await import('../lib/api');
       const apiUrl = getApiUrl();
-      const response = await fetch(`${apiUrl}/api/auth/register`, {
+      const response = await fetch(`${apiUrl}/api/users/register`, {
         method: 'POST',
         body: registrationData,
       });
