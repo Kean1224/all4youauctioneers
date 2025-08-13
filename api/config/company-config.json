@@ -1,0 +1,64 @@
+{
+  "company": {
+    "name": "ALL4YOU AUCTIONEERS",
+    "tagline": "Professional Auction Services",
+    "address": [
+      "Unit 5, Industrial Park",
+      "Johannesburg, 2000", 
+      "South Africa"
+    ],
+    "contact": {
+      "email": "admin@all4youauctions.co.za",
+      "phone": "+27 11 123 4567",
+      "website": "www.all4youauctions.co.za"
+    },
+    "registration": {
+      "vat": "VAT Reg: 4123456789",
+      "company": "Company Reg: 2024/123456/07"
+    }
+  },
+  "banking": {
+    "bankName": "First National Bank (FNB)",
+    "accountName": "ALL4YOU AUCTIONEERS (PTY) LTD",
+    "accountNumber": "123456789",
+    "branchCode": "250655",
+    "branchName": "Johannesburg Central",
+    "accountType": "Business Current Account",
+    "swiftCode": "FIRNZAJJ"
+  },
+  "invoice": {
+    "colors": {
+      "primary": "#f59e0b",
+      "secondary": "#374151",
+      "success": "#059669",
+      "muted": "#6b7280",
+      "light": "#f3f4f6",
+      "border": "#e5e7eb"
+    },
+    "terms": {
+      "buyerPaymentDays": 7,
+      "sellerPaymentDays": 14,
+      "vatRate": 0.15,
+      "buyerCommissionRate": 0.15,
+      "sellerCommissionRate": 0.10
+    },
+    "notes": {
+      "buyer": [
+        "Payment is due within {paymentDays} days of invoice date",
+        "Email proof of payment to {email}",
+        "Include invoice number in payment reference",
+        "Items will be held for collection upon payment confirmation",
+        "Late payments may incur additional charges",
+        "Questions? Contact us at {phone}"
+      ],
+      "seller": [
+        "Payment is due within {paymentDays} days of invoice date",
+        "Email proof of payment to {email}",
+        "Include invoice number in payment reference", 
+        "Seller payment processed after buyer payment and item collection",
+        "Late payments may incur additional charges",
+        "Questions? Contact us at {phone}"
+      ]
+    }
+  }
+}

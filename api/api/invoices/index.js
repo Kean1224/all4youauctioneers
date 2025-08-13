@@ -4,6 +4,7 @@ const path = require('path');
 const PDFDocument = require('pdfkit');
 const authenticateToken = require('../../middleware/auth');
 const verifyAdmin = require('../auth/verify-admin');
+const { InvoicePDFGenerator } = require('../../utils/invoicePDFGenerator');
 
 const router = express.Router();
 
@@ -62,123 +63,34 @@ try {
   sendMail = async () => Promise.resolve();
 }
 
-// Generate comprehensive PDF invoice
-const generateInvoicePDF = (invoiceData) => {
-  return new Promise((resolve, reject) => {
-    try {
-      const doc = new PDFDocument({ margin: 50, size: 'A4' });
-      const fileName = `invoice_${invoiceData.invoiceNumber}.pdf`;
-      const filePath = path.join(INVOICES_DIR, fileName);
-      
-      doc.pipe(fs.createWriteStream(filePath));
-
-      // Company Header
-      doc.fontSize(20)
-         .fillColor('#f59e0b')
-         .text('ALL4YOU AUCTIONEERS', 50, 50, { align: 'center' })
-         .fontSize(12)
-         .fillColor('#000000')
-         .text('Professional Auction Services', 50, 80, { align: 'center' })
-         .text('admin@all4youauctions.co.za | www.all4youauctions.co.za', 50, 95, { align: 'center' });
-
-      // Invoice Title
-      doc.fontSize(24)
-         .fillColor('#374151')
-         .text(`${invoiceData.type.toUpperCase()} INVOICE`, 50, 130, { align: 'center' });
-
-      // Invoice Details Box
-      const boxY = 170;
-      doc.rect(50, boxY, 495, 100)
-         .strokeColor('#e5e7eb')
-         .stroke();
-
-      doc.fontSize(12)
-         .fillColor('#000000')
-         .text(`Invoice Number: ${invoiceData.invoiceNumber}`, 60, boxY + 15)
-         .text(`Date: ${new Date(invoiceData.createdAt).toLocaleDateString()}`, 60, boxY + 35)
-         .text(`Auction: ${invoiceData.auctionTitle}`, 60, boxY + 55)
-         .text(`Status: ${invoiceData.status.toUpperCase()}`, 60, boxY + 75);
-
-      doc.text(`${invoiceData.type === 'buyer' ? 'Buyer' : 'Seller'}: ${invoiceData.userEmail}`, 300, boxY + 15)
-         .text(`Payment Due: ${new Date(invoiceData.dueDate).toLocaleDateString()}`, 300, boxY + 35);
-
-      // Items Table Header
-      const tableY = 300;
-      doc.rect(50, tableY, 495, 25)
-         .fillColor('#f3f4f6')
-         .fill();
-
-      doc.fillColor('#000000')
-         .fontSize(12)
-         .text('Lot', 60, tableY + 8)
-         .text('Description', 150, tableY + 8)
-         .text('Winning Bid', 350, tableY + 8)
-         .text('Commission', 430, tableY + 8);
-
-      // Items
-      let currentY = tableY + 25;
-      invoiceData.items.forEach((item, index) => {
-        const rowColor = index % 2 === 0 ? '#ffffff' : '#f9fafb';
-        doc.rect(50, currentY, 495, 25)
-           .fillColor(rowColor)
-           .fill();
-
-        doc.fillColor('#000000')
-           .fontSize(10)
-           .text(item.lotNumber || item.lotId, 60, currentY + 8)
-           .text(item.title.substring(0, 25) + (item.title.length > 25 ? '...' : ''), 150, currentY + 8)
-           .text(`R${item.winningBid.toLocaleString()}`, 350, currentY + 8)
-           .text(`R${item.commission.toLocaleString()}`, 430, currentY + 8);
-
-        currentY += 25;
-      });
-
-      // Totals Section
-      const totalsY = currentY + 20;
-      doc.rect(350, totalsY, 195, 80)
-         .strokeColor('#e5e7eb')
-         .stroke();
-
-      doc.fontSize(12)
-         .text(`Subtotal: R${invoiceData.subtotal.toLocaleString()}`, 360, totalsY + 10)
-         .text(`VAT (15%): R${invoiceData.vat.toLocaleString()}`, 360, totalsY + 30)
-         .fontSize(14)
-         .fillColor('#059669')
-         .text(`Total: R${invoiceData.total.toLocaleString()}`, 360, totalsY + 55);
-
-      // Payment Terms
-      doc.fontSize(12)
-         .fillColor('#374151')
-         .text('Payment Terms & Instructions:', 50, totalsY + 100)
-         .fontSize(10)
-         .fillColor('#6b7280')
-         .text('• Payment is due within 7 days of invoice date', 50, totalsY + 120)
-         .text('• Bank: FNB | Account: 123456789 | Branch: 250655', 50, totalsY + 135)
-         .text(`• Reference: ${invoiceData.invoiceNumber}`, 50, totalsY + 150)
-         .text('• Email proof of payment to admin@all4youauctions.co.za', 50, totalsY + 165);
-
-      if (invoiceData.type === 'buyer') {
-        doc.text('• Collection arrangements will be made upon payment confirmation', 50, totalsY + 180);
-      } else {
-        doc.text('• Seller payment will be processed after buyer payment and collection', 50, totalsY + 180);
-      }
-
-      // Footer
-      doc.fontSize(8)
-         .fillColor('#9ca3af')
-         .text('This is a computer-generated invoice and does not require a signature.', 50, totalsY + 220, { align: 'center' })
-         .text('ALL4YOU AUCTIONEERS - Professional Auction Services', 50, totalsY + 235, { align: 'center' });
-
-      doc.end();
-
-      doc.on('end', () => {
-        resolve({ fileName, filePath });
-      });
-
-    } catch (error) {
-      reject(error);
-    }
-  });
+// Generate comprehensive PDF invoice using enhanced template
+const generateInvoicePDF = async (invoiceData) => {
+  try {
+    const fileName = `invoice_${invoiceData.invoiceNumber}.pdf`;
+    const filePath = path.join(INVOICES_DIR, fileName);
+    
+    // Check for company logo (optional)
+    const logoPath = path.join(__dirname, '../../assets/logo.png');
+    const logoExists = fs.existsSync(logoPath) ? logoPath : null;
+    
+    // Create PDF generator instance
+    const pdfGenerator = new InvoicePDFGenerator();
+    
+    // Generate the PDF
+    const result = await pdfGenerator.generateInvoice(invoiceData, filePath, logoExists);
+    
+    console.log(`✅ Enhanced PDF invoice generated: ${fileName} (${(result.size / 1024).toFixed(1)}KB)`);
+    
+    return {
+      fileName: result.fileName,
+      filePath: result.filePath,
+      size: result.size
+    };
+    
+  } catch (error) {
+    console.error('❌ Error generating enhanced PDF invoice:', error);
+    throw error;
+  }
 };
 
 // 📄 Generate buyer invoice for won lots

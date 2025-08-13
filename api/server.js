@@ -111,6 +111,8 @@ const sellItemRouter = require('./api/sell-item/index');
 const usersRouter = require('./api/users/index');
 const systemStatusRouter = require('./api/system/status');
 const refundsRouter = require('./api/refunds/index');
+const companyLogoRouter = require('./api/company/logo');
+const testPDFRouter = require('./api/invoices/test-pdf');
 
 // 🔗 Connect routes
 app.use('/api/deposits', depositsRouter);
@@ -129,6 +131,8 @@ app.use('/api/sell-item', sellItemRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/system', systemStatusRouter);
 app.use('/api/refunds', refundsRouter);
+app.use('/api/company/logo', companyLogoRouter);
+app.use('/api/invoices/test-pdf', testPDFRouter);
 
 // Example route
 app.get('/', (req, res) => {

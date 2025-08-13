@@ -193,6 +193,71 @@ router.post('/register', upload.fields([
     users.push(newUser);
     writeUsers(users);
     
+    // Send admin notification email about new registration
+    try {
+      await sendMail({
+        to: 'Admin@all4youauctions.co.za',
+        subject: '🔔 New User Registration - FICA Approval Required',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #f59e0b;">🔔 New User Registration</h2>
+            <p>A new user has registered and requires FICA document approval.</p>
+            
+            <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h3>User Details:</h3>
+              <p><strong>Name:</strong> ${name}</p>
+              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>Phone:</strong> ${phone || 'Not provided'}</p>
+              <p><strong>ID Number:</strong> ${idNumber || 'Not provided'}</p>
+              <p><strong>Address:</strong> ${address || 'Not provided'}, ${city || ''} ${postalCode || ''}</p>
+              <p><strong>Registration Date:</strong> ${new Date().toLocaleDateString()}</p>
+            </div>
+            
+            <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h4 style="color: #dc2626;">📋 FICA Documents Uploaded:</h4>
+              <p>✅ ID Document: ${req.files.idDocument[0].filename}</p>
+              <p>✅ Proof of Address: ${req.files.proofOfAddress[0].filename}</p>
+            </div>
+            
+            <div style="text-align: center; margin: 20px 0;">
+              <a href="${process.env.FRONTEND_URL || 'https://www.all4youauctions.co.za'}/admin/users" 
+                 style="background: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold;">
+                👤 Review User in Admin Panel
+              </a>
+            </div>
+            
+            <p><strong>Action Required:</strong> Please review and approve/reject the FICA documents in the admin panel.</p>
+            
+            <p>Best regards,<br><strong>ALL4YOU AUCTIONS System</strong></p>
+          </div>
+        `,
+        text: `
+New User Registration - FICA Approval Required
+
+User Details:
+Name: ${name}
+Email: ${email}
+Phone: ${phone || 'Not provided'}
+ID Number: ${idNumber || 'Not provided'}
+Address: ${address || 'Not provided'}, ${city || ''} ${postalCode || ''}
+Registration Date: ${new Date().toLocaleDateString()}
+
+FICA Documents Uploaded:
+- ID Document: ${req.files.idDocument[0].filename}
+- Proof of Address: ${req.files.proofOfAddress[0].filename}
+
+Action Required: Please review and approve/reject the FICA documents in the admin panel.
+Admin Panel: ${process.env.FRONTEND_URL || 'https://www.all4youauctions.co.za'}/admin/users
+
+- ALL4YOU AUCTIONS System
+        `
+      });
+      console.log(`✅ Admin notification sent for new user registration: ${email}`);
+    } catch (emailError) {
+      console.error('Failed to send admin notification email:', emailError);
+      // Don't fail the registration if email fails
+    }
+    
     // Return user data without password hash
     const { password: _, ...userWithoutPassword } = newUser;
     res.status(201).json({ message: 'User registered', user: userWithoutPassword });
