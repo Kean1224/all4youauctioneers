@@ -36,7 +36,9 @@
       "Bash(SET SMTP_FROM=test@example.com)",
       "Bash(PORT=8080 npm start)",
       "Bash(PORT=8081 npm start)",
-      "Bash(PORT=3005 npm start)"
+      "Bash(PORT=3005 npm start)",
+      "Bash(del /Q \"C:\\Users\\keanm\\OneDrive\\Desktop\\all4you\\api\\uploads\\lots\\*.*\")",
+      "Bash(powershell Remove-Item:*)"
     ],
     "deny": []
   }

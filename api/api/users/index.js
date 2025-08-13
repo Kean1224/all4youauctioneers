@@ -53,55 +53,7 @@ function writeUsers(data) {
   fs.writeFileSync(usersPath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-// Ensure demo user exists
-async function ensureDemoUser() {
-  const users = readUsers();
-  const demoExists = users.some(u => u.email === 'demo@example.com');
-
-  if (!demoExists) {
-    try {
-      // Hash the demo password
-      const saltRounds = 12;
-      const hashedPassword = await bcrypt.hash('demo123', saltRounds);
-      
-      const demoUser = {
-        email: 'demo@example.com',
-        password: hashedPassword,
-        name: 'Demo User',
-        ficaApproved: true,
-        suspended: false,
-        registeredAt: new Date().toISOString(),
-        idDocument: 'demo_id.pdf',
-        proofOfAddress: 'demo_proof.pdf',
-        watchlist: []
-      };
-      users.push(demoUser);
-      writeUsers(users);
-      console.log('✅ Demo user added with hashed password.');
-    } catch (error) {
-      console.error('Error creating demo user:', error);
-    }
-  } else {
-    // Check if existing demo user needs password migration
-    const demoUser = users.find(u => u.email === 'demo@example.com');
-    if (demoUser && !demoUser.password.startsWith('$2a$') && !demoUser.password.startsWith('$2b$')) {
-      try {
-        const saltRounds = 12;
-        const hashedPassword = await bcrypt.hash(demoUser.password, saltRounds);
-        demoUser.password = hashedPassword;
-        writeUsers(users);
-        console.log('✅ Demo user password migrated to bcrypt.');
-      } catch (error) {
-        console.error('Error migrating demo user password:', error);
-      }
-    }
-  }
-}
-(async () => {
-  await ensureDemoUser();
-})().catch(err => {
-  console.error('Error initializing demo user:', err);
-});
+// Production: No demo users auto-created
 
 // ✅ POST: FICA re-upload (user can re-upload FICA docs if rejected or updating)
 router.post('/fica-reupload/:email', upload.fields([
