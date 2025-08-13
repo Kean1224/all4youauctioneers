@@ -122,6 +122,41 @@ router.post('/admin-login', adminLogin);
 // Import and use admin verification
 const verifyAdmin = require('./verify-admin');
 router.post('/verify-admin', verifyAdmin);
+router.get('/verify-admin', verifyAdmin); // Support both GET and POST
+
+// Session endpoint for admin dashboard
+router.get('/session', (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'No token provided', authenticated: false });
+  }
+
+  const jwt = require('jsonwebtoken');
+  const JWT_SECRET = process.env.JWT_SECRET || 'supersecretkey';
+  
+  try {
+    const user = jwt.verify(token, JWT_SECRET);
+    
+    // Check if token is still valid and not expired
+    if (!user || user.role !== 'admin') {
+      return res.status(401).json({ error: 'Invalid session', authenticated: false });
+    }
+    
+    // Return session info
+    res.json({
+      authenticated: true,
+      user: {
+        email: user.email,
+        role: user.role
+      },
+      expiresAt: user.exp
+    });
+  } catch (error) {
+    res.status(401).json({ error: 'Invalid session', authenticated: false });
+  }
+});
 
 // Test endpoint to verify deployment
 router.get('/test-deployment', (req, res) => {
