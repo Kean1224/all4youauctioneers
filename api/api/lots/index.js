@@ -187,10 +187,26 @@ router.post('/:auctionId/end', verifyAdmin, async (req, res) => {
     // After all lots ended, auto-generate and email invoices
     try {
       const fetch = require('node-fetch');
-      const apiUrl = process.env.API_INTERNAL_URL || `https://api-d7nd.onrender.com/api/invoices/email-invoices/${auctionId}`;
-      await fetch(apiUrl, { method: 'POST' });
+      const apiUrl = process.env.API_INTERNAL_URL || `http://localhost:5000/api/invoices/email-invoices/${auctionId}`;
+      const response = await fetch(apiUrl, { 
+        method: 'POST',
+        headers: {
+          'Authorization': req.headers.authorization, // Pass admin token
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        console.log(`✅ Auto-emailed ${result.successCount} invoices for auction ${auctionId}`);
+        notifications.push(`Auto-emailed ${result.successCount} invoices`);
+      } else {
+        console.error('Failed to auto-email invoices:', await response.text());
+        notifications.push('Failed to auto-email invoices');
+      }
     } catch (e) {
-      console.error('Failed to auto-email invoices:', e);
+      console.error('Failed to auto-email invoices:', e.message);
+      notifications.push(`Invoice emailing failed: ${e.message}`);
     }
   })();
 
@@ -719,6 +735,65 @@ router.post('/:lotId/bid', async (req, res) => {
     bidHistory: lot.bidHistory,
     newBidAmount: newBid 
   });
+});
+
+// PUT /:auctionId/:lotId/assign-seller - Assign seller to a lot (admin only)
+router.put('/:auctionId/:lotId/assign-seller', verifyAdmin, (req, res) => {
+  const { auctionId, lotId } = req.params;
+  const { sellerEmail } = req.body;
+
+  if (!sellerEmail) {
+    return res.status(400).json({ error: 'Seller email is required' });
+  }
+
+  try {
+    // Load lots data
+    const lotsPath = path.join(__dirname, '../../data/lots.json');
+    const lots = JSON.parse(fs.readFileSync(lotsPath, 'utf8'));
+    
+    // Find the specific lot
+    const lotIndex = lots.findIndex(lot => 
+      lot.id === lotId && lot.auctionId === auctionId
+    );
+
+    if (lotIndex === -1) {
+      return res.status(404).json({ error: 'Lot not found' });
+    }
+
+    // Verify seller exists and is not suspended
+    const usersPath = path.join(__dirname, '../../data/users.json');
+    const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
+    const seller = users.find(u => u.email === sellerEmail);
+
+    if (!seller) {
+      return res.status(400).json({ error: 'Seller not found' });
+    }
+
+    if (seller.suspended) {
+      return res.status(400).json({ error: 'Cannot assign suspended seller' });
+    }
+
+    // Assign seller to lot
+    lots[lotIndex].sellerEmail = sellerEmail;
+    lots[lotIndex].assignedAt = new Date().toISOString();
+    lots[lotIndex].assignedBy = req.user.email;
+
+    // Save updated lots
+    fs.writeFileSync(lotsPath, JSON.stringify(lots, null, 2));
+
+    // Log the assignment
+    console.log(`[ADMIN] ${req.user.email} assigned seller ${sellerEmail} to lot ${lotId} in auction ${auctionId}`);
+
+    res.json({
+      success: true,
+      message: 'Seller assigned successfully',
+      lot: lots[lotIndex]
+    });
+
+  } catch (error) {
+    console.error('Error assigning seller to lot:', error);
+    res.status(500).json({ error: 'Failed to assign seller' });
+  }
 });
 
 module.exports = router;

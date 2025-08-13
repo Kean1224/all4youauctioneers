@@ -122,6 +122,27 @@ app.get('/', (req, res) => {
   res.send('All4You API Gateway is running...');
 });
 
+// Security validation - warn about default secrets
+function validateEnvironment() {
+  const warnings = [];
+  
+  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'supersecretkey') {
+    warnings.push('⚠️  WARNING: Using default JWT_SECRET. Set JWT_SECRET environment variable for production.');
+  }
+  
+  if (!process.env.ADMIN_SECRET || process.env.ADMIN_SECRET === 'all4you-admin-2025') {
+    warnings.push('⚠️  WARNING: Using default ADMIN_SECRET. Set ADMIN_SECRET environment variable for production.');
+  }
+  
+  if (warnings.length > 0 && process.env.NODE_ENV === 'production') {
+    console.error('🚨 SECURITY WARNINGS:');
+    warnings.forEach(warning => console.error(warning));
+    console.error('🚨 These default secrets pose a security risk in production!');
+  } else if (warnings.length > 0) {
+    warnings.forEach(warning => console.warn(warning));
+  }
+}
+
 // Start the API server
 app.listen(PORT, () => {
   console.log(`🚀 API Gateway running on port ${PORT}`);
@@ -129,6 +150,9 @@ app.listen(PORT, () => {
   console.log(`✅ User management system: ENABLED`);
   console.log(`✅ Email verification system: ENABLED`);
   console.log(`🔗 Ready to communicate with realtime service`);
+  
+  // Validate environment security
+  validateEnvironment();
 });
 
 module.exports = app;

@@ -215,17 +215,165 @@ router.get('/session', (req, res) => {
   }
 });
 
+// POST /api/auth/verify-email - Email verification endpoint
+router.post('/verify-email', (req, res) => {
+  const { token } = req.body;
+  
+  if (!token) {
+    return res.status(400).json({ error: 'Verification token is required' });
+  }
+  
+  try {
+    // Verify the token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const { email } = decoded;
+    
+    // Find the user
+    const users = readUsers();
+    const userIndex = users.findIndex(u => u.email === email);
+    
+    if (userIndex === -1) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Check if already verified
+    if (users[userIndex].emailVerified) {
+      return res.status(400).json({ error: 'Email already verified' });
+    }
+    
+    // Mark as verified
+    users[userIndex].emailVerified = true;
+    users[userIndex].verifiedAt = new Date().toISOString();
+    
+    // Write back to file
+    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+    
+    // Create login token for immediate access
+    const loginToken = jwt.sign(
+      { email, role: 'user' },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+    
+    res.json({
+      message: 'Email verified successfully! You are now logged in.',
+      token: loginToken,
+      user: {
+        email: users[userIndex].email,
+        name: users[userIndex].name,
+        ficaApproved: users[userIndex].ficaApproved
+      }
+    });
+    
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      return res.status(400).json({ error: 'Verification link has expired. Please request a new one.' });
+    } else if (error.name === 'JsonWebTokenError') {
+      return res.status(400).json({ error: 'Invalid verification token.' });
+    }
+    
+    console.error('Email verification error:', error);
+    res.status(500).json({ error: 'Email verification failed' });
+  }
+});
+
+// POST /api/auth/resend-verification - Resend verification email
+router.post('/resend-verification', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email address is required' });
+  }
+  
+  try {
+    const users = readUsers();
+    const user = users.find(u => u.email === email);
+    
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    if (user.emailVerified) {
+      return res.status(400).json({ error: 'Email is already verified' });
+    }
+    
+    // Generate new verification token
+    const verificationToken = jwt.sign({ email }, JWT_SECRET, { expiresIn: '24h' });
+    const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${verificationToken}`;
+    
+    // Send verification email
+    try {
+      const { sendMail } = require('../../utils/mailer');
+      await sendMail({
+        to: email,
+        subject: 'Verify Your Email - All4You Auctions',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #059669;">📧 Verify Your Email Address</h2>
+            <p>Hello ${user.name || email},</p>
+            <p>Please click the button below to verify your email address and complete your registration:</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationUrl}" 
+                 style="background: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                ✅ Verify Email Address
+              </a>
+            </div>
+            
+            <p>Or copy and paste this link into your browser:</p>
+            <p style="background: #f3f4f6; padding: 10px; border-radius: 4px; word-break: break-all; font-size: 12px;">
+              ${verificationUrl}
+            </p>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+              This verification link will expire in 24 hours. If you didn't request this, please ignore this email.
+            </p>
+            
+            <p>Best regards,<br><strong>All4You Auctions Team</strong></p>
+          </div>
+        `,
+        text: `
+Verify Your Email - All4You Auctions
+
+Hello ${user.name || email},
+
+Please visit the following link to verify your email address:
+${verificationUrl}
+
+This link will expire in 24 hours.
+
+If you didn't request this, please ignore this email.
+
+- All4You Auctions Team
+        `
+      });
+      
+      res.json({ message: 'Verification email sent successfully. Please check your inbox.' });
+      
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      res.status(500).json({ error: 'Failed to send verification email. Please try again later.' });
+    }
+    
+  } catch (error) {
+    console.error('Resend verification error:', error);
+    res.status(500).json({ error: 'Failed to resend verification email' });
+  }
+});
+
 // Test endpoint to verify deployment
 router.get('/test-deployment', (req, res) => {
   res.json({ 
     status: 'deployed', 
     timestamp: new Date().toISOString(),
     message: 'Direct verify-admin implementation deployed',
-    version: '4.0',
+    version: '4.1',
     endpoints: {
       'GET /auth/session': 'available',
       'GET /auth/verify-admin': 'direct implementation', 
-      'POST /auth/verify-admin': 'direct implementation'
+      'POST /auth/verify-admin': 'direct implementation',
+      'POST /auth/verify-email': 'email verification',
+      'POST /auth/resend-verification': 'resend verification email'
     }
   });
 });

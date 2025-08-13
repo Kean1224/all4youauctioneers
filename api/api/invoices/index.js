@@ -623,6 +623,83 @@ router.put('/:invoiceId/paid', verifyAdmin, async (req, res) => {
   }
 });
 
+// 📧 Auto-email invoices for all winners in an auction
+router.post('/email-invoices/:auctionId', verifyAdmin, async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    
+    const auctions = readAuctions();
+    const auction = auctions.find(a => a.id === auctionId);
+    
+    if (!auction) {
+      return res.status(404).json({ error: 'Auction not found' });
+    }
+
+    // Find all winners in this auction
+    const winners = new Set();
+    auction.lots.forEach(lot => {
+      if (lot.bidHistory && lot.bidHistory.length > 0) {
+        const lastBid = lot.bidHistory[lot.bidHistory.length - 1];
+        winners.add(lastBid.bidderEmail);
+      }
+    });
+
+    const results = [];
+    const errors = [];
+
+    // Generate and email invoice for each winner
+    for (const winnerEmail of winners) {
+      try {
+        // Generate buyer invoice
+        const invoiceResponse = await fetch(`${process.env.BASE_URL || 'http://localhost:5000'}/api/invoices/generate/buyer/${auctionId}/${winnerEmail}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': req.headers.authorization // Pass admin token
+          }
+        });
+
+        if (invoiceResponse.ok) {
+          const invoiceData = await invoiceResponse.json();
+          results.push({
+            email: winnerEmail,
+            status: 'success',
+            invoiceId: invoiceData.invoice.id
+          });
+        } else {
+          const errorText = await invoiceResponse.text();
+          errors.push({
+            email: winnerEmail,
+            status: 'failed',
+            error: errorText
+          });
+        }
+      } catch (error) {
+        errors.push({
+          email: winnerEmail,
+          status: 'failed',
+          error: error.message
+        });
+      }
+    }
+
+    res.json({
+      message: `Processed invoices for ${winners.size} winners`,
+      auctionId,
+      auctionTitle: auction.title,
+      successful: results,
+      failed: errors,
+      totalWinners: winners.size,
+      successCount: results.length,
+      failureCount: errors.length
+    });
+
+  } catch (error) {
+    console.error('Error auto-emailing invoices:', error);
+    res.status(500).json({ error: 'Failed to process auction invoices' });
+  }
+});
+
 // ✅ Mark invoice as paid (Admin only - legacy endpoint)
 router.post('/admin/:invoiceId/mark-paid', verifyAdmin, async (req, res) => {
   try {

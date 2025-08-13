@@ -246,8 +246,9 @@ router.post('/admin/add-user', (req, res) => {
   try {
     const { email, name, adminSecret } = req.body;
     
-    // Simple admin secret check (you should use proper admin auth in production)
-    if (adminSecret !== 'all4you-admin-2025') {
+    // Admin secret check using environment variable
+    const ADMIN_SECRET = process.env.ADMIN_SECRET || 'all4you-admin-2025';
+    if (adminSecret !== ADMIN_SECRET) {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
