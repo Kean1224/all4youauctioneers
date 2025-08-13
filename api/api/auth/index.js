@@ -163,8 +163,13 @@ router.get('/test-deployment', (req, res) => {
   res.json({ 
     status: 'deployed', 
     timestamp: new Date().toISOString(),
-    message: 'verify-admin POST endpoint is available',
-    version: '2.0'
+    message: 'session and verify-admin endpoints available',
+    version: '3.0',
+    endpoints: {
+      'GET /auth/session': 'available',
+      'GET /auth/verify-admin': 'available', 
+      'POST /auth/verify-admin': 'available'
+    }
   });
 });
 
