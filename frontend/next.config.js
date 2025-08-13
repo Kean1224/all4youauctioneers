@@ -4,14 +4,14 @@ const nextConfig = {
   output: 'standalone', // For static hosting deployment
   
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://api-d7nd.onrender.com',
-    NEXT_PUBLIC_REALTIME_URL: process.env.NEXT_PUBLIC_REALTIME_URL || 'wss://all4youws-bxjj.onrender.com',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://api.all4youauctions.co.za',
+    NEXT_PUBLIC_REALTIME_URL: process.env.NEXT_PUBLIC_REALTIME_URL || 'wss://all4youauctioneers-1.onrender.com',
   },
   
   async rewrites() {
     // Only proxy in development - let production handle direct API calls
     if (process.env.NODE_ENV === 'development') {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api-d7nd.onrender.com';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.all4youauctions.co.za';
       return [
         {
           source: '/api/:path*',

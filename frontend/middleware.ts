@@ -27,7 +27,7 @@ export function middleware(request: NextRequest) {
       "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
       "style-src 'self' 'unsafe-inline'; " +
       "img-src 'self' data: https:; " +
-      "connect-src 'self' https://api-d7nd.onrender.com wss://all4youws-bxjj.onrender.com; " +
+      "connect-src 'self' https://api.all4youauctions.co.za wss://all4youauctioneers-1.onrender.com; " +
       "frame-ancestors 'none';"
     );
     

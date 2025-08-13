@@ -5,6 +5,9 @@ services:
     plan: starter
     buildCommand: npm install
     startCommand: npm start
+    customDomains:
+      - name: api.all4youauctions.co.za
+        certificateArn: auto
     envVars:
       - key: NODE_ENV
         value: production
@@ -17,11 +20,11 @@ services:
       - key: FRONTEND_URL
         value: https://www.all4youauctions.co.za
       - key: BASE_URL
-        value: https://api-d7nd.onrender.com
+        value: https://api.all4youauctions.co.za
       - key: API_INTERNAL_URL
-        value: https://api-d7nd.onrender.com
+        value: https://api.all4youauctions.co.za
       - key: REALTIME_SERVICE_URL
-        value: https://all4youws-bxjj.onrender.com
+        value: https://all4youauctioneers-1.onrender.com
       - key: UPLOAD_MAX_SIZE
         value: 5242880
       - key: FILE_STORAGE_PATH

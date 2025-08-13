@@ -117,7 +117,7 @@ router.post('/:auctionId/end', verifyAdmin, async (req, res) => {
       // 🧾 AUTO-GENERATE INVOICE FOR WINNER
       try {
         // Create invoice automatically
-        const invoiceResponse = await fetch(`${process.env.BASE_URL || 'https://api-d7nd.onrender.com'}/api/invoices/generate`, {
+        const invoiceResponse = await fetch(`${process.env.BASE_URL || 'https://api.all4youauctions.co.za'}/api/invoices/generate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: all4youws-bxjj
+    name: all4youauctioneers-1
     runtime: node
     plan: starter
     buildCommand: npm install

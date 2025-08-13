@@ -1,7 +1,7 @@
 // Realtime WebSocket Service Client
 // Replaces direct WebSocket server imports with HTTP calls to the realtime service
 
-const REALTIME_SERVICE_URL = process.env.REALTIME_SERVICE_URL || 'https://all4youws-bxjj.onrender.com';
+const REALTIME_SERVICE_URL = process.env.REALTIME_SERVICE_URL || 'https://all4youauctioneers-1.onrender.com';
 
 /**
  * Send notification to specific user

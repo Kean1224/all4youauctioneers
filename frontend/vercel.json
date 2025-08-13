@@ -5,8 +5,8 @@
   "installCommand": "npm install",
   "outputDirectory": ".next",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://api-d7nd.onrender.com",
-    "NEXT_PUBLIC_REALTIME_URL": "wss://all4youws-bxjj.onrender.com"
+    "NEXT_PUBLIC_API_URL": "https://api.all4youauctions.co.za",
+    "NEXT_PUBLIC_REALTIME_URL": "wss://all4youauctioneers-1.onrender.com"
   },
   "functions": {
     "app/**/*.tsx": {
@@ -16,7 +16,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://api-d7nd.onrender.com/api/:path*"
+      "destination": "https://api.all4youauctions.co.za/api/:path*"
     }
   ],
   "redirects": [
