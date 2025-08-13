@@ -31,3 +31,7 @@ services:
         value: /tmp/uploads
     healthCheckPath: /health
     autoDeploy: true
+    disk:
+      name: auction-data-disk
+      mountPath: /opt/render/project/data
+      sizeGB: 10
