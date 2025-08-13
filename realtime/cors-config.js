@@ -6,6 +6,9 @@ module.exports = cors({
     'http://localhost:3000',
     'http://localhost:3001', 
     'http://localhost:3002',
+    // Production frontend (custom domain)
+    'https://www.all4youauctions.co.za',
+    'https://all4youauctions.co.za',
     // Render deployment URLs
     'https://all4youauctions-frontend.onrender.com',
     'https://all4you-frontend.onrender.com',

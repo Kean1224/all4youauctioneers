@@ -5,6 +5,12 @@ services:
     plan: starter
     dockerfilePath: ./Dockerfile
     dockerContext: ./
+    customDomains:
+      - name: www.all4youauctions.co.za
+        certificateArn: auto
+      - name: all4youauctions.co.za
+        certificateArn: auto
+        redirectTo: www.all4youauctions.co.za
     envVars:
       - key: NODE_ENV
         value: production
