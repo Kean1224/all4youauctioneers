@@ -97,7 +97,11 @@ async function ensureDemoUser() {
     }
   }
 }
-ensureDemoUser();
+(async () => {
+  await ensureDemoUser();
+})().catch(err => {
+  console.error('Error initializing demo user:', err);
+});
 
 // ✅ POST: FICA re-upload (user can re-upload FICA docs if rejected or updating)
 router.post('/fica-reupload/:email', upload.fields([
