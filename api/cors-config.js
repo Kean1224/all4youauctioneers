@@ -7,6 +7,7 @@ module.exports = cors({
     'http://localhost:3001', 
     'http://localhost:3002',
     // Render deployment URLs
+    'https://all4youauctions-frontend.onrender.com',
     'https://all4you-frontend.onrender.com',
     'https://all4you-backend.onrender.com',
     'https://all4youauctioneers.onrender.com',

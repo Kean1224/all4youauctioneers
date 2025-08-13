@@ -15,7 +15,7 @@ services:
       - key: ADMIN_SECRET
         generateValue: true
       - key: FRONTEND_URL
-        value: https://all4youauctions.vercel.app
+        value: https://all4youauctions-frontend.onrender.com
       - key: BASE_URL
         value: https://api-d7nd.onrender.com
       - key: API_INTERNAL_URL

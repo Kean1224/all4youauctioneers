@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: all4youauctions-frontend
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    dockerContext: ./
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: NEXT_PUBLIC_API_URL
+        value: https://api-d7nd.onrender.com
+      - key: NEXT_PUBLIC_REALTIME_URL
+        value: wss://all4youws-bxjj.onrender.com
+    healthCheckPath: /
+    autoDeploy: true
