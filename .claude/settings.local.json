@@ -41,7 +41,9 @@
       "Bash(powershell Remove-Item:*)",
       "Bash(powershell:*)",
       "Bash(mkdir:*)",
-      "Bash(PORT=8082 npm start)"
+      "Bash(PORT=8082 npm start)",
+      "Bash(PORT=5003 npm start)",
+      "Bash(PORT=9000 npm start)"
     ],
     "deny": []
   }

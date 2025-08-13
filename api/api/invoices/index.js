@@ -141,7 +141,7 @@ router.post('/generate/buyer/:auctionId/:userEmail', authenticateToken, async (r
 
     // Calculate totals
     const items = wonLots.map(lot => {
-      const commission = lot.currentBid * 0.15; // 15% buyer's premium
+      const commission = lot.currentBid * 0.10; // 10% buyer's premium
       return {
         lotId: lot.id,
         lotNumber: lot.lotNumber || lot.id,
@@ -284,7 +284,7 @@ router.post('/generate/seller/:auctionId/:userEmail', verifyAdmin, async (req, r
 
     // Calculate seller payment (winning bid minus commission)
     const items = soldLots.map(lot => {
-      const commission = lot.currentBid * 0.10; // 10% seller's commission
+      const commission = lot.currentBid * 0.15; // 15% seller's commission
       const sellerReceives = lot.currentBid - commission;
       return {
         lotId: lot.id,

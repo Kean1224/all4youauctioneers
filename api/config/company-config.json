@@ -39,8 +39,8 @@
       "buyerPaymentDays": 7,
       "sellerPaymentDays": 14,
       "vatRate": 0.15,
-      "buyerCommissionRate": 0.15,
-      "sellerCommissionRate": 0.10
+      "buyerCommissionRate": 0.10,
+      "sellerCommissionRate": 0.15
     },
     "notes": {
       "buyer": [
