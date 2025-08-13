@@ -119,10 +119,67 @@ router.post('/login', async (req, res) => {
 const adminLogin = require('./admin-login');
 router.post('/admin-login', adminLogin);
 
-// Import and use admin verification
-const verifyAdmin = require('./verify-admin');
-router.post('/verify-admin', verifyAdmin);
-router.get('/verify-admin', verifyAdmin); // Support both GET and POST
+// Admin verification endpoint (direct implementation)
+const verifyAdminEndpoint = (req, res) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
+  
+  if (!token) {
+    console.log(`[SECURITY] ${new Date().toISOString()}: ADMIN_ACCESS_DENIED`, { reason: 'No token provided', ip: clientIP });
+    return res.status(401).json({ error: 'No token provided' });
+  }
+
+  const jwt = require('jsonwebtoken');
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      console.log(`[SECURITY] ${new Date().toISOString()}: ADMIN_TOKEN_INVALID`, { 
+        reason: err.message, 
+        ip: clientIP,
+        token: token.substring(0, 20) + '...' 
+      });
+      return res.status(401).json({ error: 'Invalid token' });
+    }
+
+    if (!user || user.role !== 'admin') {
+      console.log(`[SECURITY] ${new Date().toISOString()}: ADMIN_ROLE_MISMATCH`, { 
+        user: user?.email || 'unknown',
+        role: user?.role || 'none',
+        ip: clientIP 
+      });
+      return res.status(401).json({ error: 'Unauthorized: Admin access required' });
+    }
+
+    // Check token age (additional security)
+    const tokenAge = Date.now() / 1000 - user.iat;
+    if (tokenAge > 4 * 60 * 60) { // 4 hours max
+      console.log(`[SECURITY] ${new Date().toISOString()}: ADMIN_TOKEN_EXPIRED`, { 
+        user: user.email,
+        tokenAge: Math.floor(tokenAge / 60) + ' minutes',
+        ip: clientIP 
+      });
+      return res.status(401).json({ error: 'Token expired - please login again' });
+    }
+
+    // Success - log access
+    console.log(`[SECURITY] ${new Date().toISOString()}: ADMIN_ACCESS_GRANTED`, { 
+      user: user.email,
+      path: req.path || 'unknown',
+      method: req.method || 'unknown',
+      ip: clientIP 
+    });
+
+    // Return success
+    return res.json({ 
+      ok: true, 
+      user: { email: user.email, role: user.role },
+      expiresAt: user.exp 
+    });
+  });
+};
+
+router.post('/verify-admin', verifyAdminEndpoint);
+router.get('/verify-admin', verifyAdminEndpoint);
 
 // Session endpoint for admin dashboard
 router.get('/session', (req, res) => {
@@ -163,12 +220,12 @@ router.get('/test-deployment', (req, res) => {
   res.json({ 
     status: 'deployed', 
     timestamp: new Date().toISOString(),
-    message: 'session and verify-admin endpoints available',
-    version: '3.0',
+    message: 'Direct verify-admin implementation deployed',
+    version: '4.0',
     endpoints: {
       'GET /auth/session': 'available',
-      'GET /auth/verify-admin': 'available', 
-      'POST /auth/verify-admin': 'available'
+      'GET /auth/verify-admin': 'direct implementation', 
+      'POST /auth/verify-admin': 'direct implementation'
     }
   });
 });
