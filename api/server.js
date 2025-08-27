@@ -110,6 +110,7 @@ const lotsRouter = require('./api/lots/index');
 const sellItemRouter = require('./api/sell-item/index');
 const usersRouter = require('./api/users/index');
 const systemStatusRouter = require('./api/system/status');
+const systemBackupRouter = require('./api/system/backup');
 const refundsRouter = require('./api/refunds/index');
 const companyLogoRouter = require('./api/company/logo');
 const testPDFRouter = require('./api/invoices/test-pdf');
@@ -130,6 +131,7 @@ app.use('/api/lots', lotsRouter);
 app.use('/api/sell-item', sellItemRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/system', systemStatusRouter);
+app.use('/api/system/backup', systemBackupRouter);
 app.use('/api/refunds', refundsRouter);
 app.use('/api/company/logo', companyLogoRouter);
 app.use('/api/invoices/test-pdf', testPDFRouter);
@@ -163,6 +165,7 @@ function validateEnvironment() {
 // Initialize data and storage on startup
 const DataInitializer = require('./utils/data-init');
 const storageManager = require('./utils/storage');
+const BackupManager = require('./utils/backup-manager');
 
 // Start the API server with proper initialization
 app.listen(PORT, async () => {
@@ -177,6 +180,10 @@ app.listen(PORT, async () => {
     // Initialize storage directories
     storageManager.ensureUploadDirs();
     
+    // Initialize automatic backup system
+    const backupManager = new BackupManager();
+    await backupManager.initialize();
+    
     // Validate environment security
     validateEnvironment();
     
@@ -186,6 +193,7 @@ app.listen(PORT, async () => {
     console.log(`✅ Email verification system: ENABLED`);
     console.log(`✅ Data persistence layer: INITIALIZED`);
     console.log(`✅ File storage system: CONFIGURED`);
+    console.log(`✅ Automatic backup system: ACTIVE`);
     console.log(`🔗 Ready to communicate with realtime service`);
     console.log(`🎉 All4You API Gateway is LIVE and ready for production!`);
     
