@@ -16,7 +16,7 @@ export const API_CONFIG = {
 export const getApiUrl = (): string => {
   // In development, use localhost
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5003';
+    return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
   }
   
   // In production, use the production API URL
@@ -25,14 +25,14 @@ export const getApiUrl = (): string => {
   }
   
   // SSR fallback - use environment variable
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5003';
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 };
 
 // Utility function to get realtime URL
 export const getRealtimeUrl = (): string => {
   // In development, use localhost
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return process.env.NEXT_PUBLIC_REALTIME_URL || 'ws://localhost:9000';
+    return process.env.NEXT_PUBLIC_REALTIME_URL || 'ws://localhost:5001';
   }
   
   // In production, use the production Realtime URL
@@ -41,5 +41,5 @@ export const getRealtimeUrl = (): string => {
   }
   
   // SSR fallback - use environment variable
-  return process.env.NEXT_PUBLIC_REALTIME_URL || 'ws://localhost:9000';
+  return process.env.NEXT_PUBLIC_REALTIME_URL || 'ws://localhost:5001';
 };
