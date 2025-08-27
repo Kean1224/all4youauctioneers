@@ -5,6 +5,7 @@ const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const authenticateToken = require('../../middleware/auth');
+const verifyAdmin = require('../auth/verify-admin');
 const router = express.Router();
 
 const usersPath = path.join(__dirname, '../../data/users.json');
@@ -413,7 +414,6 @@ router.put('/reject/:email', async (req, res) => {
   res.json({ message: 'FICA documents rejected', user, reason });
 });
 
-const verifyAdmin = require('../auth/verify-admin');
 
 // ✅ PUT: Suspend user (admin only)
 router.put('/suspend/:email', verifyAdmin, (req, res) => {
