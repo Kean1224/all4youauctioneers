@@ -15,8 +15,10 @@ services:
         value: 10000
       - key: JWT_SECRET
         generateValue: true
+        length: 64
       - key: ADMIN_SECRET
         generateValue: true
+        length: 64
       - key: FRONTEND_URL
         value: https://www.all4youauctions.co.za
       - key: BASE_URL
