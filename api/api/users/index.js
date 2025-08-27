@@ -87,6 +87,36 @@ router.post('/fica-reupload/:email', upload.fields([
   res.json({ message: 'FICA documents re-uploaded. Pending admin review.', user });
 });
 
+// ✅ GET pending registrations (admin only)
+router.get('/pending', verifyAdmin, (req, res) => {
+  const PENDING_USERS_FILE = path.join(__dirname, '../../data/pending-registrations.json');
+  
+  try {
+    if (!fs.existsSync(PENDING_USERS_FILE)) {
+      return res.json([]);
+    }
+    
+    const pendingUsers = JSON.parse(fs.readFileSync(PENDING_USERS_FILE, 'utf-8'));
+    
+    // Remove sensitive data before sending to frontend
+    const safePendingUsers = pendingUsers.map(user => ({
+      email: user.email,
+      name: user.name,
+      username: user.username,
+      cell: user.cell,
+      createdAt: user.createdAt,
+      expiresAt: user.expiresAt,
+      idDocument: user.idDocument,
+      proofOfAddress: user.proofOfAddress
+    }));
+    
+    res.json(safePendingUsers);
+  } catch (error) {
+    console.error('Error reading pending users:', error);
+    res.status(500).json({ error: 'Failed to read pending users' });
+  }
+});
+
 // ✅ GET all users
 router.get('/', (req, res) => {
   const users = readUsers();
@@ -439,6 +469,40 @@ router.put('/:email/watchlist', (req, res) => {
 
   writeUsers(users);
   res.json({ message: 'Watchlist updated', watchlist: user.watchlist });
+});
+
+// ✅ POST: Manually verify email (admin only) 
+router.post('/:email/verify-email', verifyAdmin, (req, res) => {
+  const { createVerifiedUser } = require('../auth/email-verification');
+  const PENDING_USERS_FILE = path.join(__dirname, '../../data/pending-registrations.json');
+  
+  try {
+    // Read pending users
+    if (!fs.existsSync(PENDING_USERS_FILE)) {
+      return res.status(404).json({ error: 'No pending registrations found' });
+    }
+    
+    const pendingUsers = JSON.parse(fs.readFileSync(PENDING_USERS_FILE, 'utf-8'));
+    const pendingUser = pendingUsers.find(u => u.email === req.params.email);
+    
+    if (!pendingUser) {
+      return res.status(404).json({ error: 'Pending registration not found' });
+    }
+    
+    // Create verified user
+    const newUser = createVerifiedUser(pendingUser);
+    
+    // Remove from pending users
+    const updatedPending = pendingUsers.filter(u => u.email !== req.params.email);
+    fs.writeFileSync(PENDING_USERS_FILE, JSON.stringify(updatedPending, null, 2));
+    
+    console.log(`✅ Admin manually verified email for: ${req.params.email}`);
+    res.json({ message: 'Email verified successfully', user: newUser });
+    
+  } catch (error) {
+    console.error('Manual email verification error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // ✅ DELETE user by email (admin only)
