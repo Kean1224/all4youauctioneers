@@ -414,13 +414,17 @@ router.get('/:auctionId/:lotId/autobid/:userEmail', authenticateToken, (req, res
   res.json({ maxBid: autoBid?.maxBid || null });
 });
 
-// ✅ Place a bid using increment, and process auto-bids
+// Import atomic operations to prevent race conditions
+const atomicData = require('../../utils/atomic-data');
+
+// ✅ Place a bid using increment, and process auto-bids (ATOMIC - RACE CONDITION SAFE)
 router.post('/:lotId/bid', async (req, res) => {
   const { lotId } = req.params;
   const { bidderEmail, amount, increment } = req.body;
 
   console.log('🎯 Bid request received:', { lotId, bidderEmail, amount, increment });
 
+  // First read auctions to find the auction ID (read-only operation)
   const auctions = readAuctions();
   
   // Find auction that contains this lot
@@ -493,53 +497,55 @@ router.post('/:lotId/bid', async (req, res) => {
   // Use the bid increment from the request, or fall back to lot's default increment
   const bidIncrement = increment || lot.bidIncrement || 10;
   
-  // Validate that the proposed bid meets the minimum increment requirement
-  const expectedMinBid = lot.currentBid + bidIncrement;
-  if (amount && amount < expectedMinBid) {
-    return res.status(400).json({ 
-      success: false, 
-      error: `Minimum bid is R${expectedMinBid.toLocaleString()}` 
-    });
-  }
-
   // Use the amount provided, or calculate based on current bid + increment
   let newBid = amount || (lot.currentBid + bidIncrement);
-  let lastBidder = bidderEmail || 'unknown';
 
-  lot.currentBid = newBid;
-  lot.bidHistory = lot.bidHistory || [];
-  lot.bidHistory.push({
-    bidderEmail: lastBidder,
-    amount: newBid,
-    time: new Date().toISOString()
-  });
-
-  // 🚀 REAL-TIME BID UPDATE - Send to all auction subscribers
-  if (sendBidUpdate) {
-    sendBidUpdate(auctionId, lotId, {
-      currentBid: lot.currentBid,
-      bidderEmail: lastBidder.substring(0, 3) + '***', // Masked for privacy
+  try {
+    // 🔒 ATOMIC OPERATION - Prevents race conditions in bidding
+    const result = await atomicData.placeBidAtomically(auctionId, lotId, {
+      bidderEmail: bidderEmail,
       bidAmount: newBid,
-      lotTitle: lot.title,
-      timestamp: new Date().toISOString(),
-      bidIncrement: bidIncrement,
-      nextMinBid: lot.currentBid + bidIncrement
+      minimumIncrement: bidIncrement,
+      originalEndTime: auction.endTime
     });
-  }
 
-  // Notify previous bidder if outbid
-  if (previousBidder && previousBidder !== lastBidder) {
-    // Real-time notification to outbid user
-    if (wsNotify) {
-      wsNotify(previousBidder, { 
-        type: 'outbid_notification',
-        message: `You've been outbid on lot "${lot.title}"!`,
-        lotId: lotId,
-        auctionId: auctionId,
-        newBid: newBid,
-        lotTitle: lot.title
+    const { bidResult } = result;
+    if (!bidResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: bidResult.error 
       });
     }
+
+    console.log('✅ Atomic bid placement successful:', bidResult);
+
+    // 🚀 REAL-TIME BID UPDATE - Send to all auction subscribers
+    if (sendBidUpdate) {
+      sendBidUpdate(auctionId, lotId, {
+        currentBid: bidResult.newBid,
+        bidderEmail: bidderEmail.substring(0, 3) + '***', // Masked for privacy
+        bidAmount: bidResult.newBid,
+        lotTitle: lot.title,
+        timestamp: new Date().toISOString(),
+        bidIncrement: bidIncrement,
+        nextMinBid: bidResult.newBid + bidIncrement,
+        auctionExtended: bidResult.auctionExtended
+      });
+    }
+
+    // Notify previous bidder if outbid
+    if (bidResult.previousBidder && bidResult.previousBidder !== bidderEmail) {
+      // Real-time notification to outbid user
+      if (wsNotify) {
+        wsNotify(bidResult.previousBidder, { 
+          type: 'outbid_notification',
+          message: `You've been outbid on lot "${lot.title}"!`,
+          lotId: lotId,
+          auctionId: auctionId,
+          newBid: bidResult.newBid,
+          lotTitle: lot.title
+        });
+      }
     
     try {
       if (sendOutbidNotification) {
@@ -700,33 +706,42 @@ router.post('/:lotId/bid', async (req, res) => {
   }
 
   writeAuctions(auctions);
-  
-  // Send bid confirmation email to the successful bidder
-  try {
-    if (sendBidConfirmation) {
-      await sendBidConfirmation({
-        bidderEmail: lastBidder,
-        lotTitle: lot.title,
-        auctionTitle: auction ? auction.title : 'Auction',
-        auctionId: auctionId,
-        lotId: lotId,
-        bidAmount: lot.currentBid,
-        timeRemaining: auction ? calculateTimeRemaining(auction.endTime) : null,
-        nextMinBid: lot.currentBid + bidIncrement,
-        wasExtended: currentTime >= auctionEndTime - fiveMinutesInMs && currentTime < auctionEndTime
-      });
+    
+    // Send bid confirmation email to the successful bidder
+    try {
+      if (sendBidConfirmation) {
+        await sendBidConfirmation({
+          bidderEmail: bidderEmail,
+          lotTitle: lot.title,
+          auctionTitle: auction ? auction.title : 'Auction',
+          auctionId: auctionId,
+          lotId: lotId,
+          bidAmount: bidResult.newBid,
+          timeRemaining: auction ? calculateTimeRemaining(auction.endTime) : null,
+          nextMinBid: bidResult.newBid + bidIncrement,
+          wasExtended: bidResult.auctionExtended
+        });
+      }
+    } catch (e) {
+      console.error('Failed to send bid confirmation email:', e.message);
     }
-  } catch (e) {
-    console.error('Failed to send bid confirmation email:', e.message);
+    
+    res.json({ 
+      success: true,
+      message: 'Bid placed successfully', 
+      currentBid: bidResult.newBid,
+      bidHistory: bidResult.bidHistory,
+      newBidAmount: bidResult.newBid,
+      auctionExtended: bidResult.auctionExtended
+    });
+
+  } catch (error) {
+    console.error('❌ Atomic bid placement failed:', error.message);
+    res.status(400).json({ 
+      success: false, 
+      error: error.message || 'Bid placement failed. Please try again.' 
+    });
   }
-  
-  res.json({ 
-    success: true,
-    message: 'Bid placed successfully', 
-    currentBid: lot.currentBid,
-    bidHistory: lot.bidHistory,
-    newBidAmount: newBid 
-  });
 });
 
 // PUT /:auctionId/:lotId/assign-seller - Assign seller to a lot (admin only)
