@@ -4,7 +4,7 @@ const path = require('path');
 const multer = require('multer');
 const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
-const authenticateToken = require('../../middleware/auth');
+const { authenticateToken } = require('../../middleware/auth');
 const verifyAdmin = require('../auth/verify-admin');
 const router = express.Router();
 
@@ -307,7 +307,11 @@ router.post('/admin/add-user', (req, res) => {
     const { email, name, adminSecret } = req.body;
     
     // Admin secret check using environment variable
-    const ADMIN_SECRET = process.env.ADMIN_SECRET || 'all4you-admin-2025';
+    const ADMIN_SECRET = process.env.ADMIN_SECRET;
+    if (!ADMIN_SECRET) {
+      console.error('🚨 CRITICAL: ADMIN_SECRET environment variable not set!');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
     if (adminSecret !== ADMIN_SECRET) {
       return res.status(403).json({ error: 'Unauthorized' });
     }

@@ -167,12 +167,22 @@ const DataInitializer = require('./utils/data-init');
 const storageManager = require('./utils/storage');
 const BackupManager = require('./utils/backup-manager');
 
+// Initialize PostgreSQL database
+const dbManager = require('./database/connection');
+const migrationManager = require('./database/migrations');
+const dbModels = require('./database/models');
+
 // Start the API server with proper initialization
 app.listen(PORT, async () => {
   console.log(`🚀 API Gateway starting on port ${PORT}...`);
   
   try {
-    // Initialize data files
+    // Initialize PostgreSQL database
+    console.log('🗄️  Initializing PostgreSQL database system...');
+    await dbManager.initialize();
+    await migrationManager.runMigrations();
+    
+    // Initialize fallback data files (for migration period)
     const dataInit = new DataInitializer();
     await dataInit.initializeDataFiles();
     await dataInit.validateDataIntegrity();

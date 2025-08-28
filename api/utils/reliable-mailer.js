@@ -20,7 +20,12 @@ class EnhancedEmailService {
    */
   initializeTransporter() {
     try {
-      this.transporter = nodemailer.createTransporter({
+      // Verify nodemailer has required methods
+      if (!nodemailer || typeof nodemailer.createTransport !== 'function') {
+        throw new Error('nodemailer.createTransport is not available');
+      }
+      
+      this.transporter = nodemailer.createTransport({
         service: 'gmail',
         host: process.env.SMTP_HOST || 'smtp.gmail.com',
         port: parseInt(process.env.SMTP_PORT) || 587,

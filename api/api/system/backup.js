@@ -1,9 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const { verifyAdmin } = require('../../middleware/auth');
-const BackupManager = require('../../utils/backup-manager');
 
-const backupManager = new BackupManager();
+// Import middleware with error handling
+let verifyAdmin;
+try {
+  const auth = require('../../middleware/auth');
+  verifyAdmin = auth.verifyAdmin;
+} catch (error) {
+  console.error('❌ Failed to load auth middleware:', error.message);
+  verifyAdmin = (req, res, next) => {
+    res.status(500).json({ error: 'Auth system unavailable' });
+  };
+}
+
+// Import BackupManager with error handling
+let backupManager;
+try {
+  const BackupManager = require('../../utils/backup-manager');
+  backupManager = new BackupManager();
+} catch (error) {
+  console.error('❌ Failed to load backup manager:', error.message);
+  backupManager = null;
+}
 
 /**
  * GET /api/system/backup/status
@@ -11,6 +29,14 @@ const backupManager = new BackupManager();
  */
 router.get('/status', verifyAdmin, async (req, res) => {
   try {
+    if (!backupManager) {
+      return res.status(503).json({
+        success: false,
+        status: 'unavailable',
+        message: 'Backup system not available'
+      });
+    }
+    
     const stats = await backupManager.getBackupStats();
     const backups = await backupManager.listBackups();
     

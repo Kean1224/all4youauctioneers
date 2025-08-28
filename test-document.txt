@@ -1,0 +1,9 @@
+Test FICA Document
+==================
+
+This is a test document for FICA verification.
+Document Type: ID Document
+User: Test User 1
+Date: 2025-08-27
+
+This document is for testing purposes only.

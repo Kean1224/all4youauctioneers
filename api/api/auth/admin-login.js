@@ -2,11 +2,13 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
 // Use a strong secret in production!
-const SECRET = process.env.JWT_SECRET || (() => {
+const SECRET = process.env.JWT_SECRET;
+
+if (!SECRET) {
   console.error('🚨 CRITICAL: JWT_SECRET environment variable not set!');
   console.error('Generate a strong secret with: openssl rand -base64 64');
-  process.exit(1);
-})();
+  throw new Error('JWT_SECRET environment variable is required');
+}
 
 // Admin credentials - load from environment variables
 const ADMIN_CREDENTIALS = [
@@ -14,7 +16,7 @@ const ADMIN_CREDENTIALS = [
     email: process.env.ADMIN_EMAIL || 'admin@all4youauctions.com', 
     password: process.env.ADMIN_PASSWORD || (() => {
       console.error('🚨 CRITICAL: ADMIN_PASSWORD environment variable not set!');
-      process.exit(1);
+      throw new Error('ADMIN_PASSWORD environment variable is required');
     })()
   }
 ];

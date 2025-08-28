@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const PDFDocument = require('pdfkit');
-const authenticateToken = require('../../middleware/auth');
+const { authenticateToken } = require('../../middleware/auth');
 const verifyAdmin = require('../auth/verify-admin');
 const { InvoicePDFGenerator } = require('../../utils/invoicePDFGenerator');
 
