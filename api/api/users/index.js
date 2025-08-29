@@ -312,7 +312,7 @@ Admin Panel: ${process.env.FRONTEND_URL || 'https://www.all4youauctions.co.za'}/
 const { sendMail } = require('../../utils/mailer');
 
 // ✅ POST: Admin endpoint to manually add missing users (for production fixes)
-router.post('/admin/add-user', (req, res) => {
+router.post('/admin/add-user', async (req, res) => {
   try {
     const { email, name, adminSecret } = req.body;
     

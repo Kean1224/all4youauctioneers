@@ -467,35 +467,7 @@ router.post('/:lotId/bid', async (req, res) => {
 
   const auctionId = auction.id;
 
-  // ✅ FICA APPROVAL CHECK - User must be approved to bid
-  const usersPath = path.join(__dirname, '../../data/users.json');
-  let users = [];
-  if (fs.existsSync(usersPath)) {
-    users = JSON.parse(fs.readFileSync(usersPath, 'utf-8'));
-  }
-  
-  const user = users.find(u => u.email === bidderEmail);
-  if (!user) {
-    return res.status(403).json({ 
-      success: false, 
-      error: 'User not found. Please register to participate in auctions.' 
-    });
-  }
-  
-  if (!user.ficaApproved) {
-    if (user.rejectionReason) {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Your FICA documents were rejected. Please re-upload your documents for approval before bidding.',
-        rejectionReason: user.rejectionReason
-      });
-    } else {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Your FICA documents are pending approval. You will be able to bid once approved by our admin team.' 
-      });
-    }
-  }
+  // FICA check is now handled earlier in the bidding endpoint (lines 433-446)
 
   if (user.suspended) {
     return res.status(403).json({ 
