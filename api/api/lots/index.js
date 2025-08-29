@@ -430,6 +430,21 @@ router.post('/:lotId/bid', async (req, res) => {
 
   console.log('🎯 Bid request received:', { lotId, bidderEmail, amount, increment });
 
+  // CRITICAL: Check FICA approval before allowing bidding
+  const users = readUsers();
+  const user = users.find(u => u.email === bidderEmail);
+  
+  if (!user) {
+    return res.status(404).json({ success: false, error: 'User not found' });
+  }
+  
+  if (!user.ficaApproved) {
+    return res.status(403).json({ 
+      success: false, 
+      error: 'FICA approval required before bidding. Please upload required documents.' 
+    });
+  }
+
   // First read auctions to find the auction ID (read-only operation)
   const auctions = readAuctions();
   

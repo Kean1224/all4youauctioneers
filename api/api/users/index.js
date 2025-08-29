@@ -328,23 +328,40 @@ router.post('/admin/add-user', (req, res) => {
 
     const users = readUsers();
     
+    // Validate input
+    if (!email || !name || !email.includes('@')) {
+      return res.status(400).json({ error: 'Invalid email or name' });
+    }
+
     // Check if user already exists
     if (users.some(u => u.email === email)) {
       return res.status(409).json({ error: 'User already exists' });
     }
 
-    // Add the missing user with default values
+    // Generate secure temporary password
+    const bcrypt = require('bcryptjs');
+    const tempPassword = require('crypto').randomBytes(12).toString('hex');
+    const hashedPassword = await bcrypt.hash(tempPassword, 12);
+
+    // Add the missing user with secure values
     const newUser = {
       email,
-      password: '$2b$10$placeholder.hash.for.manual.user', // Placeholder hash
+      password: hashedPassword,
       name,
+      phone: '',
+      idNumber: '',
+      address: '',
+      city: '',
+      postalCode: '',
       ficaApproved: false,
       suspended: false,
       registeredAt: new Date().toISOString(),
       watchlist: [],
       deposits: [],
-      idDocument: 'manually_added.pdf', // Placeholder
-      proofOfAddress: 'manually_added.pdf' // Placeholder
+      idDocument: 'admin_created_pending.pdf',
+      proofOfAddress: 'admin_created_pending.pdf',
+      tempPassword: tempPassword, // Send to admin for user notification
+      requirePasswordChange: true
     };
 
     users.push(newUser);

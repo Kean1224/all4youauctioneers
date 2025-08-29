@@ -150,12 +150,21 @@ class DatabaseManager {
       return result;
       
     } catch (error) {
-      await client.query('ROLLBACK');
-      console.error('⚠️  Transaction rolled back:', error.message);
+      try {
+        await client.query('ROLLBACK');
+        console.error('⚠️  Transaction rolled back:', error.message);
+      } catch (rollbackError) {
+        console.error('❌ ROLLBACK failed:', rollbackError.message);
+      }
       throw error;
       
     } finally {
-      client.release();
+      try {
+        client.release();
+      } catch (releaseError) {
+        console.error('❌ Client release failed:', releaseError.message);
+        // Don't throw here to avoid masking original error
+      }
     }
   }
 

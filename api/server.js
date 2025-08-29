@@ -145,19 +145,31 @@ app.get('/', (req, res) => {
 function validateEnvironment() {
   const warnings = [];
   
-  if (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'supersecretkey') {
-    warnings.push('⚠️  WARNING: Using default JWT_SECRET. Set JWT_SECRET environment variable for production.');
+  // CRITICAL: Check for production security requirements
+  const defaultSecrets = [
+    'supersecretkey', 'dev-jwt-secret', 'test-jwt-secret', 
+    'all4you-admin-2025', 'dev-admin-secret', 'test-admin-secret'
+  ];
+  
+  if (!process.env.JWT_SECRET || defaultSecrets.includes(process.env.JWT_SECRET)) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('🚨 CRITICAL: Cannot start in production with default JWT_SECRET!');
+      process.exit(1);
+    } else {
+      warnings.push('⚠️  WARNING: Using default/weak JWT_SECRET. Set strong JWT_SECRET for production.');
+    }
   }
   
-  if (!process.env.ADMIN_SECRET || process.env.ADMIN_SECRET === 'all4you-admin-2025') {
-    warnings.push('⚠️  WARNING: Using default ADMIN_SECRET. Set ADMIN_SECRET environment variable for production.');
+  if (!process.env.ADMIN_SECRET || defaultSecrets.includes(process.env.ADMIN_SECRET)) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('🚨 CRITICAL: Cannot start in production with default ADMIN_SECRET!');
+      process.exit(1);
+    } else {
+      warnings.push('⚠️  WARNING: Using default/weak ADMIN_SECRET. Set strong ADMIN_SECRET for production.');
+    }
   }
   
-  if (warnings.length > 0 && process.env.NODE_ENV === 'production') {
-    console.error('🚨 SECURITY WARNINGS:');
-    warnings.forEach(warning => console.error(warning));
-    console.error('🚨 These default secrets pose a security risk in production!');
-  } else if (warnings.length > 0) {
+  if (warnings.length > 0) {
     warnings.forEach(warning => console.warn(warning));
   }
 }

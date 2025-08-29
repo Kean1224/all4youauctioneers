@@ -96,9 +96,10 @@ class EnhancedEmailService {
       // Send the email
       const info = await this.transporter.sendMail(mailOptions);
       
-      // Reset failure count on success
+      // Reset failure count and retry delay on success
       this.failureCount = 0;
       this.lastFailure = null;
+      this.retryDelay = 2000; // Reset to initial delay
       
       console.log(`✅ Email sent successfully: ${info.messageId}`);
       return { 

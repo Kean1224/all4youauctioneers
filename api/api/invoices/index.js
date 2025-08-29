@@ -139,21 +139,26 @@ router.post('/generate/buyer/:auctionId/:userEmail', authenticateToken, async (r
       });
     }
 
-    // Calculate totals
+    // Calculate totals - CORRECTED VAT CALCULATION
     const items = wonLots.map(lot => {
-      const commission = lot.currentBid * 0.10; // 10% buyer's premium
+      const winningBid = parseFloat(lot.currentBid) || 0;
+      const commission = winningBid * 0.10; // 10% buyer's premium
       return {
         lotId: lot.id,
         lotNumber: lot.lotNumber || lot.id,
         title: lot.title,
-        winningBid: lot.currentBid,
+        winningBid: winningBid,
         commission: commission
       };
     });
 
-    const subtotal = items.reduce((sum, item) => sum + item.winningBid + item.commission, 0);
-    const vat = subtotal * 0.15; // 15% VAT
-    const total = subtotal + vat;
+    // Calculate subtotals
+    const lotSubtotal = items.reduce((sum, item) => sum + item.winningBid, 0);
+    const commissionSubtotal = items.reduce((sum, item) => sum + item.commission, 0);
+    
+    // VAT on commission only (standard practice for auction houses)
+    const commissionVAT = commissionSubtotal * 0.15; // 15% VAT on commission
+    const total = lotSubtotal + commissionSubtotal + commissionVAT;
 
     // Generate invoice number
     const invoiceNumber = `BUY-${auctionId.toUpperCase()}-${Date.now()}`;
@@ -166,8 +171,9 @@ router.post('/generate/buyer/:auctionId/:userEmail', authenticateToken, async (r
       auctionTitle: auction.title,
       userEmail,
       items,
-      subtotal,
-      vat,
+      lotSubtotal,
+      commissionSubtotal,
+      commissionVAT,
       total,
       status: 'pending',
       createdAt: new Date().toISOString(),

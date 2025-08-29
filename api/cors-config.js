@@ -1,31 +1,35 @@
 const cors = require('cors');
 
-module.exports = cors({
-  origin: [
-    // Development URLs
+// Environment-specific CORS configuration
+const corsConfig = {
+  production: [
+    'https://www.all4youauctions.co.za',
+    'https://all4youauctions.co.za',
+    'https://all4youauctioneers.onrender.com'
+  ],
+  development: [
     'http://localhost:3000',
     'http://localhost:3001', 
-    'http://localhost:3002',
-    // Production domains
-    'https://www.all4youauctions.co.za',
-    'https://all4youauctions.co.za',
-    'https://api.all4youauctions.co.za',
-    // Render deployment URLs  
-    'https://all4youauctions-frontend.onrender.com',
-    'https://all4youauctioneers-1.onrender.com',
-    'https://all4you-frontend.onrender.com',
-    'https://all4you-backend.onrender.com',
-    'https://all4youauctioneers.onrender.com',
-    // Legacy Render URLs (keep for compatibility)
-    'https://groot-cvb5.onrender.com',
-    'https://groot-1.onrender.com',
-    'https://groot-2.onrender.com',
-    'https://groot-frontend.onrender.com',
-    // Custom domain URLs (if you plan to use custom domains later)
-    'https://all4youauctions.co.za',
-    'https://www.all4youauctions.co.za',
-    'https://api.all4youauctions.co.za'
-  ],
+    'http://localhost:3002'
+  ]
+};
+
+const allowedOrigins = process.env.NODE_ENV === 'production' 
+  ? corsConfig.production 
+  : [...corsConfig.production, ...corsConfig.development];
+
+module.exports = cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    } else {
+      console.warn(`🚫 CORS blocked origin: ${origin}`);
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Origin', 'Accept']

@@ -71,13 +71,22 @@ app.post('/api/notify', (req, res) => {
     let sent = 0;
     let failed = 0;
     
+    const failedClients = [];
+    
     for (const [email, client] of wsService.clients.entries()) {
       if (wsService.sendToClient(client.ws, data)) {
         sent++;
       } else {
         failed++;
+        failedClients.push(email);
       }
     }
+    
+    // Clean up failed connections
+    failedClients.forEach(email => {
+      wsService.clients.delete(email);
+      console.log(`🧹 Removed failed client: ${email}`);
+    });
     
     console.log(`📢 Broadcast sent to ${sent} clients, ${failed} failed`);
     res.json({
