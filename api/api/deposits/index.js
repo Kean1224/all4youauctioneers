@@ -322,8 +322,8 @@ router.post('/:auctionId/:email', (req, res) => {
   res.json(entry);
 });
 
-// PUT: Admin approves deposit - temporarily remove verifyAdmin
-router.put('/:auctionId/:email', (req, res) => {
+// PUT: Admin approves deposit - ADMIN AUTHENTICATION REQUIRED
+router.put('/:auctionId/:email', verifyAdmin, (req, res) => {
   const { auctionId, email } = req.params;
   const deposits = readDeposits();
   let entry = deposits.find(d => d.auctionId === auctionId && d.email === email);

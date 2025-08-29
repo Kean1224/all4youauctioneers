@@ -89,13 +89,19 @@ router.post('/:auctionId/end', verifyAdmin, async (req, res) => {
   async function endLotWithSniperProtection(lot, auctionId) {
     // Check if lot already ended
     if (lot.status === 'ended') return;
-    // Check for sniper protection: if last bid within 4min of end, extend by 4min
+    // Check for sniper protection: if last bid within 4min of end, extend by 4min (max 3 extensions)
     let endTime = new Date(lot.endTime).getTime();
     let lastBidTime = lot.bidHistory && lot.bidHistory.length > 0 ? new Date(lot.bidHistory[lot.bidHistory.length - 1].time).getTime() : null;
-    if (lastBidTime && lastBidTime >= endTime - 4 * 60 * 1000) {
+    
+    // Initialize extension counter if not exists
+    lot.extensionCount = lot.extensionCount || 0;
+    const maxExtensions = 3; // Prevent infinite extensions
+    
+    if (lastBidTime && lastBidTime >= endTime - 4 * 60 * 1000 && lot.extensionCount < maxExtensions) {
       // Extend end time by 4min
       endTime = lastBidTime + 4 * 60 * 1000;
       lot.endTime = new Date(endTime).toISOString();
+      lot.extensionCount++;
   // Notify all buyers: Auction is live now!
   if (wsNotify) wsNotify(null, { message: `Auction "${auction.title}" is live now!` });
   // Schedule 15 min warning
@@ -578,6 +584,10 @@ router.post('/:lotId/bid', async (req, res) => {
   let autobidTriggered = true;
   while (autobidTriggered) {
     autobidTriggered = false;
+    // Get last bidder from bid history
+    const lastBidder = lot.bidHistory && lot.bidHistory.length > 0 ? 
+      lot.bidHistory[lot.bidHistory.length - 1].bidderEmail : null;
+    
     // Find all auto-bidders who can outbid current and are not the current highest bidder
     const eligible = lot.autoBids.filter(b => 
       b.maxBid >= lot.currentBid + bidIncrement && 

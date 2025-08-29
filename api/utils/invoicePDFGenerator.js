@@ -20,16 +20,22 @@ const COMPANY_INFO = {
   registration: 'Company Reg: 2024/123456/07'
 };
 
-// Banking details
+// Banking details - SECURED FROM ENVIRONMENT VARIABLES
 const BANKING_INFO = {
-  bankName: 'First National Bank (FNB)',
-  accountName: 'ALL4YOU AUCTIONEERS (PTY) LTD',
-  accountNumber: '123456789',
-  branchCode: '250655',
-  branchName: 'Johannesburg Central',
-  accountType: 'Business Current Account',
-  swiftCode: 'FIRNZAJJ'
+  bankName: process.env.BANK_NAME || 'First National Bank (FNB)',
+  accountName: process.env.BANK_ACCOUNT_NAME || 'ALL4YOU AUCTIONEERS (PTY) LTD',
+  accountNumber: process.env.BANK_ACCOUNT_NUMBER || '[ACCOUNT_NUMBER_NOT_SET]',
+  branchCode: process.env.BANK_BRANCH_CODE || '[BRANCH_CODE_NOT_SET]',
+  branchName: process.env.BANK_BRANCH_NAME || 'Johannesburg Central',
+  accountType: process.env.BANK_ACCOUNT_TYPE || 'Business Current Account',
+  swiftCode: process.env.BANK_SWIFT_CODE || '[SWIFT_CODE_NOT_SET]'
 };
+
+// Validate critical banking info is set
+if (!process.env.BANK_ACCOUNT_NUMBER || !process.env.BANK_BRANCH_CODE) {
+  console.error('🚨 CRITICAL: Banking information not properly configured in environment variables');
+  console.error('Required: BANK_ACCOUNT_NUMBER, BANK_BRANCH_CODE');
+}
 
 // Color scheme
 const COLORS = {

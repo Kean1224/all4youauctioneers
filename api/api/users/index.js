@@ -20,10 +20,20 @@ if (!fs.existsSync(uploadDir)) {
 const storage = multer.diskStorage({
   destination: uploadDir,
   filename: (req, file, cb) => {
-    const email = req.body.email.replace(/[^a-zA-Z0-9]/g, '_'); // sanitize
-    const ext = path.extname(file.originalname);
+    // Use UUID for secure filename generation
+    const { v4: uuidv4 } = require('uuid');
+    
+    // Validate and sanitize extension
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf', '.gif'];
+    
+    if (!allowedExtensions.includes(ext)) {
+      return cb(new Error('Invalid file type'), null);
+    }
+    
     const prefix = file.fieldname === 'idDocument' ? 'id' : 'proof';
-    cb(null, `${email}-${prefix}${ext}`);
+    const secureFilename = `${prefix}-${uuidv4()}${ext}`;
+    cb(null, secureFilename);
   }
 });
 
