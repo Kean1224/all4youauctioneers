@@ -369,7 +369,7 @@ Admin Panel: ${process.env.FRONTEND_URL || 'https://www.all4youauctions.co.za'}/
 const { sendMail } = require('../../utils/mailer');
 
 // ✅ POST: Admin endpoint to manually add missing users (for production fixes)
-router.post('/admin/add-user', async (req, res) => {
+router.post('/admin/add-user', verifyAdmin, async (req, res) => {
   try {
     const { email, name, adminSecret } = req.body;
     
@@ -435,7 +435,7 @@ router.post('/admin/add-user', async (req, res) => {
   }
 });
 
-router.put('/fica/:email', async (req, res) => {
+router.put('/fica/:email', verifyAdmin, async (req, res) => {
   const users = readUsers();
   const user = users.find(u => u.email === req.params.email);
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -460,7 +460,7 @@ router.put('/fica/:email', async (req, res) => {
 });
 
 // ✅ PUT: Reject FICA with reason
-router.put('/reject/:email', async (req, res) => {
+router.put('/reject/:email', verifyAdmin, async (req, res) => {
   const users = readUsers();
   const user = users.find(u => u.email === req.params.email);
   if (!user) return res.status(404).json({ error: 'User not found' });
@@ -539,7 +539,7 @@ router.put('/:email', verifyAdmin, (req, res) => {
 });
 
 // ✅ PUT: Toggle item in user's watchlist (user only, not admin)
-router.put('/:email/watchlist', (req, res) => {
+router.put('/:email/watchlist', authenticateToken, (req, res) => {
   const { lotId } = req.body;
   if (!lotId) return res.status(400).json({ error: 'Missing lotId' });
 
