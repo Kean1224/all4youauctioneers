@@ -234,6 +234,63 @@ router.post('/register', upload.fields([
     users.push(newUser);
     writeUsers(users);
     
+    // Send email verification to the user
+    try {
+      const jwt = require('jsonwebtoken');
+      const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+      
+      // Generate verification token
+      const verificationToken = jwt.sign({ email }, JWT_SECRET, { expiresIn: '24h' });
+      const verificationUrl = `${process.env.FRONTEND_URL || 'https://www.all4youauctions.co.za'}/verify-email?token=${verificationToken}`;
+      
+      // Send verification email to user
+      await sendMail({
+        to: email,
+        subject: '✅ Verify Your Email - All4You Auctions',
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h1 style="color: #059669; margin: 0;">All4You Auctions</h1>
+              <p style="color: #6b7280; margin: 5px 0;">South Africa's Premier Auction House</p>
+            </div>
+            
+            <h2 style="color: #374151;">Welcome ${name}!</h2>
+            <p style="color: #6b7280; line-height: 1.6;">
+              Thank you for registering with All4You Auctions. To complete your registration and start participating in auctions, please verify your email address by clicking the button below:
+            </p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${verificationUrl}" 
+                 style="background: #059669; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                ✅ Verify Email Address
+              </a>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+              This verification link will expire in 24 hours. If you didn't request this, please ignore this email.
+            </p>
+            
+            <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
+              <h4>Next Steps:</h4>
+              <ol style="color: #6b7280; margin: 0; padding-left: 20px;">
+                <li>Verify your email address (click button above)</li>
+                <li>Wait for FICA document approval from our team</li>
+                <li>Start bidding on amazing auction items!</li>
+              </ol>
+            </div>
+            
+            <p>Best regards,<br><strong>All4You Auctions Team</strong></p>
+          </div>
+        `,
+        text: `Welcome ${name}! Please verify your email by visiting: ${verificationUrl}`
+      });
+      
+      console.log(`✅ Verification email sent to: ${email}`);
+    } catch (emailError) {
+      console.error('Failed to send verification email:', emailError);
+      // Don't fail registration if email fails
+    }
+    
     // Send admin notification email about new registration
     try {
       await sendMail({
