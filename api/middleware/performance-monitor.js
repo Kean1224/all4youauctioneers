@@ -1,6 +1,6 @@
 const os = require('os');
 
-// =Ê Production Performance Monitoring System
+// =ï¿½ Production Performance Monitoring System
 class PerformanceMonitor {
   constructor() {
     this.metrics = {
@@ -63,20 +63,20 @@ class PerformanceMonitor {
 
     // Memory warnings
     if (memPercentage > 80) {
-      console.warn(`   HIGH MEMORY USAGE: ${memPercentage.toFixed(1)}% (${Math.round(memUsage/1024/1024)}MB)`);
+      console.warn(`ï¿½  HIGH MEMORY USAGE: ${memPercentage.toFixed(1)}% (${Math.round(memUsage/1024/1024)}MB)`);
       if (memPercentage > 95) {
-        console.error('=¨ CRITICAL MEMORY USAGE - Consider scaling up!');
+        console.error('=ï¿½ CRITICAL MEMORY USAGE - Consider scaling up!');
       }
     }
 
     // Active connections warning
     if (this.metrics.connections.active > this.metrics.connections.max * 0.8) {
-      console.warn(`   HIGH CONNECTION COUNT: ${this.metrics.connections.active}/${this.metrics.connections.max}`);
+      console.warn(`ï¿½  HIGH CONNECTION COUNT: ${this.metrics.connections.active}/${this.metrics.connections.max}`);
     }
 
     // Error rate warning
     if (this.metrics.errors.rate > 10) { // More than 10 errors per hour
-      console.warn(`   HIGH ERROR RATE: ${this.metrics.errors.rate.toFixed(1)} errors/hour`);
+      console.warn(`ï¿½  HIGH ERROR RATE: ${this.metrics.errors.rate.toFixed(1)} errors/hour`);
     }
   }
 
@@ -103,7 +103,7 @@ class PerformanceMonitor {
     const uptime = Math.floor((Date.now() - this.startTime) / 1000 / 60); // minutes
     const memMB = Math.round(this.metrics.memory.usage / 1024 / 1024);
     
-    console.log('=Ê Performance Metrics:');
+    console.log('=ï¿½ Performance Metrics:');
     console.log(`   Uptime: ${uptime} minutes`);
     console.log(`   Total Requests: ${this.metrics.requests.total}`);
     console.log(`   Active Requests: ${this.metrics.requests.active}`);
@@ -138,9 +138,15 @@ class PerformanceMonitor {
           timestamp: Date.now()
         });
 
-        // Track errors
+        // Track errors (exclude 404s for non-API routes like favicon.ico, robots.txt, etc.)
         if (res.statusCode >= 400) {
-          this.metrics.errors.count++;
+          const isApiRoute = req.path.startsWith('/api/') || req.path.startsWith('/health');
+          const is404NonApi = res.statusCode === 404 && !isApiRoute;
+          
+          // Only count as error if it's an API route or non-404 error
+          if (!is404NonApi) {
+            this.metrics.errors.count++;
+          }
         }
 
         // Log slow requests in production
@@ -198,7 +204,7 @@ class PerformanceMonitor {
     try {
       if (global.gc) {
         global.gc();
-        console.log('>ù Forced garbage collection');
+        console.log('>ï¿½ Forced garbage collection');
       }
     } catch (error) {
       console.error('Error during forced cleanup:', error);

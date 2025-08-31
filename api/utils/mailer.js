@@ -1,5 +1,10 @@
 const nodemailer = require('nodemailer');
 
+// Ensure environment variables are loaded
+if (!process.env.SMTP_HOST) {
+  require('dotenv').config();
+}
+
 console.log('🔧 Configuring Email Transporter...');
 console.log('SMTP Host:', process.env.SMTP_HOST);
 console.log('SMTP Port:', process.env.SMTP_PORT);

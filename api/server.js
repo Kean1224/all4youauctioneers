@@ -73,6 +73,24 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Handle common static file requests to reduce 404 errors
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain');
+  res.send('User-agent: *\nDisallow: /api/\nDisallow: /admin/');
+});
+
+// Add performance headers for API responses
+app.use((req, res, next) => {
+  if (req.path.startsWith('/api/')) {
+    // Don't cache API responses
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
+  next();
+});
+
 // Middleware - Static file serving with CORS headers
 app.use('/uploads', (req, res, next) => {
   console.log(`Static file request: ${req.method} ${req.path}`);

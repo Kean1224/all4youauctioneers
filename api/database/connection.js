@@ -30,17 +30,17 @@ class DatabaseManager {
         port: process.env.DB_PORT || 5432,
         database: process.env.DB_NAME || 'all4you_auctions',
         user: process.env.DB_USER || 'postgres',
-        password: process.env.DB_PASSWORD || 'password',
+        password: process.env.DB_PASS || process.env.DB_PASSWORD || 'password',
         
         // Connection pool settings
         max: 20, // Maximum number of clients
         idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
         connectionTimeoutMillis: 10000, // Return error if connection takes longer than 10 seconds
         
-        // SSL configuration for production
-        ssl: process.env.NODE_ENV === 'production' ? {
+        // SSL configuration for Render PostgreSQL (always required)
+        ssl: {
           rejectUnauthorized: false
-        } : false
+        }
       };
 
       // Create connection pool
