@@ -95,11 +95,11 @@ router.get('/:id', (req, res) => {
 });
 
 // POST new auction (admin only)
-router.post('/', verifyAdmin, upload.single('auctionImage'), (req, res) => {
+router.post('/', verifyAdmin, upload.fields([{ name: 'auctionImage', maxCount: 1 }]), (req, res) => {
   try {
     console.log('🎯 Auction creation request received:', {
       body: req.body,
-      hasFile: !!req.file,
+      hasFile: !!(req.files && req.files.auctionImage),
       user: req.user?.email
     });
     
@@ -129,7 +129,7 @@ router.post('/', verifyAdmin, upload.single('auctionImage'), (req, res) => {
     increment: parsedIncrement,
     depositRequired: !!depositRequired,
     depositAmount: parsedDepositAmount,
-    auctionImage: req.file ? `/uploads/auctions/${req.file.filename}` : null,
+    auctionImage: (req.files && req.files.auctionImage && req.files.auctionImage[0]) ? `/uploads/auctions/${req.files.auctionImage[0].filename}` : null,
     lots: [],
     createdAt: new Date().toISOString(),
   };
