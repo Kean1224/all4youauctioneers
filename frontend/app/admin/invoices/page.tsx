@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { getApiUrl } from '../../../lib/api';
 import AdminSidebar from '../../../components/AdminSidebar';
 import ModernAdminLayout from '../../../components/ModernAdminLayout';
+import { getToken } from '../../../utils/auth';
 
 type Invoice = {
   id: string;
@@ -47,7 +48,13 @@ function AdminInvoicesPage() {
 
   const fetchInvoices = async () => {
     try {
-      const res = await fetch(`${getApiUrl()}/api/invoices/admin/all`);
+      const token = getToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      };
+      
+      const res = await fetch(`${getApiUrl()}/api/invoices/admin/all`, { headers });
       const data = await res.json();
       // data shape: { invoices, stats }
       const invoicesArr = Array.isArray(data.invoices) ? data.invoices : [];
@@ -145,9 +152,15 @@ function AdminInvoicesPage() {
                           if (!inv.paid) {
                             // Mark as paid in backend (admin endpoint)
                             try {
+                              const token = getToken();
+                              const headers = {
+                                'Content-Type': 'application/json',
+                                ...(token && { 'Authorization': `Bearer ${token}` })
+                              };
+                              
                               const res = await fetch(`${getApiUrl()}/api/invoices/admin/${inv.id}/mark-paid`, {
                                 method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
+                                headers,
                                 body: JSON.stringify({}),
                               });
                               if (!res.ok) throw new Error('Failed to update');
@@ -210,9 +223,15 @@ function AdminInvoicesPage() {
                   onClick={async () => {
                     if (!selectedInvoice.paid) {
                       try {
+                        const token = getToken();
+                        const headers = {
+                          'Content-Type': 'application/json',
+                          ...(token && { 'Authorization': `Bearer ${token}` })
+                        };
+                        
                         const res = await fetch(`${getApiUrl()}/api/invoices/${selectedInvoice.id}/paid`, {
                           method: 'PUT',
-                          headers: { 'Content-Type': 'application/json' },
+                          headers,
                         });
                         if (!res.ok) throw new Error('Failed to update');
                         setInvoices(prev => prev.map(i => i.id === selectedInvoice.id ? { ...i, paid: true } : i));

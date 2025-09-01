@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { getApiUrl } from "../../../lib/api";
 import AdminSidebar from "../../../components/AdminSidebar";
+import { getToken } from "../../../utils/auth";
 
 export default function AdminAuctionDepositsPage() {
   const [auctions, setAuctions] = useState<any[]>([]);
@@ -9,25 +10,43 @@ export default function AdminAuctionDepositsPage() {
   const [deposits, setDeposits] = useState<any[]>([]);
 
   useEffect(() => {
-    fetch(`${getApiUrl()}/api/auctions`)
+    const token = getToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+    
+    fetch(`${getApiUrl()}/api/auctions`, { headers })
       .then((res) => res.json())
       .then(setAuctions);
   }, []);
 
   useEffect(() => {
     if (!selectedAuction) return;
-    fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`)
+    const token = getToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+    
+    fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`, { headers })
       .then((res) => res.json())
       .then(setDeposits);
   }, [selectedAuction]);
 
   const handleApprove = async (email: string) => {
+    const token = getToken();
+    const headers = {
+      "Content-Type": "application/json",
+      ...(token && { "Authorization": `Bearer ${token}` })
+    };
+    
     await fetch(`${getApiUrl()}/api/deposits/${selectedAuction}/${email}`, {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify({ status: "approved" }),
     });
-    fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`)
+    fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`, { headers })
       .then((res) => res.json())
       .then(setDeposits);
   };

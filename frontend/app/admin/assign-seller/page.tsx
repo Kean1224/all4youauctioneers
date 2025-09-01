@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { getApiUrl } from '../../../lib/api';
 import ModernAdminLayout from '../../../components/ModernAdminLayout';
+import { getToken } from '../../../utils/auth';
 
 export default function AssignSellerPage() {
   const [auctions, setAuctions] = useState<any[]>([]);
@@ -14,17 +15,29 @@ export default function AssignSellerPage() {
   const [status, setStatus] = useState('');
 
   useEffect(() => {
-    fetch(`${getApiUrl()}/api/auctions`)
+    const token = getToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+    
+    fetch(`${getApiUrl()}/api/auctions`, { headers })
       .then(res => res.json())
       .then(setAuctions);
-    fetch(`${getApiUrl()}/api/users`)
+    fetch(`${getApiUrl()}/api/users`, { headers })
       .then(res => res.json())
       .then(data => setUsers(data.filter((u: any) => u.role !== 'admin' && !u.suspended)));
   }, []);
 
   useEffect(() => {
     if (selectedAuctionId) {
-      fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}`)
+      const token = getToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      };
+      
+      fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}`, { headers })
         .then(res => res.json())
         .then(setLots);
     } else {
@@ -35,9 +48,15 @@ export default function AssignSellerPage() {
   const handleAssign = async () => {
     if (!selectedAuctionId || !selectedLotId || !selectedSeller) return;
     setStatus('');
+    const token = getToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+    
     const res = await fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}/${selectedLotId}/assign-seller`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ sellerEmail: selectedSeller })
     });
     if (res.ok) {

@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import ModernAdminLayout from "../../../components/ModernAdminLayout";
 import AdminSidebar from "../../../components/AdminSidebar";
+import { getToken } from '../../../utils/auth';
 
 export default function AdminAuctionsPage() {
   const router = useRouter();
@@ -43,7 +44,13 @@ export default function AdminAuctionsPage() {
   const fetchAuctions = async () => {
     try {
       const { getApiUrl } = await import('../../../lib/api');
-      const res = await fetch(`${getApiUrl()}/api/auctions`);
+      const token = getToken();
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      };
+      
+      const res = await fetch(`${getApiUrl()}/api/auctions`, { headers });
       const data = await res.json();
       setAuctions(data);
     } catch (e) {
@@ -65,8 +72,14 @@ export default function AdminAuctionsPage() {
       formData.append("depositAmount", String(form.depositAmount));
       if (selectedImage) formData.append("image", selectedImage);
       const { getApiUrl } = await import('../../../lib/api');
+      const token = getToken();
+      const headers = {
+        ...(token && { 'Authorization': `Bearer ${token}` })
+      };
+      
       const res = await fetch(`${getApiUrl()}/api/auctions`, {
         method: "POST",
+        headers,
         body: formData,
       });
       if (res.ok) {
@@ -90,7 +103,13 @@ export default function AdminAuctionsPage() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this auction?")) return;
     const { getApiUrl } = await import('../../../lib/api');
-    await fetch(`${getApiUrl()}/api/auctions/${id}`, { method: "DELETE" });
+    const token = getToken();
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    };
+    
+    await fetch(`${getApiUrl()}/api/auctions/${id}`, { method: "DELETE", headers });
     fetchAuctions();
   };
 
