@@ -441,6 +441,108 @@ class DatabaseModels {
   /**
    * Get lot with current bid information
    */
+  /**
+   * Get all lots for an auction
+   */
+  async getLotsByAuctionId(auctionId) {
+    const query = `
+      SELECT l.*,
+             COALESCE(MAX(b.bid_amount), l.starting_bid) as current_bid,
+             COUNT(b.id) as bid_count
+      FROM lots l
+      LEFT JOIN bids b ON l.id = b.lot_id
+      WHERE l.auction_id = $1
+      GROUP BY l.id
+      ORDER BY l.id
+    `;
+    const result = await dbManager.query(query, [auctionId]);
+    return result.rows;
+  }
+
+  /**
+   * Update lot details
+   */
+  async updateLot(lotId, lotData) {
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    // Build dynamic update query
+    Object.keys(lotData).forEach(key => {
+      if (lotData[key] !== undefined) {
+        fields.push(`${key} = $${paramIndex}`);
+        values.push(lotData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (fields.length === 0) {
+      throw new Error('No fields to update');
+    }
+
+    values.push(lotId); // Add lotId as last parameter
+    const query = `
+      UPDATE lots 
+      SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+
+    const result = await dbManager.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Delete lot from database
+   */
+  async deleteLot(lotId) {
+    const query = 'DELETE FROM lots WHERE id = $1 RETURNING *';
+    const result = await dbManager.query(query, [lotId]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Get lot by ID with basic info
+   */
+  async getLotById(lotId) {
+    const query = 'SELECT * FROM lots WHERE id = $1';
+    const result = await dbManager.query(query, [lotId]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Set auto-bid for a lot
+   */
+  async setAutoBid(lotId, bidderEmail, maxBid) {
+    // For now, store auto-bids as JSON in a separate field or create auto_bids table later
+    // This is a temporary solution - should create a proper auto_bids table
+    const query = `
+      UPDATE lots 
+      SET auto_bids = COALESCE(auto_bids, '[]'::jsonb) || jsonb_build_object($2, $3)::jsonb,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `;
+    const result = await dbManager.query(query, [lotId, bidderEmail, maxBid]);
+    return result.rows[0];
+  }
+
+  /**
+   * Get auto-bid for a user on a lot
+   */
+  async getAutoBid(lotId, bidderEmail) {
+    const query = `
+      SELECT auto_bids->$2 as max_bid 
+      FROM lots 
+      WHERE id = $1
+    `;
+    const result = await dbManager.query(query, [lotId, bidderEmail]);
+    return result.rows[0]?.max_bid || null;
+  }
+
+  /**
+   * Get lot with current bid information
+   */
   async getLotWithBids(lotId) {
     const query = `
       SELECT l.*,

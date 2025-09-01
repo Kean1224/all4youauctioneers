@@ -246,6 +246,29 @@ class MigrationManager {
           ALTER TABLE auctions DROP COLUMN IF EXISTS deposit_required;
           ALTER TABLE auctions DROP COLUMN IF EXISTS deposit_amount;
         `
+      },
+
+      {
+        version: 11,
+        name: 'add_auto_bids_and_lot_number_to_lots',
+        up: `
+          ALTER TABLE lots ADD COLUMN IF NOT EXISTS auto_bids JSONB DEFAULT '{}';
+          ALTER TABLE lots ADD COLUMN IF NOT EXISTS lot_number INTEGER;
+          ALTER TABLE lots ADD COLUMN IF NOT EXISTS end_time TIMESTAMP;
+          
+          -- Create index for auto_bids queries
+          CREATE INDEX IF NOT EXISTS idx_lots_auto_bids ON lots USING GIN (auto_bids);
+          CREATE INDEX IF NOT EXISTS idx_lots_lot_number ON lots(lot_number);
+          CREATE INDEX IF NOT EXISTS idx_lots_end_time ON lots(end_time);
+        `,
+        down: `
+          DROP INDEX IF EXISTS idx_lots_auto_bids;
+          DROP INDEX IF EXISTS idx_lots_lot_number;
+          DROP INDEX IF EXISTS idx_lots_end_time;
+          ALTER TABLE lots DROP COLUMN IF EXISTS auto_bids;
+          ALTER TABLE lots DROP COLUMN IF EXISTS lot_number;
+          ALTER TABLE lots DROP COLUMN IF EXISTS end_time;
+        `
       }
     ];
   }
