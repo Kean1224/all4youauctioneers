@@ -340,6 +340,64 @@ class DatabaseModels {
   }
 
   /**
+   * Delete auction from database (CASCADE deletes lots and bids)
+   */
+  async deleteAuction(auctionId) {
+    return await dbManager.transaction(async (client) => {
+      // Get auction info before deletion
+      const auctionQuery = 'SELECT * FROM auctions WHERE id = $1';
+      const auctionResult = await client.query(auctionQuery, [auctionId]);
+      
+      if (auctionResult.rows.length === 0) {
+        throw new Error('Auction not found');
+      }
+      
+      const auction = auctionResult.rows[0];
+      
+      // Delete auction (CASCADE will delete lots, bids, invoices, etc.)
+      const deleteQuery = 'DELETE FROM auctions WHERE id = $1 RETURNING *';
+      const deleteResult = await client.query(deleteQuery, [auctionId]);
+      
+      console.log(`🗑️ Deleted auction ${auctionId}: "${auction.title}" with all associated data`);
+      
+      return deleteResult.rows[0];
+    });
+  }
+
+  /**
+   * Update auction details
+   */
+  async updateAuction(auctionId, auctionData) {
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+
+    // Build dynamic update query
+    Object.keys(auctionData).forEach(key => {
+      if (auctionData[key] !== undefined) {
+        fields.push(`${key} = $${paramIndex}`);
+        values.push(auctionData[key]);
+        paramIndex++;
+      }
+    });
+
+    if (fields.length === 0) {
+      throw new Error('No fields to update');
+    }
+
+    values.push(auctionId); // Add auctionId as last parameter
+    const query = `
+      UPDATE auctions 
+      SET ${fields.join(', ')}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+
+    const result = await dbManager.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
    * Store auction image as base64 in PostgreSQL
    */
   async storeAuctionImage(imageData) {

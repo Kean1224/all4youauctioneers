@@ -254,18 +254,27 @@ router.put('/:id', verifyAdmin, upload.any(), (req, res) => {
   res.json(auctions[index]);
 });
 
-// DELETE auction (admin only)
-router.delete('/:id', verifyAdmin, (req, res) => {
-  const { id } = req.params;
-  let auctions = readAuctions();
-  const auction = auctions.find(a => a.id === id);
-
-  if (!auction) return res.status(404).json({ error: 'Auction not found' });
-
-  auctions = auctions.filter(a => a.id !== id);
-  writeAuctions(auctions);
-
-  res.json({ message: 'Auction deleted successfully' });
+// DELETE auction (admin only) - MIGRATED TO POSTGRESQL
+router.delete('/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Delete auction from database (CASCADE deletes lots, bids, etc.)
+    const deletedAuction = await dbModels.deleteAuction(id);
+    
+    res.json({ 
+      message: 'Auction deleted successfully', 
+      auction: deletedAuction 
+    });
+    
+  } catch (error) {
+    if (error.message === 'Auction not found') {
+      return res.status(404).json({ error: 'Auction not found' });
+    }
+    
+    console.error('Error deleting auction:', error);
+    res.status(500).json({ error: 'Failed to delete auction' });
+  }
 });
 
 // GET /:id/lots - Get all lots for a specific auction
