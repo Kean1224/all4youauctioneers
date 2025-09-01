@@ -96,7 +96,7 @@ function LotCard({
         {images.length > 0 ? (
           <>
             <Image
-              src={images[0].startsWith('http') ? images[0] : `${API_URL}${images[0]}`}
+              src={images[0].startsWith('http') || images[0].startsWith('data:') ? images[0] : `${API_URL}${images[0]}`}
               alt={lot.title || 'Auction Lot Image'}
               fill
               className="object-cover group-hover:scale-105 transition-transform duration-700"
@@ -1269,7 +1269,7 @@ export default function AuctionDetailPage() {
                   <div className="relative">
                     <Image
                       src={
-                        imageModal.images[imageModal.currentIndex]?.startsWith('http') 
+                        imageModal.images[imageModal.currentIndex]?.startsWith('http') || imageModal.images[imageModal.currentIndex]?.startsWith('data:')
                           ? imageModal.images[imageModal.currentIndex]
                           : `${API_URL}${imageModal.images[imageModal.currentIndex]}`
                       }
@@ -1309,7 +1309,7 @@ export default function AuctionDetailPage() {
                         >
                           <Image
                             src={
-                              img.startsWith('http') 
+                              img.startsWith('http') || img.startsWith('data:')
                                 ? img
                                 : `${API_URL}${img}`
                             }

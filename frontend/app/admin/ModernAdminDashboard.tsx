@@ -68,6 +68,7 @@ export default function ModernAdminDashboard() {
     monthlyGrowth: 0
   });
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([]);
+  const [auctions, setAuctions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -84,6 +85,9 @@ export default function ModernAdminDashboard() {
         fetch(`${getApiUrl()}/auctions`).then(res => res.json()).catch(() => []),
         fetch(`${getApiUrl()}/sell-item`).then(res => res.json()).catch(() => [])
       ]);
+
+      // Store auctions for the auctions tab
+      setAuctions(auctions);
 
       const lots = auctions.reduce((acc: number, auction: any) => acc + (auction.lots?.length || 0), 0);
       const activeAuctions = auctions.filter((auction: any) => auction.status === 'active').length;
@@ -376,8 +380,121 @@ export default function ModernAdminDashboard() {
                 </motion.div>
               )}
 
+              {/* Auctions Tab */}
+              {activeTab === 'auctions' && (
+                <motion.div
+                  key="auctions"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                >
+                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-6 mb-6">
+                    <h3 className="text-xl font-bold text-white mb-6">Auction Management</h3>
+                    
+                    {auctions.length === 0 ? (
+                      <div className="text-center py-12">
+                        <TrophyIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-400 mb-2">No auctions found</p>
+                        <p className="text-gray-500 text-sm">Create your first auction to get started</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {auctions.map((auction, index) => (
+                          <div key={auction.id || index} className="bg-white/5 border border-white/10 rounded-xl p-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="text-lg font-semibold text-white mb-2">{auction.title}</h4>
+                                <p className="text-gray-400 text-sm mb-3">{auction.description}</p>
+                                
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                  <div>
+                                    <p className="text-gray-500 text-xs">Status</p>
+                                    <p className="text-white font-medium">{auction.status || 'Active'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500 text-xs">Total Lots</p>
+                                    <p className="text-white font-medium">{auction.lots?.length || 0}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500 text-xs">Start Date</p>
+                                    <p className="text-white font-medium">
+                                      {auction.startTime ? new Date(auction.startTime).toLocaleDateString() : 'Not set'}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500 text-xs">End Date</p>
+                                    <p className="text-white font-medium">
+                                      {auction.endTime ? new Date(auction.endTime).toLocaleDateString() : 'Not set'}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Lots Display */}
+                                {auction.lots && auction.lots.length > 0 && (
+                                  <div>
+                                    <h5 className="text-white font-medium mb-3">Lots ({auction.lots.length})</h5>
+                                    <div className="space-y-2">
+                                      {auction.lots.map((lot: any, lotIndex: number) => (
+                                        <div key={lot.id || lotIndex} className="bg-white/5 border border-white/5 rounded-lg p-3">
+                                          <div className="flex items-center gap-4">
+                                            {lot.images && lot.images.length > 0 && (
+                                              <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                                                <img 
+                                                  src={lot.images[0].startsWith('data:') || lot.images[0].startsWith('http') 
+                                                    ? lot.images[0] 
+                                                    : `${getApiUrl()}${lot.images[0]}`
+                                                  }
+                                                  alt={lot.title}
+                                                  className="w-full h-full object-cover"
+                                                  onError={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.style.display = 'none';
+                                                  }}
+                                                />
+                                              </div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                              <h6 className="text-white font-medium truncate">{lot.title}</h6>
+                                              <p className="text-gray-400 text-sm truncate">{lot.description}</p>
+                                              <div className="flex items-center gap-4 mt-1">
+                                                <span className="text-green-400 text-sm">
+                                                  Start: R{(lot.startingPrice || lot.startPrice || 0).toLocaleString()}
+                                                </span>
+                                                <span className="text-blue-400 text-sm">
+                                                  Current: R{(lot.currentBid || lot.startingPrice || lot.startPrice || 0).toLocaleString()}
+                                                </span>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="flex gap-2 ml-4">
+                                <button className="p-2 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/30 transition-colors">
+                                  <EyeIcon className="w-4 h-4" />
+                                </button>
+                                <button className="p-2 bg-green-500/20 text-green-400 rounded-lg hover:bg-green-500/30 transition-colors">
+                                  <PencilIcon className="w-4 h-4" />
+                                </button>
+                                <button className="p-2 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors">
+                                  <TrashIcon className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
               {/* Other tabs would be implemented similarly */}
-              {activeTab !== 'overview' && activeTab !== 'users' && (
+              {activeTab !== 'overview' && activeTab !== 'users' && activeTab !== 'auctions' && (
                 <motion.div
                   key={activeTab}
                   initial={{ opacity: 0, y: 20 }}
