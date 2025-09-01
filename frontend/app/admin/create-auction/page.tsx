@@ -146,6 +146,7 @@ export default function CreateAuctionPage() {
 
       const token = getToken();
       console.log('Creating auction with token:', token ? 'present' : 'missing');
+      console.log('Token value:', token?.substring(0, 50) + '...');
       
       const auctionResponse = await fetch(`${getApiUrl()}/api/auctions`, {
         method: 'POST',
