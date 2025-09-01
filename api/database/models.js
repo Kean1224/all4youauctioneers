@@ -649,12 +649,33 @@ class DatabaseModels {
       SELECT bidder_email, bid_amount, bid_time, is_auto_bid
       FROM bids
       WHERE lot_id = $1
-      ORDER BY bid_amount DESC, bid_time DESC
+      ORDER BY bid_time ASC
       LIMIT $2
     `;
     
     const result = await dbManager.query(query, [lotId, limit]);
-    return result.rows;
+    
+    // Transform to expected frontend format
+    return result.rows.map(bid => ({
+      bidderEmail: bid.bidder_email,
+      amount: parseFloat(bid.bid_amount),
+      time: bid.bid_time,
+      isAutoBid: bid.is_auto_bid || false
+    }));
+  }
+
+  /**
+   * Get lots with bid history for an auction
+   */
+  async getLotsWithBidHistory(auctionId) {
+    const lots = await this.getLotsByAuctionId(auctionId);
+    
+    // Get bid history for each lot
+    for (let lot of lots) {
+      lot.bidHistory = await this.getBidHistory(lot.id);
+    }
+    
+    return lots;
   }
 
   // ===================== INVOICES MODEL =====================

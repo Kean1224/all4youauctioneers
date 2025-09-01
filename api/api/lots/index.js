@@ -144,13 +144,30 @@ router.get('/:auctionId', async (req, res) => {
       return res.status(404).json({ error: 'Auction not found' });
     }
 
-    // Get lots from database
-    let lots = await dbModels.getLotsByAuctionId(auctionId);
-  
-    // TODO: Add automatic lot numbering and end time assignment via database updates if needed
-    // For now, return lots as they are from database
+    // Get lots with bid history from database
+    let lots = await dbModels.getLotsWithBidHistory(auctionId);
     
-    res.json({ lots });
+    // Transform database format to frontend format
+    const transformedLots = lots.map(lot => ({
+      id: lot.id,
+      title: lot.title,
+      description: lot.description,
+      startPrice: parseFloat(lot.starting_bid) || 0,
+      currentBid: parseFloat(lot.current_bid) || parseFloat(lot.starting_bid) || 0,
+      bidIncrement: parseFloat(lot.bid_increment) || 10,
+      image: lot.image_urls && lot.image_urls.length > 0 ? lot.image_urls[0] : '',
+      images: lot.image_urls || [],
+      bidHistory: lot.bidHistory || [],
+      endTime: lot.end_time,
+      lotNumber: lot.lot_number,
+      sellerEmail: lot.seller_email,
+      condition: lot.condition || 'Good',
+      createdAt: lot.created_at,
+      status: lot.status,
+      bid_count: parseInt(lot.bid_count) || 0
+    }));
+    
+    res.json({ lots: transformedLots });
   } catch (error) {
     console.error('Error fetching lots:', error);
     res.status(500).json({ error: 'Failed to fetch lots' });
