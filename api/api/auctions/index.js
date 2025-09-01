@@ -117,6 +117,11 @@ router.post('/', verifyAdmin, upload.any(), async (req, res) => {
     }
   }
 
+  // Get user ID from email
+  const userEmail = req.user?.email || 'admin@all4youauctions.co.za';
+  const user = await dbModels.getUserByEmail(userEmail);
+  const userId = user ? user.id : null;
+
   const newAuctionData = {
     title,
     description: description || '',
@@ -127,7 +132,7 @@ router.post('/', verifyAdmin, upload.any(), async (req, res) => {
     deposit_required: !!depositRequired,
     deposit_amount: parsedDepositAmount,
     image_urls: imageUrl ? [imageUrl] : [],
-    created_by: req.user?.email || 'admin',
+    created_by: userId,
     status: 'draft'
   };
   
