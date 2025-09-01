@@ -283,8 +283,8 @@ class DatabaseModels {
    */
   async createAuction(auctionData) {
     const query = `
-      INSERT INTO auctions (title, description, status, start_time, end_time, created_by, image_urls)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO auctions (title, description, status, start_time, end_time, created_by, image_urls, location, increment, deposit_required, deposit_amount)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
     
@@ -295,7 +295,11 @@ class DatabaseModels {
       auctionData.start_time || null,
       auctionData.end_time || null,
       auctionData.created_by || null,
-      auctionData.image_urls || []
+      auctionData.image_urls || [],
+      auctionData.location || null,
+      auctionData.increment || 10,
+      auctionData.deposit_required || false,
+      auctionData.deposit_amount || 0
     ];
     
     const result = await dbManager.query(query, values);

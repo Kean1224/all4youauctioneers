@@ -57,7 +57,18 @@ router.get('/', async (req, res) => {
   try {
     const auctions = await dbModels.getAllAuctions();
     const activeAuctions = auctions.filter(auction => !isAuctionCompleted(auction));
-    res.json(activeAuctions);
+    
+    // Transform auctions to match frontend expectations
+    const transformedAuctions = activeAuctions.map(auction => ({
+      ...auction,
+      // Add frontend-expected field names
+      startDate: auction.start_time,
+      endDate: auction.end_time,
+      auctionImage: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
+      image: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null
+    }));
+    
+    res.json(transformedAuctions);
   } catch (error) {
     console.error('Error fetching auctions:', error);
     res.status(500).json({ error: 'Failed to fetch auctions' });
@@ -69,7 +80,18 @@ router.get('/past', async (req, res) => {
   try {
     const auctions = await dbModels.getAllAuctions();
     const completedAuctions = auctions.filter(auction => isAuctionCompleted(auction));
-    res.json(completedAuctions);
+    
+    // Transform auctions to match frontend expectations
+    const transformedAuctions = completedAuctions.map(auction => ({
+      ...auction,
+      // Add frontend-expected field names
+      startDate: auction.start_time,
+      endDate: auction.end_time,
+      auctionImage: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
+      image: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null
+    }));
+    
+    res.json(transformedAuctions);
   } catch (error) {
     console.error('Error fetching past auctions:', error);
     res.status(500).json({ error: 'Failed to fetch past auctions' });
@@ -86,8 +108,18 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Auction not found' });
     }
 
+    // Transform auction to match frontend expectations
+    const transformedAuction = {
+      ...auction,
+      // Add frontend-expected field names
+      startDate: auction.start_time,
+      endDate: auction.end_time,
+      auctionImage: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
+      image: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null
+    };
+
     // TODO: Implement view count increment in database if needed
-    res.json(auction);
+    res.json(transformedAuction);
   } catch (error) {
     console.error('Error fetching auction:', error);
     res.status(500).json({ error: 'Failed to fetch auction' });
