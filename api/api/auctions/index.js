@@ -96,11 +96,19 @@ router.get('/:id', (req, res) => {
 
 // POST new auction (admin only)
 router.post('/', verifyAdmin, upload.single('auctionImage'), (req, res) => {
-  const { title, description, location, startTime, endTime, increment, depositRequired, depositAmount } = req.body;
+  try {
+    console.log('🎯 Auction creation request received:', {
+      body: req.body,
+      hasFile: !!req.file,
+      user: req.user?.email
+    });
+    
+    const { title, description, location, startTime, endTime, increment, depositRequired, depositAmount } = req.body;
 
-  if (!title || !startTime || !endTime || !increment) {
-    return res.status(400).json({ error: 'Missing required fields.' });
-  }
+    if (!title || !startTime || !endTime || !increment) {
+      console.log('❌ Missing required fields:', { title, startTime, endTime, increment });
+      return res.status(400).json({ error: 'Missing required fields.' });
+    }
 
   const auctions = readAuctions();
 
@@ -122,7 +130,13 @@ router.post('/', verifyAdmin, upload.single('auctionImage'), (req, res) => {
   auctions.push(newAuction);
   writeAuctions(auctions);
 
+  console.log('✅ Auction created successfully:', newAuction.id, newAuction.title);
   res.status(201).json(newAuction);
+  
+  } catch (error) {
+    console.error('🚨 Auction creation error:', error);
+    res.status(500).json({ error: 'Internal server error: ' + error.message });
+  }
 });
 
 // PUT update an auction (admin only)
