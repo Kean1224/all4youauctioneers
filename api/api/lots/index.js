@@ -282,18 +282,22 @@ router.get('/:auctionId', (req, res) => {
 });
 
 // ✅ POST: Add a new lot to an auction
-router.post('/:auctionId', verifyAdmin, upload.fields([{ name: 'images', maxCount: 10 }]), async (req, res) => {
+router.post('/:auctionId', verifyAdmin, upload.any(), async (req, res) => {
   try {
     const { auctionId } = req.params;
     const { title, description, startPrice, bidIncrement, endTime, sellerEmail, condition } = req.body;
     
     // Handle multiple images - store in PostgreSQL
     let imageUrls = [];
-    if (req.files && req.files.images) {
-      for (const file of req.files.images) {
-        const imageUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-        imageUrls.push(imageUrl);
+    if (req.files && req.files.length > 0) {
+      console.log('📄 Files received for lot:', req.files.map(f => ({ fieldname: f.fieldname, filename: f.originalname })));
+      for (const file of req.files) {
+        if (file.fieldname.includes('image') || file.fieldname === 'images') {
+          const imageUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+          imageUrls.push(imageUrl);
+        }
       }
+      console.log('🖼️ Processed', imageUrls.length, 'images for lot');
     }
 
     // Get auction to check if it exists

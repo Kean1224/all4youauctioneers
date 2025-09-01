@@ -120,11 +120,14 @@ router.post('/', verifyAdmin, upload.any(), async (req, res) => {
   // Handle image upload to PostgreSQL
   let imageUrl = null;
   if (req.files && req.files.length > 0) {
-    const imageFile = req.files.find(f => f.fieldname === 'auctionImage');
+    // Try both 'image' and 'auctionImage' field names for compatibility
+    const imageFile = req.files.find(f => f.fieldname === 'image' || f.fieldname === 'auctionImage');
     if (imageFile) {
       // Store image as base64 in PostgreSQL
       imageUrl = `data:${imageFile.mimetype};base64,${imageFile.buffer.toString('base64')}`;
-      console.log('🖼️ Image stored in PostgreSQL');
+      console.log('🖼️ Image stored in PostgreSQL, fieldname:', imageFile.fieldname);
+    } else {
+      console.log('🚨 No image file found. Available fields:', req.files.map(f => f.fieldname));
     }
   }
 
