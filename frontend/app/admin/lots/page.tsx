@@ -93,7 +93,7 @@ export default function AdminLotsPage() {
         fetch(`${getApiUrl()}/api/auctions/past`, { headers })
       ]);
       
-      let allAuctions: Auction[] = [];
+      let allAuctions: any[] = [];
       
       if (activeResponse.ok) {
         const activeAuctions = await activeResponse.json();
@@ -115,13 +115,29 @@ export default function AdminLotsPage() {
         return;
       }
       
+      // Fetch lots for each auction
+      const auctionsWithLots = await Promise.all(
+        allAuctions.map(async (auction) => {
+          try {
+            const lotsResponse = await fetch(`${getApiUrl()}/api/lots/${auction.id}`, { headers });
+            if (lotsResponse.ok) {
+              const lotsData = await lotsResponse.json();
+              return { ...auction, lots: lotsData.lots || [] };
+            }
+          } catch (error) {
+            console.error(`Error fetching lots for auction ${auction.id}:`, error);
+          }
+          return { ...auction, lots: [] };
+        })
+      );
+      
       // Sort by creation date (newest first)
-      allAuctions.sort((a: any, b: any) => 
+      auctionsWithLots.sort((a: any, b: any) => 
         new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
       );
       
-      setAuctions(allAuctions);
-      console.log('Fetched auctions with lots:', allAuctions);
+      setAuctions(auctionsWithLots);
+      console.log('Fetched auctions with lots:', auctionsWithLots);
     } catch (error) {
       console.error('Error fetching auctions:', error);
       setAuctions([]);
@@ -496,7 +512,7 @@ export default function AdminLotsPage() {
                         <div className="flex flex-col items-end gap-2 mt-2">
                           {lot.image && (
                             <img
-                              src={`${getApiUrl()}${lot.image}`}
+                              src={lot.image.startsWith('http') || lot.image.startsWith('data:') ? lot.image : `${getApiUrl()}${lot.image}`}
                               alt={lot.title}
                               className="w-24 h-20 object-cover rounded border border-green-200 bg-white"
                             />
