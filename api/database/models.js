@@ -303,6 +303,30 @@ class DatabaseModels {
   }
 
   /**
+   * Get all auctions from database
+   */
+  async getAllAuctions() {
+    const query = `
+      SELECT * FROM auctions 
+      ORDER BY created_at DESC
+    `;
+    const result = await dbManager.query(query);
+    return result.rows;
+  }
+
+  /**
+   * Get auction by ID
+   */
+  async getAuctionById(auctionId) {
+    const query = `
+      SELECT * FROM auctions 
+      WHERE id = $1
+    `;
+    const result = await dbManager.query(query, [auctionId]);
+    return result.rows[0] || null;
+  }
+
+  /**
    * Store auction image as base64 in PostgreSQL
    */
   async storeAuctionImage(imageData) {

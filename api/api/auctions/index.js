@@ -53,34 +53,45 @@ function isAuctionCompleted(auction) {
 }
 
 // GET all active auctions (excludes completed ones)
-router.get('/', (req, res) => {
-  const auctions = readAuctions();
-  const activeAuctions = auctions.filter(auction => !isAuctionCompleted(auction));
-  res.json(activeAuctions);
+router.get('/', async (req, res) => {
+  try {
+    const auctions = await dbModels.getAllAuctions();
+    const activeAuctions = auctions.filter(auction => !isAuctionCompleted(auction));
+    res.json(activeAuctions);
+  } catch (error) {
+    console.error('Error fetching auctions:', error);
+    res.status(500).json({ error: 'Failed to fetch auctions' });
+  }
 });
 
 // GET all past/completed auctions
-router.get('/past', (req, res) => {
-  const auctions = readAuctions();
-  const completedAuctions = auctions.filter(auction => isAuctionCompleted(auction));
-  res.json(completedAuctions);
+router.get('/past', async (req, res) => {
+  try {
+    const auctions = await dbModels.getAllAuctions();
+    const completedAuctions = auctions.filter(auction => isAuctionCompleted(auction));
+    res.json(completedAuctions);
+  } catch (error) {
+    console.error('Error fetching past auctions:', error);
+    res.status(500).json({ error: 'Failed to fetch past auctions' });
+  }
 });
 
 // GET single auction by ID
-router.get('/:id', (req, res) => {
-  const { id } = req.params;
-  const auctions = readAuctions();
-  const auction = auctions.find(a => a.id === id);
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const auction = await dbModels.getAuctionById(id);
 
-  if (!auction) {
-    return res.status(404).json({ error: 'Auction not found' });
+    if (!auction) {
+      return res.status(404).json({ error: 'Auction not found' });
+    }
+
+    // TODO: Implement view count increment in database if needed
+    res.json(auction);
+  } catch (error) {
+    console.error('Error fetching auction:', error);
+    res.status(500).json({ error: 'Failed to fetch auction' });
   }
-
-  // Increment view count
-  auction.viewCount = (auction.viewCount || 0) + 1;
-  writeAuctions(auctions);
-
-  res.json(auction);
 });
 
 // POST new auction (admin only)
