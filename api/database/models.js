@@ -482,9 +482,9 @@ class DatabaseModels {
    */
   async createLot(lotData) {
     const query = `
-      INSERT INTO lots (auction_id, title, description, starting_bid, reserve_price, 
-                       bid_increment, category, condition, image_urls, seller_email)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      INSERT INTO lots (auction_id, title, description, starting_bid, current_bid, reserve_price, 
+                       bid_increment, category, condition, image_urls, seller_email, lot_number, end_time)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
     
@@ -493,12 +493,15 @@ class DatabaseModels {
       lotData.title,
       lotData.description || null,
       lotData.starting_bid || 0,
+      lotData.current_bid || lotData.starting_bid || 0,
       lotData.reserve_price || null,
       lotData.bid_increment || 10,
       lotData.category || null,
       lotData.condition || null,
       lotData.image_urls || [],
-      lotData.seller_email || null
+      lotData.seller_email || null,
+      lotData.lot_number || null,
+      lotData.end_time || null
     ];
     
     const result = await dbManager.query(query, values);
