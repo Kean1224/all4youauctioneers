@@ -150,8 +150,8 @@ router.get('/:auctionId', async (req, res) => {
     // Transform database format to frontend format
     const transformedLots = lots.map(lot => ({
       id: lot.id,
-      title: lot.title,
-      description: lot.description,
+      title: lot.title || 'Untitled Lot',
+      description: lot.description || '',
       startPrice: parseFloat(lot.starting_bid) || 0,
       currentBid: parseFloat(lot.current_bid) || parseFloat(lot.starting_bid) || 0,
       bidIncrement: parseFloat(lot.bid_increment) || 10,
@@ -159,11 +159,11 @@ router.get('/:auctionId', async (req, res) => {
       images: lot.image_urls || [],
       bidHistory: lot.bidHistory || [],
       endTime: lot.end_time,
-      lotNumber: lot.lot_number,
-      sellerEmail: lot.seller_email,
+      lotNumber: lot.lot_number || 0,
+      sellerEmail: lot.seller_email || null,
       condition: lot.condition || 'Good',
       createdAt: lot.created_at,
-      status: lot.status,
+      status: lot.status || 'active',
       bid_count: parseInt(lot.bid_count) || 0
     }));
     
@@ -179,6 +179,19 @@ router.post('/:auctionId', verifyAdmin, upload.any(), async (req, res) => {
   try {
     const { auctionId } = req.params;
     const { title, description, startPrice, bidIncrement, endTime, sellerEmail, condition } = req.body;
+    
+    console.log('🔍 DEBUG - Lot creation request received:');
+    console.log('📋 Body data:', { title, description, startPrice, bidIncrement, endTime, sellerEmail, condition });
+    console.log('📁 Files:', req.files?.length || 0);
+    
+    // Validate required fields
+    if (!title || title.trim() === '') {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    
+    if (!startPrice || isNaN(parseFloat(startPrice)) || parseFloat(startPrice) <= 0) {
+      return res.status(400).json({ error: 'Valid starting price is required' });
+    }
     
     // Handle multiple images - store in PostgreSQL
     let imageUrls = [];
@@ -216,13 +229,17 @@ router.post('/:auctionId', verifyAdmin, upload.any(), async (req, res) => {
       console.log(`📅 Auto-scheduled lot ${maxLotNumber + 1} to end at: ${new Date(lotEndTime).toLocaleString()}`);
     }
     
+    // Ensure numeric values are properly parsed
+    const startingBid = parseFloat(startPrice);
+    const increment = parseFloat(bidIncrement) || 10;
+    
     const newLotData = {
       auction_id: auctionId,
-      title,
-      description,
-      starting_bid: parseFloat(startPrice),
-      current_bid: parseFloat(startPrice),
-      bid_increment: parseFloat(bidIncrement) || 10,
+      title: title.trim(),
+      description: description ? description.trim() : '',
+      starting_bid: startingBid,
+      current_bid: startingBid,
+      bid_increment: increment,
       image_urls: imageUrls,
       seller_email: sellerEmail || null,
       condition: condition || 'Good',
@@ -230,29 +247,38 @@ router.post('/:auctionId', verifyAdmin, upload.any(), async (req, res) => {
       end_time: lotEndTime
     };
     
+    console.log('💾 Creating lot with data:', newLotData);
+    
     const createdLot = await dbModels.createLot(newLotData);
     
-    // Format response to match expected format
+    console.log('✅ Created lot:', createdLot);
+    
+    // Format response to match expected format - ensuring all fields are included
     const responseData = {
       id: createdLot.id,
       title: createdLot.title,
-      description: createdLot.description,
-      startPrice: createdLot.starting_bid,
-      image: imageUrls.length > 0 ? imageUrls[0] : '',
-      currentBid: createdLot.current_bid,
-      bidIncrement: createdLot.bid_increment,
+      description: createdLot.description || '',
+      startPrice: parseFloat(createdLot.starting_bid),
+      currentBid: parseFloat(createdLot.current_bid || createdLot.starting_bid),
+      bidIncrement: parseFloat(createdLot.bid_increment),
+      image: (createdLot.image_urls && createdLot.image_urls.length > 0) ? createdLot.image_urls[0] : '',
+      images: createdLot.image_urls || [],
       bidHistory: [],
-      endTime: createdLot.end_time || lotEndTime,
+      endTime: createdLot.end_time,
       createdAt: createdLot.created_at,
       sellerEmail: createdLot.seller_email,
-      lotNumber: createdLot.lot_number || (maxLotNumber + 1),
-      condition: createdLot.condition
+      lotNumber: createdLot.lot_number,
+      condition: createdLot.condition || 'Good',
+      status: createdLot.status || 'active',
+      bid_count: 0
     };
+    
+    console.log('📤 Sending response:', responseData);
     
     res.status(201).json(responseData);
   } catch (error) {
-    console.error('Error creating lot:', error);
-    res.status(500).json({ error: 'Failed to create lot' });
+    console.error('❌ Error creating lot:', error);
+    res.status(500).json({ error: 'Failed to create lot: ' + error.message });
   }
 });
 
