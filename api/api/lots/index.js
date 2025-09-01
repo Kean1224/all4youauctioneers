@@ -223,13 +223,34 @@ function writeAuctions(data) {
 
 // Multer setup for image uploads
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/lots/'),
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, '../../uploads/lots');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    cb(null, uploadDir);
+  },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    cb(null, `${uuidv4()}${ext}`);
+    cb(null, `lot-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`);
   }
 });
-const upload = multer({ storage });
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    
+    if (mimetype && extname) {
+      return cb(null, true);
+    } else {
+      cb(new Error('Only image files are allowed'));
+    }
+  }
+});
 
 // ✅ GET lots for auction
 router.get('/:auctionId', (req, res) => {
@@ -273,10 +294,15 @@ router.get('/:auctionId', (req, res) => {
 });
 
 // ✅ POST: Add a new lot to an auction
-router.post('/:auctionId', upload.single('image'), (req, res) => {
+router.post('/:auctionId', verifyAdmin, upload.fields([{ name: 'images', maxCount: 10 }]), (req, res) => {
   const { auctionId } = req.params;
   const { title, description, startPrice, bidIncrement, endTime, sellerEmail, condition } = req.body;
-  const image = req.file ? `/uploads/lots/${req.file.filename}` : '';
+  // Handle multiple images
+  let images = [];
+  if (req.files && req.files.images) {
+    images = req.files.images.map(file => `/uploads/lots/${file.filename}`);
+  }
+  const image = images.length > 0 ? images[0] : ''; // Use first image as primary
 
   const auctions = readAuctions();
   const auction = auctions.find(a => a.id === auctionId);
