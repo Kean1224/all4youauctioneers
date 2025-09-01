@@ -153,9 +153,11 @@ router.get('/:auctionId', async (req, res) => {
       title: lot.title || 'Untitled Lot',
       description: lot.description || '',
       startPrice: parseFloat(lot.starting_bid) || 0,
+      startingPrice: parseFloat(lot.starting_bid) || 0, // Frontend expects this field
       currentBid: parseFloat(lot.current_bid) || parseFloat(lot.starting_bid) || 0,
       bidIncrement: parseFloat(lot.bid_increment) || 10,
       image: lot.image_urls && lot.image_urls.length > 0 ? lot.image_urls[0] : '',
+      imageUrl: lot.image_urls && lot.image_urls.length > 0 ? lot.image_urls[0] : '', // Fallback field
       images: lot.image_urls || [],
       bidHistory: lot.bidHistory || [],
       endTime: lot.end_time,
@@ -259,9 +261,11 @@ router.post('/:auctionId', verifyAdmin, upload.any(), async (req, res) => {
       title: createdLot.title,
       description: createdLot.description || '',
       startPrice: parseFloat(createdLot.starting_bid),
+      startingPrice: parseFloat(createdLot.starting_bid), // Frontend expects this field
       currentBid: parseFloat(createdLot.current_bid || createdLot.starting_bid),
       bidIncrement: parseFloat(createdLot.bid_increment),
       image: (createdLot.image_urls && createdLot.image_urls.length > 0) ? createdLot.image_urls[0] : '',
+      imageUrl: (createdLot.image_urls && createdLot.image_urls.length > 0) ? createdLot.image_urls[0] : '', // Fallback field
       images: createdLot.image_urls || [],
       bidHistory: [],
       endTime: createdLot.end_time,

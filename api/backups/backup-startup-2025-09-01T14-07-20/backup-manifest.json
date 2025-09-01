@@ -1,0 +1,42 @@
+{
+  "timestamp": "2025-09-01T14:07:20.122Z",
+  "type": "startup",
+  "files": [
+    {
+      "filename": "users.json",
+      "size": 356,
+      "modified": "2025-08-13T15:27:28.396Z"
+    },
+    {
+      "filename": "auctions.json",
+      "size": 2,
+      "modified": "2025-08-13T12:57:27.873Z"
+    },
+    {
+      "filename": "lots.json",
+      "size": 4,
+      "modified": "2025-08-11T18:39:16.578Z"
+    },
+    {
+      "filename": "invoices.json",
+      "size": 2,
+      "modified": "2025-08-13T12:57:41.234Z"
+    },
+    {
+      "filename": "auctionDeposits.json",
+      "size": 2,
+      "modified": "2025-08-12T12:13:30.633Z"
+    },
+    {
+      "filename": "fica.json",
+      "size": 2,
+      "modified": "2025-08-09T06:33:43.459Z"
+    },
+    {
+      "filename": "refundRequests.json",
+      "size": 4,
+      "modified": "2025-08-09T06:33:43.449Z"
+    }
+  ],
+  "status": "success"
+}
