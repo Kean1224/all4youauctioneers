@@ -108,14 +108,23 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Auction not found' });
     }
 
+    // Get auction with lots data
+    const auctionWithLots = await dbModels.getAuctionWithLots(id);
+    const lots = auctionWithLots?.lots || [];
+    
     // Transform auction to match frontend expectations
     const transformedAuction = {
       ...auction,
-      // Add frontend-expected field names
+      // Add frontend-expected field names for cards
       startDate: auction.start_time,
       endDate: auction.end_time,
+      // Add frontend-expected field names for detail page
+      startTime: auction.start_time,
+      endTime: auction.end_time,
       auctionImage: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
-      image: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null
+      image: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
+      lots: lots,
+      createdAt: auction.created_at
     };
 
     // TODO: Implement view count increment in database if needed
