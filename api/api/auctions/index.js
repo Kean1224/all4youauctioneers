@@ -111,6 +111,13 @@ router.post('/', verifyAdmin, upload.single('auctionImage'), (req, res) => {
     }
 
   const auctions = readAuctions();
+  console.log('📊 Current auctions count:', auctions.length);
+
+  // Parse numeric values safely
+  const parsedIncrement = parseInt(increment) || 10;
+  const parsedDepositAmount = depositRequired ? Number(depositAmount) || 0 : 0;
+  
+  console.log('🔢 Parsed values:', { parsedIncrement, depositRequired, parsedDepositAmount });
 
   const newAuction = {
     id: uuidv4(),
@@ -119,16 +126,20 @@ router.post('/', verifyAdmin, upload.single('auctionImage'), (req, res) => {
     location: location || '',
     startTime,
     endTime,
-    increment: parseInt(increment),
+    increment: parsedIncrement,
     depositRequired: !!depositRequired,
-    depositAmount: depositRequired ? Number(depositAmount) : 0,
+    depositAmount: parsedDepositAmount,
     auctionImage: req.file ? `/uploads/auctions/${req.file.filename}` : null,
     lots: [],
     createdAt: new Date().toISOString(),
   };
+  
+  console.log('📋 New auction object:', JSON.stringify(newAuction, null, 2));
 
   auctions.push(newAuction);
+  console.log('💾 Writing auctions to file...');
   writeAuctions(auctions);
+  console.log('💾 File write completed');
 
   console.log('✅ Auction created successfully:', newAuction.id, newAuction.title);
   res.status(201).json(newAuction);
