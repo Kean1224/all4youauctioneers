@@ -95,11 +95,12 @@ router.get('/:id', (req, res) => {
 });
 
 // POST new auction (admin only)
-router.post('/', verifyAdmin, upload.fields([{ name: 'auctionImage', maxCount: 1 }]), (req, res) => {
+router.post('/', verifyAdmin, upload.any(), (req, res) => {
   try {
     console.log('🎯 Auction creation request received:', {
       body: req.body,
-      hasFile: !!(req.files && req.files.auctionImage),
+      files: req.files,
+      fileCount: req.files ? req.files.length : 0,
       user: req.user?.email
     });
     
@@ -129,7 +130,7 @@ router.post('/', verifyAdmin, upload.fields([{ name: 'auctionImage', maxCount: 1
     increment: parsedIncrement,
     depositRequired: !!depositRequired,
     depositAmount: parsedDepositAmount,
-    auctionImage: (req.files && req.files.auctionImage && req.files.auctionImage[0]) ? `/uploads/auctions/${req.files.auctionImage[0].filename}` : null,
+    auctionImage: (req.files && req.files.length > 0) ? `/uploads/auctions/${req.files.find(f => f.fieldname === 'auctionImage')?.filename}` : null,
     lots: [],
     createdAt: new Date().toISOString(),
   };
@@ -151,7 +152,7 @@ router.post('/', verifyAdmin, upload.fields([{ name: 'auctionImage', maxCount: 1
 });
 
 // PUT update an auction (admin only)
-router.put('/:id', verifyAdmin, upload.fields([{ name: 'auctionImage', maxCount: 1 }]), (req, res) => {
+router.put('/:id', verifyAdmin, upload.any(), (req, res) => {
   const { id } = req.params;
   const auctions = readAuctions();
   const index = auctions.findIndex(a => a.id === id);
@@ -166,7 +167,8 @@ router.put('/:id', verifyAdmin, upload.fields([{ name: 'auctionImage', maxCount:
   }
 
   // Handle image update
-  if (req.files && req.files.auctionImage && req.files.auctionImage[0]) {
+  const auctionImageFile = req.files && req.files.find(f => f.fieldname === 'auctionImage');
+  if (auctionImageFile) {
     // Delete old image if exists
     if (auctions[index].auctionImage) {
       const oldImagePath = path.join(__dirname, '../../', auctions[index].auctionImage);
@@ -174,7 +176,7 @@ router.put('/:id', verifyAdmin, upload.fields([{ name: 'auctionImage', maxCount:
         fs.unlinkSync(oldImagePath);
       }
     }
-    update.auctionImage = `/uploads/auctions/${req.files.auctionImage[0].filename}`;
+    update.auctionImage = `/uploads/auctions/${auctionImageFile.filename}`;
   }
 
   auctions[index] = { ...auctions[index], ...update };
