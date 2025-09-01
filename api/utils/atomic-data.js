@@ -151,11 +151,12 @@ class AtomicDataOperations {
         const now = new Date();
         const timeRemaining = endTime - now;
         
-        // If less than 5 minutes remaining, extend by 5 minutes
-        if (timeRemaining < 5 * 60 * 1000) {
-          const newEndTime = new Date(now.getTime() + 5 * 60 * 1000);
+        // If less than 2 minutes remaining, extend by 2 minutes (industry standard)
+        if (timeRemaining < 2 * 60 * 1000) {
+          const newEndTime = new Date(now.getTime() + 2 * 60 * 1000);
           auction.endTime = newEndTime.toISOString();
-          console.log(`⏱️  Auction ${auctionId} extended to ${newEndTime.toISOString()}`);
+          lot.extensionCount = (lot.extensionCount || 0) + 1;
+          console.log(`⏱️  Auction ${auctionId} lot ${lotId} extended to ${newEndTime.toISOString()} (extension #${lot.extensionCount})`);
         }
       }
 

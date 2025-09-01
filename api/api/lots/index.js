@@ -90,17 +90,16 @@ router.post('/:auctionId/end', verifyAdmin, async (req, res) => {
   async function endLotWithSniperProtection(lot, auctionId) {
     // Check if lot already ended
     if (lot.status === 'ended') return;
-    // Check for sniper protection: if last bid within 4min of end, extend by 4min (max 3 extensions)
+    // Check for sniper protection: if last bid within 2min of end, extend by 2min (unlimited extensions)
     let endTime = new Date(lot.endTime).getTime();
     let lastBidTime = lot.bidHistory && lot.bidHistory.length > 0 ? new Date(lot.bidHistory[lot.bidHistory.length - 1].time).getTime() : null;
     
-    // Initialize extension counter if not exists
+    // Initialize extension counter for tracking (no limit enforced)
     lot.extensionCount = lot.extensionCount || 0;
-    const maxExtensions = 3; // Prevent infinite extensions
     
-    if (lastBidTime && lastBidTime >= endTime - 4 * 60 * 1000 && lot.extensionCount < maxExtensions) {
-      // Extend end time by 4min
-      endTime = lastBidTime + 4 * 60 * 1000;
+    if (lastBidTime && lastBidTime >= endTime - 2 * 60 * 1000) {
+      // Extend end time by 2min from the bid time
+      endTime = lastBidTime + 2 * 60 * 1000;
       lot.endTime = new Date(endTime).toISOString();
       lot.extensionCount++;
   // Notify all buyers: Auction is live now!
