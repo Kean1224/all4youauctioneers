@@ -106,6 +106,11 @@ router.post('/:auctionId/end', verifyAdmin, async (req, res) => {
       message: 'Auction lots scheduled to end with database-based stagger timing.', 
       lotEndTimes 
     });
+
+  } catch (error) {
+    console.error('Error ending auction:', error);
+    res.status(500).json({ error: 'Failed to end auction' });
+  }
 });
 // JSON file operations removed - all data now handled via PostgreSQL database
 
