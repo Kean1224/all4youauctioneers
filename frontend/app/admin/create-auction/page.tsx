@@ -145,6 +145,8 @@ export default function CreateAuctionPage() {
       }
 
       const token = getToken();
+      console.log('Creating auction with token:', token ? 'present' : 'missing');
+      
       const auctionResponse = await fetch(`${getApiUrl()}/api/auctions`, {
         method: 'POST',
         headers: {
@@ -152,6 +154,8 @@ export default function CreateAuctionPage() {
         },
         body: formData,
       });
+      
+      console.log('Auction creation response status:', auctionResponse.status);
 
       if (!auctionResponse.ok) {
         const errorData = await auctionResponse.json();
