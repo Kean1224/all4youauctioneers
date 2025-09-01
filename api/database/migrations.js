@@ -227,6 +227,25 @@ class MigrationManager {
           CREATE INDEX IF NOT EXISTS idx_company_assets_type ON company_assets(asset_type);
         `,
         down: 'DROP TABLE IF EXISTS company_assets CASCADE;'
+      },
+
+      {
+        version: 10,
+        name: 'add_image_urls_to_auctions',
+        up: `
+          ALTER TABLE auctions ADD COLUMN IF NOT EXISTS image_urls TEXT[];
+          ALTER TABLE auctions ADD COLUMN IF NOT EXISTS location VARCHAR(255);
+          ALTER TABLE auctions ADD COLUMN IF NOT EXISTS increment INTEGER DEFAULT 10;
+          ALTER TABLE auctions ADD COLUMN IF NOT EXISTS deposit_required BOOLEAN DEFAULT FALSE;
+          ALTER TABLE auctions ADD COLUMN IF NOT EXISTS deposit_amount DECIMAL(10,2) DEFAULT 0;
+        `,
+        down: `
+          ALTER TABLE auctions DROP COLUMN IF EXISTS image_urls;
+          ALTER TABLE auctions DROP COLUMN IF EXISTS location;
+          ALTER TABLE auctions DROP COLUMN IF EXISTS increment;
+          ALTER TABLE auctions DROP COLUMN IF EXISTS deposit_required;
+          ALTER TABLE auctions DROP COLUMN IF EXISTS deposit_amount;
+        `
       }
     ];
   }
