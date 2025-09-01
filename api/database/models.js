@@ -230,6 +230,15 @@ class DatabaseModels {
   }
 
   /**
+   * Delete user from database
+   */
+  async deleteUser(email) {
+    const query = 'DELETE FROM users WHERE email = $1 RETURNING *';
+    const result = await dbManager.query(query, [email]);
+    return result.rows[0] || null;
+  }
+
+  /**
    * Get all users (admin) - returns data compatible with existing API
    */
   async getAllUsers(limit = 100, offset = 0) {

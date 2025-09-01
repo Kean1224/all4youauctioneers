@@ -39,14 +39,7 @@ const upload = multer({
   }
 });
 
-// Helpers
-function readUsers() {
-  if (!fs.existsSync(usersPath)) return [];
-  return JSON.parse(fs.readFileSync(usersPath, 'utf-8'));
-}
-function writeUsers(data) {
-  fs.writeFileSync(usersPath, JSON.stringify(data, null, 2), 'utf-8');
-}
+// JSON file operations removed - all user data now handled via PostgreSQL database
 
 // Production: No demo users auto-created
 
@@ -718,36 +711,60 @@ router.put('/suspend/:email', verifyAdmin, async (req, res) => {
   }
 });
 
-// ✅ PUT: Update user (admin only)
-router.put('/:email', verifyAdmin, (req, res) => {
-  const users = readUsers();
-  const user = users.find(u => u.email === req.params.email);
-  if (!user) return res.status(404).json({ error: 'User not found' });
+// ✅ PUT: Update user (admin only) - MIGRATED TO POSTGRESQL
+router.put('/:email', verifyAdmin, async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
+    
+    // Get user from database
+    const user = await dbModels.getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-  Object.assign(user, req.body);
-  writeUsers(users);
-  res.json({ message: 'User updated', user });
+    // Update user in database
+    const updatedUser = await dbModels.updateUser(email, req.body);
+    
+    console.log(`[ADMIN] Updated user ${email}:`, Object.keys(req.body));
+    res.json({ message: 'User updated', user: updatedUser });
+    
+  } catch (error) {
+    console.error('Error updating user:', error);
+    res.status(500).json({ error: 'Failed to update user' });
+  }
 });
 
-// ✅ PUT: Toggle item in user's watchlist (user only, not admin)
-router.put('/:email/watchlist', authenticateToken, (req, res) => {
-  const { lotId } = req.body;
-  if (!lotId) return res.status(400).json({ error: 'Missing lotId' });
+// ✅ PUT: Toggle item in user's watchlist (user only, not admin) - MIGRATED TO POSTGRESQL
+router.put('/:email/watchlist', authenticateToken, async (req, res) => {
+  try {
+    const { lotId } = req.body;
+    if (!lotId) return res.status(400).json({ error: 'Missing lotId' });
 
-  const users = readUsers();
-  const user = users.find(u => u.email === req.params.email);
-  if (!user) return res.status(404).json({ error: 'User not found' });
+    const email = decodeURIComponent(req.params.email);
+    
+    // Get user with extended data (including watchlist)
+    const user = await dbModels.getUserWithExtendedData(email);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-  if (!user.watchlist) user.watchlist = [];
+    let watchlist = user.watchlist || [];
 
-  if (user.watchlist.includes(lotId)) {
-    user.watchlist = user.watchlist.filter(id => id !== lotId);
-  } else {
-    user.watchlist.push(lotId);
+    if (watchlist.includes(lotId)) {
+      watchlist = watchlist.filter(id => id !== lotId);
+    } else {
+      watchlist.push(lotId);
+    }
+
+    // Update watchlist in database
+    await dbModels.updateUserWatchlist(email, watchlist);
+    
+    res.json({ message: 'Watchlist updated', watchlist });
+    
+  } catch (error) {
+    console.error('Error updating watchlist:', error);
+    res.status(500).json({ error: 'Failed to update watchlist' });
   }
-
-  writeUsers(users);
-  res.json({ message: 'Watchlist updated', watchlist: user.watchlist });
 });
 
 // ✅ POST: Manually verify email (admin only) 
@@ -784,41 +801,50 @@ router.post('/:email/verify-email', verifyAdmin, (req, res) => {
   }
 });
 
-// ✅ DELETE user by email (admin only)
-router.delete('/:email', verifyAdmin, (req, res) => {
-  const users = readUsers();
-  const email = decodeURIComponent(req.params.email);
-  const idx = users.findIndex(u => u.email === email);
-  if (idx === -1) return res.status(404).json({ error: 'User not found' });
-  
-  const [deleted] = users.splice(idx, 1);
-  
-  // Clean up user's FICA documents if they exist
-  const documentsToDelete = [];
-  if (deleted.idDocument) documentsToDelete.push(deleted.idDocument);
-  if (deleted.proofOfAddress) documentsToDelete.push(deleted.proofOfAddress);
-  if (deleted.bankStatement) documentsToDelete.push(deleted.bankStatement);
-  
-  documentsToDelete.forEach(filename => {
-    const filePath = path.join(uploadDir, filename);
-    try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-        console.log(`✅ Deleted FICA document: ${filename}`);
-      }
-    } catch (error) {
-      console.log(`⚠️  Could not delete file ${filename}:`, error.message);
+// ✅ DELETE user by email (admin only) - MIGRATED TO POSTGRESQL
+router.delete('/:email', verifyAdmin, async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
+    
+    // Get user data first (including FICA documents)
+    const user = await dbModels.getUserWithExtendedData(email);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
-  });
-  
-  writeUsers(users);
-  console.log(`✅ User ${email} deleted successfully${documentsToDelete.length > 0 ? ` with ${documentsToDelete.length} documents` : ''}`);
-  
-  res.json({ 
-    message: 'User deleted successfully', 
-    user: deleted,
-    documentsDeleted: documentsToDelete.length 
-  });
+    
+    // Clean up user's FICA documents if they exist
+    const documentsToDelete = [];
+    if (user.idDocument) documentsToDelete.push(user.idDocument);
+    if (user.proofOfAddress) documentsToDelete.push(user.proofOfAddress);
+    if (user.bankStatement) documentsToDelete.push(user.bankStatement);
+    
+    documentsToDelete.forEach(filename => {
+      const filePath = path.join(uploadDir, filename);
+      try {
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+          console.log(`✅ Deleted FICA document: ${filename}`);
+        }
+      } catch (error) {
+        console.log(`⚠️  Could not delete file ${filename}:`, error.message);
+      }
+    });
+    
+    // Delete user from database
+    const deletedUser = await dbModels.deleteUser(email);
+    
+    console.log(`✅ User ${email} deleted from database${documentsToDelete.length > 0 ? ` with ${documentsToDelete.length} documents` : ''}`);
+    
+    res.json({ 
+      message: 'User deleted successfully', 
+      user: deletedUser,
+      documentsDeleted: documentsToDelete.length 
+    });
+    
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ error: 'Failed to delete user' });
+  }
 });
 
 module.exports = router;
