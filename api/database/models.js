@@ -629,6 +629,140 @@ class DatabaseModels {
     return invoice;
   }
 
+  /**
+   * Generate consolidated invoices for auction completion
+   * Creates buyer invoices (with 10% commission) and seller invoices (with 15% commission deduction)
+   */
+  async generateAuctionInvoices(auctionId) {
+    console.log('📋 Generating invoices for auction:', auctionId);
+    
+    // Get auction with lots and their winning bids
+    const auctionData = await this.getAuctionWithLots(auctionId);
+    if (!auctionData || !auctionData.lots) {
+      throw new Error('Auction or lots not found');
+    }
+
+    // Filter only sold lots (lots with winning bids)
+    const soldLots = auctionData.lots.filter(lot => {
+      const lastBid = lot.bidHistory?.[lot.bidHistory.length - 1];
+      return lastBid && lot.status === 'ended';
+    });
+
+    if (soldLots.length === 0) {
+      console.log('⚠️  No sold lots found for auction', auctionId);
+      return { buyerInvoices: [], sellerInvoices: [] };
+    }
+
+    // Group lots by buyer (winner) and seller
+    const lotsByBuyer = {};
+    const lotsBySeller = {};
+
+    soldLots.forEach(lot => {
+      const lastBid = lot.bidHistory[lot.bidHistory.length - 1];
+      const buyerEmail = lastBid.bidderEmail;
+      const sellerEmail = lot.sellerEmail || lot.seller_email;
+      
+      // Group by buyer
+      if (!lotsByBuyer[buyerEmail]) {
+        lotsByBuyer[buyerEmail] = [];
+      }
+      lotsByBuyer[buyerEmail].push({ ...lot, winningBid: lastBid.amount });
+
+      // Group by seller (if seller is specified)
+      if (sellerEmail && sellerEmail.trim()) {
+        if (!lotsBySeller[sellerEmail]) {
+          lotsBySeller[sellerEmail] = [];
+        }
+        lotsBySeller[sellerEmail].push({ ...lot, winningBid: lastBid.amount });
+      }
+    });
+
+    const createdInvoices = { buyerInvoices: [], sellerInvoices: [] };
+
+    // Generate buyer invoices (consolidated by buyer)
+    for (const [buyerEmail, lots] of Object.entries(lotsByBuyer)) {
+      const buyerInvoice = await this.createBuyerInvoice(auctionId, buyerEmail, lots);
+      createdInvoices.buyerInvoices.push(buyerInvoice);
+    }
+
+    // Generate seller invoices (consolidated by seller)  
+    for (const [sellerEmail, lots] of Object.entries(lotsBySeller)) {
+      const sellerInvoice = await this.createSellerInvoice(auctionId, sellerEmail, lots);
+      createdInvoices.sellerInvoices.push(sellerInvoice);
+    }
+
+    console.log(`✅ Generated ${createdInvoices.buyerInvoices.length} buyer invoices and ${createdInvoices.sellerInvoices.length} seller invoices`);
+    return createdInvoices;
+  }
+
+  /**
+   * Create buyer invoice with 10% commission
+   */
+  async createBuyerInvoice(auctionId, buyerEmail, lots) {
+    const subtotal = lots.reduce((sum, lot) => sum + lot.winningBid, 0);
+    const commission = Math.round(subtotal * 0.10 * 100) / 100; // 10% buyer commission
+    const total = subtotal + commission;
+    
+    const invoiceNumber = `BUY-${auctionId}-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+    const dueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+
+    const invoiceData = {
+      invoice_number: invoiceNumber,
+      user_email: buyerEmail,
+      auction_id: auctionId,
+      invoice_type: 'buyer',
+      subtotal: subtotal,
+      commission: commission,
+      total: total,
+      due_date: dueDate
+    };
+
+    const items = lots.map(lot => ({
+      lot_id: lot.id,
+      item_description: `Lot ${lot.lotNumber || lot.id}: ${lot.title}`,
+      quantity: 1,
+      unit_price: lot.winningBid,
+      total_price: lot.winningBid
+    }));
+
+    console.log(`💰 Creating buyer invoice for ${buyerEmail}: R${total} (${lots.length} items)`);
+    return await this.createInvoice(invoiceData, items);
+  }
+
+  /**
+   * Create seller invoice with 15% commission deduction  
+   */
+  async createSellerInvoice(auctionId, sellerEmail, lots) {
+    const subtotal = lots.reduce((sum, lot) => sum + lot.winningBid, 0);
+    const commission = Math.round(subtotal * 0.15 * 100) / 100; // 15% seller commission
+    const total = subtotal - commission; // Seller gets paid LESS commission
+
+    const invoiceNumber = `SELL-${auctionId}-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+    const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days from now
+
+    const invoiceData = {
+      invoice_number: invoiceNumber,
+      user_email: sellerEmail,
+      auction_id: auctionId,
+      invoice_type: 'seller',
+      subtotal: subtotal,
+      commission: commission,
+      total: total, // Amount to pay seller (after commission deduction)
+      due_date: dueDate
+    };
+
+    const items = lots.map(lot => ({
+      lot_id: lot.id,
+      item_description: `Lot ${lot.lotNumber || lot.id}: ${lot.title}`,
+      quantity: 1,
+      unit_price: lot.winningBid,
+      total_price: lot.winningBid
+    }));
+
+    console.log(`💳 Creating seller invoice for ${sellerEmail}: R${total} payout (R${commission} commission deducted)`);
+    return await this.createInvoice(invoiceData, items);
+  }
+
   // ===================== FICA MODEL =====================
 
   /**

@@ -22,93 +22,70 @@ function writeJSON(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
+// Import database models
+const dbModels = require('../../database/models');
+
 // POST: Complete auction and generate all invoices
 router.post('/complete-auction/:auctionId', async (req, res) => {
   try {
     const { auctionId } = req.params;
+    console.log('🏁 Completing auction:', auctionId);
     
-    // Get auction data
-    const auctions = readJSON(auctionsPath);
-    const auction = auctions.find(a => a.id === auctionId);
+    // Check if auction exists in database
+    const auction = await dbModels.getAuctionById(auctionId);
     if (!auction) {
       return res.status(404).json({ error: 'Auction not found' });
     }
 
-    // Get all lots for this auction
-    const allLots = readJSON(lotsPath);
-    const auctionLots = allLots.filter(lot => lot.auctionId === auctionId);
+    // Generate consolidated invoices using new database system
+    const invoiceResults = await dbModels.generateAuctionInvoices(auctionId);
     
-    // Filter only sold lots (lots with bidHistory)
-    const soldLots = auctionLots.filter(lot => 
-      lot.bidHistory && 
-      lot.bidHistory.length > 0 && 
-      lot.status !== 'active' // Ensure auction has ended
-    );
-
-    if (soldLots.length === 0) {
+    if (invoiceResults.buyerInvoices.length === 0 && invoiceResults.sellerInvoices.length === 0) {
       return res.status(400).json({ error: 'No sold lots found for this auction' });
     }
 
-    // Generate invoices for all sold lots
-    const invoices = readJSON(invoicesPath);
-    const newInvoices = [];
+    // Update auction status to completed (future enhancement - add this field to auctions table)
+    console.log(`✅ Auction ${auctionId} completed with ${invoiceResults.buyerInvoices.length} buyer invoices and ${invoiceResults.sellerInvoices.length} seller invoices`);
 
-    for (const lot of soldLots) {
-      // Get highest bidder (winner)
-      const winner = lot.bidHistory[lot.bidHistory.length - 1];
-      const winningBid = winner.amount;
-      
-      // Calculate fees
-      const buyerTotal = Math.round(winningBid * 1.10); // 10% buyer premium
-      const sellerNet = Math.round(winningBid * 0.85);  // 15% seller commission
-
-      // Create invoice record
-      const invoice = {
-        id: uuidv4(),
-        auctionId: auction.id,
-        auctionTitle: auction.title,
-        lotId: lot.id,
-        lotNumber: lot.lotNumber || lot.id,
-        item: lot.title,
-        buyerEmail: winner.bidderEmail,
-        sellerEmail: lot.sellerEmail,
-        winningBid: winningBid,
-        buyerTotal: buyerTotal,
-        sellerNet: sellerNet,
-        buyerPremium: buyerTotal - winningBid,
-        sellerCommission: winningBid - sellerNet,
-        status: 'unpaid',
-        createdAt: new Date().toISOString(),
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days to pay
-      };
-
-      newInvoices.push(invoice);
-    }
-
-    // Save all invoices
-    invoices.push(...newInvoices);
-    writeJSON(invoicesPath, invoices);
-
-    // Mark auction as completed
-    auction.status = 'completed';
-    auction.completedAt = new Date().toISOString();
-    writeJSON(auctionsPath, auctions);
-
-    // Send email notifications (optional)
-    await sendInvoiceNotifications(newInvoices, auction);
+    // Send email notifications (optional - implement later)
+    // await sendInvoiceNotifications(invoiceResults, auction);
 
     res.json({
       message: 'Auction completed successfully',
       auctionId: auction.id,
-      soldLots: soldLots.length,
-      invoicesGenerated: newInvoices.length,
-      totalRevenue: newInvoices.reduce((sum, inv) => sum + inv.winningBid, 0),
-      invoices: newInvoices
+      buyerInvoicesGenerated: invoiceResults.buyerInvoices.length,
+      sellerInvoicesGenerated: invoiceResults.sellerInvoices.length,
+      totalInvoicesGenerated: invoiceResults.buyerInvoices.length + invoiceResults.sellerInvoices.length,
+      results: invoiceResults
     });
 
   } catch (error) {
     console.error('Error completing auction:', error);
-    res.status(500).json({ error: 'Failed to complete auction' });
+    res.status(500).json({ error: 'Failed to complete auction', details: error.message });
+  }
+});
+
+// POST: Generate invoices for auction (can be called multiple times)
+router.post('/generate-invoices/:auctionId', async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    console.log('📋 Generating invoices for auction:', auctionId);
+    
+    // Generate consolidated invoices
+    const invoiceResults = await dbModels.generateAuctionInvoices(auctionId);
+    
+    res.json({
+      message: 'Invoices generated successfully',
+      auctionId: auctionId,
+      buyerInvoicesGenerated: invoiceResults.buyerInvoices.length,
+      sellerInvoicesGenerated: invoiceResults.sellerInvoices.length,
+      totalInvoicesGenerated: invoiceResults.buyerInvoices.length + invoiceResults.sellerInvoices.length,
+      results: invoiceResults
+    });
+
+  } catch (error) {
+    console.error('Error generating invoices:', error);
+    res.status(500).json({ error: 'Failed to generate invoices', details: error.message });
   }
 });
 
