@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { getApiUrl } from '../../../lib/api';
 import AdminSidebar from '../../../components/AdminSidebar';
+import { getToken } from '../../../utils/auth';
 
 interface PendingItem {
   id: string;
@@ -36,10 +37,11 @@ export default function CreateAuctionPage() {
   const [isCreating, setIsCreating] = useState(false);
 
   // Helper to get admin auth headers
-  // For testing: do not send Authorization header
   const getAdminHeaders = () => {
+    const token = getToken();
     return {
       'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` })
     };
   };
 
@@ -142,8 +144,12 @@ export default function CreateAuctionPage() {
         formData.append('auctionImage', auctionImage);
       }
 
+      const token = getToken();
       const auctionResponse = await fetch(`${getApiUrl()}/api/auctions`, {
         method: 'POST',
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
         body: formData,
       });
 
@@ -185,6 +191,9 @@ export default function CreateAuctionPage() {
 
           const lotResponse = await fetch(`${getApiUrl()}/api/lots/${auctionId}`, {
             method: 'POST',
+            headers: {
+              ...(token && { 'Authorization': `Bearer ${token}` })
+            },
             body: lotFormData, // Send as FormData instead of JSON
           });
 
