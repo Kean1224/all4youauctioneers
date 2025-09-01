@@ -299,13 +299,13 @@ class DatabaseModels {
     
     const values = [
       auctionData.title,
-      auctionData.description || null,
+      auctionData.description || '',
       auctionData.status || 'draft',
       auctionData.start_time || null,
       auctionData.end_time || null,
       auctionData.created_by || null,
       auctionData.image_urls || [],
-      auctionData.location || null,
+      auctionData.location || '',
       auctionData.increment || 10,
       auctionData.deposit_required || false,
       auctionData.deposit_amount || 0

@@ -403,13 +403,38 @@ export default function ModernAdminDashboard() {
                           <div key={auction.id || index} className="bg-white/5 border border-white/10 rounded-xl p-4">
                             <div className="flex items-start justify-between">
                               <div className="flex-1">
-                                <h4 className="text-lg font-semibold text-white mb-2">{auction.title}</h4>
-                                <p className="text-gray-400 text-sm mb-3">{auction.description}</p>
+                                <div className="flex items-start gap-4 mb-4">
+                                  {/* Auction Image */}
+                                  {(auction.image_urls && auction.image_urls.length > 0) && (
+                                    <div className="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
+                                      <img 
+                                        src={auction.image_urls[0].startsWith('data:') || auction.image_urls[0].startsWith('http') 
+                                          ? auction.image_urls[0] 
+                                          : `${getApiUrl()}${auction.image_urls[0]}`
+                                        }
+                                        alt={auction.title}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.style.display = 'none';
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                  <div className="flex-1">
+                                    <h4 className="text-lg font-semibold text-white mb-2">{auction.title}</h4>
+                                    <p className="text-gray-400 text-sm mb-3">{auction.description || 'No description provided'}</p>
+                                  </div>
+                                </div>
                                 
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
                                   <div>
                                     <p className="text-gray-500 text-xs">Status</p>
-                                    <p className="text-white font-medium">{auction.status || 'Active'}</p>
+                                    <p className="text-white font-medium">{auction.status || 'Draft'}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-gray-500 text-xs">Location</p>
+                                    <p className="text-white font-medium">{auction.location || 'Not specified'}</p>
                                   </div>
                                   <div>
                                     <p className="text-gray-500 text-xs">Total Lots</p>
@@ -418,13 +443,13 @@ export default function ModernAdminDashboard() {
                                   <div>
                                     <p className="text-gray-500 text-xs">Start Date</p>
                                     <p className="text-white font-medium">
-                                      {auction.startTime ? new Date(auction.startTime).toLocaleDateString() : 'Not set'}
+                                      {auction.start_time ? new Date(auction.start_time).toLocaleDateString() : 'Not set'}
                                     </p>
                                   </div>
                                   <div>
                                     <p className="text-gray-500 text-xs">End Date</p>
                                     <p className="text-white font-medium">
-                                      {auction.endTime ? new Date(auction.endTime).toLocaleDateString() : 'Not set'}
+                                      {auction.end_time ? new Date(auction.end_time).toLocaleDateString() : 'Not set'}
                                     </p>
                                   </div>
                                 </div>
