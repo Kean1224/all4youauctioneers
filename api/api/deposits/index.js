@@ -17,20 +17,8 @@ if (!fs.existsSync(DEPOSITS_UPLOAD_DIR)) {
   fs.mkdirSync(DEPOSITS_UPLOAD_DIR, { recursive: true });
 }
 
-// Configure multer for deposit proof uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, DEPOSITS_UPLOAD_DIR);
-  },
-  filename: (req, file, cb) => {
-    const userEmail = req.user?.email || 'unknown';
-    const auctionId = req.body.auctionId || req.params.auctionId;
-    const sanitizedEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
-    const timestamp = Date.now();
-    const ext = path.extname(file.originalname);
-    cb(null, `deposit_${sanitizedEmail}_${auctionId}_${timestamp}${ext}`);
-  }
-});
+// Configure multer for memory storage (files will be stored in PostgreSQL)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,

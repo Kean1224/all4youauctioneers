@@ -3,23 +3,12 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const verifyAdmin = require('../auth/verify-admin');
+const dbModels = require('../../database/models');
 
 const router = express.Router();
 
-// Configure multer for logo upload
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const assetsDir = path.join(__dirname, '../../assets');
-    if (!fs.existsSync(assetsDir)) {
-      fs.mkdirSync(assetsDir, { recursive: true });
-    }
-    cb(null, assetsDir);
-  },
-  filename: (req, file, cb) => {
-    // Always save as logo.png for consistency
-    cb(null, 'logo.png');
-  }
-});
+// Configure multer for memory storage (logo will be stored in PostgreSQL)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,
@@ -37,24 +26,29 @@ const upload = multer({
 });
 
 // 📤 Upload company logo (Admin only)
-router.post('/upload', verifyAdmin, upload.single('logo'), (req, res) => {
+router.post('/upload', verifyAdmin, upload.single('logo'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No logo file provided' });
     }
 
-    const logoPath = req.file.path;
-    const logoStats = fs.statSync(logoPath);
+    // Store logo in PostgreSQL
+    const logoData = await dbModels.storeCompanyLogo({
+      file_url: `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+      original_filename: req.file.originalname,
+      file_size: req.file.size,
+      mime_type: req.file.mimetype
+    });
 
     res.json({
       success: true,
       message: 'Company logo uploaded successfully',
       logo: {
-        filename: req.file.filename,
-        originalName: req.file.originalname,
-        size: logoStats.size,
-        path: logoPath,
-        uploadedAt: new Date().toISOString()
+        id: logoData.id,
+        originalName: logoData.original_filename,
+        size: logoData.file_size,
+        mimeType: logoData.mime_type,
+        uploadedAt: logoData.created_at
       }
     });
 
@@ -65,25 +59,25 @@ router.post('/upload', verifyAdmin, upload.single('logo'), (req, res) => {
 });
 
 // 📥 Get current company logo
-router.get('/current', (req, res) => {
+router.get('/current', async (req, res) => {
   try {
-    const logoPath = path.join(__dirname, '../../assets/logo.png');
+    const logo = await dbModels.getCompanyLogo();
     
-    if (!fs.existsSync(logoPath)) {
+    if (!logo) {
       return res.status(404).json({ 
         error: 'No company logo found',
         message: 'Upload a logo using POST /api/company/logo/upload'
       });
     }
-
-    const logoStats = fs.statSync(logoPath);
     
     res.json({
       success: true,
       logo: {
-        filename: 'logo.png',
-        size: logoStats.size,
-        lastModified: logoStats.mtime,
+        id: logo.id,
+        originalName: logo.original_filename,
+        size: logo.file_size,
+        mimeType: logo.mime_type,
+        lastModified: logo.updated_at,
         downloadUrl: '/api/company/logo/download'
       }
     });
@@ -95,20 +89,25 @@ router.get('/current', (req, res) => {
 });
 
 // 📥 Download/display company logo
-router.get('/download', (req, res) => {
+router.get('/download', async (req, res) => {
   try {
-    const logoPath = path.join(__dirname, '../../assets/logo.png');
+    const logo = await dbModels.getCompanyLogo();
     
-    if (!fs.existsSync(logoPath)) {
+    if (!logo) {
       return res.status(404).json({ error: 'Logo not found' });
     }
 
+    // Extract base64 data and mime type
+    const base64Data = logo.file_url.split(',')[1];
+    const mimeType = logo.mime_type || 'image/png';
+    
     // Set appropriate headers for image display
-    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Type', mimeType);
     res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
     
-    // Send the logo file
-    res.sendFile(logoPath);
+    // Send the logo as buffer
+    const buffer = Buffer.from(base64Data, 'base64');
+    res.send(buffer);
 
   } catch (error) {
     console.error('Error serving logo:', error);

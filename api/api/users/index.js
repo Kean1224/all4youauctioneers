@@ -6,8 +6,10 @@ const bcrypt = require('bcryptjs');
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('../../middleware/auth');
 const verifyAdmin = require('../auth/verify-admin');
+const dbModels = require('../../database/models');
 const router = express.Router();
 
+// Legacy JSON path for backup/migration only
 const usersPath = path.join(__dirname, '../../data/users.json');
 const uploadDir = path.join(__dirname, '../../uploads/fica');
 
@@ -16,26 +18,8 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure multer with PDF support
-const storage = multer.diskStorage({
-  destination: uploadDir,
-  filename: (req, file, cb) => {
-    // Use UUID for secure filename generation
-    const { v4: uuidv4 } = require('uuid');
-    
-    // Validate and sanitize extension
-    const ext = path.extname(file.originalname).toLowerCase();
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.pdf', '.gif'];
-    
-    if (!allowedExtensions.includes(ext)) {
-      return cb(new Error('Invalid file type'), null);
-    }
-    
-    const prefix = file.fieldname === 'idDocument' ? 'id' : 'proof';
-    const secureFilename = `${prefix}-${uuidv4()}${ext}`;
-    cb(null, secureFilename);
-  }
-});
+// Configure multer for memory storage (files will be stored in PostgreSQL)
+const storage = multer.memoryStorage();
 
 // File filter to accept images and PDFs
 const fileFilter = (req, file, cb) => {
@@ -71,31 +55,80 @@ router.post('/fica-reupload/:email', upload.fields([
   { name: 'idDocument', maxCount: 1 },
   { name: 'proofOfAddress', maxCount: 1 },
   { name: 'bankStatement', maxCount: 1 }
-]), (req, res) => {
-  const users = readUsers();
-  const email = decodeURIComponent(req.params.email);
-  const user = users.find(u => u.email === email);
-  if (!user) return res.status(404).json({ error: 'User not found' });
+]), async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
+    const user = await dbModels.getUserByEmail(email);
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-  // Overwrite FICA docs if provided
-  if (req.files.idDocument) {
-    user.idDocument = req.files.idDocument[0].filename;
+    // Build update data for FICA documents
+    const updateData = {
+      ficaApproved: false,
+      rejection_reason: null // Clear rejection reason
+    };
+
+    // Store files in PostgreSQL and get URLs
+    if (req.files.idDocument) {
+      const file = req.files.idDocument[0];
+      const ficaDoc = await dbModels.storeFicaDocument({
+        user_email: email,
+        file_url: `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
+        original_filename: file.originalname,
+        file_size: file.size,
+        mime_type: file.mimetype
+      });
+      updateData.idDocument = ficaDoc.file_url;
+    }
+    if (req.files.proofOfAddress) {
+      const file = req.files.proofOfAddress[0];
+      const ficaDoc = await dbModels.storeFicaDocument({
+        user_email: email,
+        file_url: `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
+        original_filename: file.originalname,
+        file_size: file.size,
+        mime_type: file.mimetype
+      });
+      updateData.proofOfAddress = ficaDoc.file_url;
+    }
+    if (req.files.bankStatement) {
+      const file = req.files.bankStatement[0];
+      const ficaDoc = await dbModels.storeFicaDocument({
+        user_email: email,
+        file_url: `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
+        original_filename: file.originalname,
+        file_size: file.size,
+        mime_type: file.mimetype
+      });
+      updateData.bankStatement = ficaDoc.file_url;
+    }
+
+    // Update user in database
+    const updatedUser = await dbModels.updateUser(email, updateData);
+    
+    // Transform response to match expected format
+    const userResponse = {
+      email: updatedUser.email,
+      name: updatedUser.name,
+      phone: updatedUser.phone,
+      address: updatedUser.address,
+      city: updatedUser.city,
+      postalCode: updatedUser.postal_code,
+      ficaApproved: updatedUser.fica_approved,
+      emailVerified: updatedUser.email_verified,
+      suspended: updatedUser.suspended,
+      rejectionReason: updatedUser.rejection_reason,
+      registeredAt: updatedUser.created_at,
+      resubmittedAt: new Date().toISOString(),
+      idDocument: updateData.idDocument || null,
+      proofOfAddress: updateData.proofOfAddress || null,
+      bankStatement: updateData.bankStatement || null
+    };
+    
+    res.json({ message: 'FICA documents re-uploaded. Pending admin review.', user: userResponse });
+  } catch (error) {
+    console.error('Error during FICA reupload:', error);
+    res.status(500).json({ error: 'Failed to reupload FICA documents' });
   }
-  if (req.files.proofOfAddress) {
-    user.proofOfAddress = req.files.proofOfAddress[0].filename;
-  }
-  if (req.files.bankStatement) {
-    user.bankStatement = req.files.bankStatement[0].filename;
-  }
-  
-  // Reset approval status and clear rejection reason
-  user.ficaApproved = false;
-  delete user.rejectionReason;
-  delete user.rejectedAt;
-  user.resubmittedAt = new Date().toISOString();
-  
-  writeUsers(users);
-  res.json({ message: 'FICA documents re-uploaded. Pending admin review.', user });
 });
 
 // ✅ GET pending registrations (admin only)
@@ -129,62 +162,120 @@ router.get('/pending', verifyAdmin, (req, res) => {
 });
 
 // ✅ GET all users
-router.get('/', (req, res) => {
-  const users = readUsers();
-  
-  // Load deposit data and merge it with users
-  const depositsPath = path.join(__dirname, '../deposits/../../data/auctionDeposits.json');
-  let deposits = [];
-  if (fs.existsSync(depositsPath)) {
-    deposits = JSON.parse(fs.readFileSync(depositsPath, 'utf-8'));
+router.get('/', async (req, res) => {
+  try {
+    // Get users from database instead of JSON file
+    const users = await dbModels.getAllUsers();
+    
+    // Load deposit data and merge it with users (legacy deposits still in JSON)
+    const depositsPath = path.join(__dirname, '../deposits/../../data/auctionDeposits.json');
+    let deposits = [];
+    if (fs.existsSync(depositsPath)) {
+      deposits = JSON.parse(fs.readFileSync(depositsPath, 'utf-8'));
+    }
+    
+    // Add deposit information to each user
+    const usersWithDeposits = users.map(user => ({
+      ...user,
+      deposits: deposits.filter(d => d.email === user.email).map(d => ({
+        auctionId: d.auctionId,
+        status: d.status === 'approved' ? 'paid' : d.status === 'pending' ? 'pending' : d.status,
+        returned: d.status === 'returned'
+      }))
+    }));
+    
+    res.json(usersWithDeposits);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ error: 'Failed to fetch users' });
   }
-  
-  // Add deposit information to each user
-  const usersWithDeposits = users.map(user => ({
-    ...user,
-    deposits: deposits.filter(d => d.email === user.email).map(d => ({
-      auctionId: d.auctionId,
-      status: d.status === 'approved' ? 'paid' : d.status === 'pending' ? 'pending' : d.status,
-      returned: d.status === 'returned'
-    }))
-  }));
-  
-  res.json(usersWithDeposits);
 });
 
 // ✅ GET current user profile (authenticated user's own profile)
-router.get('/profile', authenticateToken, (req, res) => {
-  const users = readUsers();
-  const user = users.find(u => u.email === req.user.email);
-  if (!user) return res.status(404).json({ error: 'User profile not found' });
-  
-  // Return safe profile data without sensitive info
-  const { password, ...safeUser } = user;
-  res.json(safeUser);
+router.get('/profile', authenticateToken, async (req, res) => {
+  try {
+    const user = await dbModels.getUserWithExtendedData(req.user.email);
+    if (!user) return res.status(404).json({ error: 'User profile not found' });
+    
+    // Return safe profile data without sensitive info
+    const { password_hash: _, ...safeUser } = user;
+    
+    // Transform to match expected format
+    const profileData = {
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      address: user.address,
+      city: user.city,
+      postalCode: user.postal_code,
+      ficaApproved: user.fica_approved,
+      emailVerified: user.email_verified,
+      suspended: user.suspended,
+      registeredAt: user.created_at,
+      idDocument: user.idDocument,
+      proofOfAddress: user.proofOfAddress,
+      bankStatement: user.bankStatement,
+      watchlist: user.watchlist
+    };
+    
+    res.json(profileData);
+  } catch (error) {
+    console.error('Error fetching user profile:', error);
+    res.status(500).json({ error: 'Failed to fetch user profile' });
+  }
 });
 
 // ✅ GET current user FICA status
-router.get('/fica-status', authenticateToken, (req, res) => {
-  const users = readUsers();
-  const user = users.find(u => u.email === req.user.email);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  
-  res.json({
-    ficaApproved: user.ficaApproved || false,
-    ficaStatus: user.ficaApproved ? 'approved' : 'pending',
-    rejectionReason: user.rejectionReason || null,
-    rejectedAt: user.rejectedAt || null,
-    resubmittedAt: user.resubmittedAt || null
-  });
+router.get('/fica-status', authenticateToken, async (req, res) => {
+  try {
+    const user = await dbModels.getUserByEmail(req.user.email);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    res.json({
+      ficaApproved: user.fica_approved || false,
+      ficaStatus: user.fica_approved ? 'approved' : 'pending',
+      rejectionReason: user.rejection_reason || null,
+      rejectedAt: user.rejectedAt || null, // This field needs to be added to DB if needed
+      resubmittedAt: user.resubmittedAt || null // This field needs to be added to DB if needed
+    });
+  } catch (error) {
+    console.error('Error fetching FICA status:', error);
+    res.status(500).json({ error: 'Failed to fetch FICA status' });
+  }
 });
 
 // ✅ GET single user by email
-router.get('/:email', (req, res) => {
-  const users = readUsers();
-  const email = decodeURIComponent(req.params.email);
-  const user = users.find(u => u.email === email);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json(user);
+router.get('/:email', async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.email);
+    const user = await dbModels.getUserWithExtendedData(email);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    
+    // Transform to match expected format
+    const userData = {
+      email: user.email,
+      name: user.name,
+      phone: user.phone,
+      address: user.address,
+      city: user.city,
+      postalCode: user.postal_code,
+      ficaApproved: user.fica_approved,
+      emailVerified: user.email_verified,
+      suspended: user.suspended,
+      suspensionReason: user.suspension_reason,
+      rejectionReason: user.rejection_reason,
+      registeredAt: user.created_at,
+      idDocument: user.idDocument,
+      proofOfAddress: user.proofOfAddress,
+      bankStatement: user.bankStatement,
+      watchlist: user.watchlist
+    };
+    
+    res.json(userData);
+  } catch (error) {
+    console.error('Error fetching user:', error);
+    res.status(500).json({ error: 'Failed to fetch user' });
+  }
 });
 
 // ✅ POST register (with FICA uploads)
@@ -204,9 +295,15 @@ router.post('/register', upload.fields([
     return res.status(400).json({ error: 'Missing required documents: ID document and proof of address are required.' });
   }
 
-  const users = readUsers();
-  if (users.some(u => u.email === email)) {
-    return res.status(409).json({ error: 'Email already exists' });
+  // Check if user already exists in database
+  try {
+    const existingUser = await dbModels.getUserByEmail(email);
+    if (existingUser) {
+      return res.status(409).json({ error: 'Email already exists' });
+    }
+  } catch (error) {
+    console.error('Error checking existing user:', error);
+    return res.status(500).json({ error: 'Registration failed. Please try again.' });
   }
 
   try {
@@ -214,9 +311,29 @@ router.post('/register', upload.fields([
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    const newUser = {
+    // Store FICA documents in PostgreSQL
+    const idDocFile = req.files.idDocument[0];
+    const proofOfAddressFile = req.files.proofOfAddress[0];
+    
+    const idDocData = await dbModels.storeFicaDocument({
+      user_email: email,
+      file_url: `data:${idDocFile.mimetype};base64,${idDocFile.buffer.toString('base64')}`,
+      original_filename: idDocFile.originalname,
+      file_size: idDocFile.size,
+      mime_type: idDocFile.mimetype
+    });
+    
+    const proofDocData = await dbModels.storeFicaDocument({
+      user_email: email,
+      file_url: `data:${proofOfAddressFile.mimetype};base64,${proofOfAddressFile.buffer.toString('base64')}`,
+      original_filename: proofOfAddressFile.originalname,
+      file_size: proofOfAddressFile.size,
+      mime_type: proofOfAddressFile.mimetype
+    });
+
+    const newUserData = {
       email,
-      password: hashedPassword,
+      password_hash: hashedPassword,
       name,
       phone: phone || '',
       idNumber: idNumber || '',
@@ -225,14 +342,13 @@ router.post('/register', upload.fields([
       postalCode: postalCode || '',
       ficaApproved: false,
       suspended: false,
-      registeredAt: new Date().toISOString(),
-      idDocument: req.files.idDocument[0].filename,
-      proofOfAddress: req.files.proofOfAddress[0].filename,
+      idDocument: idDocData.file_url,
+      proofOfAddress: proofDocData.file_url,
       watchlist: []
     };
 
-    users.push(newUser);
-    writeUsers(users);
+    // Create user in database instead of JSON file
+    const createdUser = await dbModels.createUser(newUserData);
     
     // Send email verification to the user
     try {
@@ -356,11 +472,26 @@ Admin Panel: ${process.env.FRONTEND_URL || 'https://www.all4youauctions.co.za'}/
       // Don't fail the registration if email fails
     }
     
-    // Return user data without password hash
-    const { password: _, ...userWithoutPassword } = newUser;
-    res.status(201).json({ message: 'User registered', user: userWithoutPassword });
+    // Transform database user to match expected frontend format
+    const userResponse = {
+      email: createdUser.email,
+      name: createdUser.name,
+      phone: createdUser.phone,
+      idNumber: newUserData.idNumber, // This field isn't stored in DB yet
+      address: createdUser.address,
+      city: createdUser.city,
+      postalCode: createdUser.postal_code,
+      ficaApproved: createdUser.fica_approved,
+      suspended: createdUser.suspended,
+      registeredAt: createdUser.created_at,
+      idDocument: newUserData.idDocument,
+      proofOfAddress: newUserData.proofOfAddress,
+      watchlist: []
+    };
+    
+    res.status(201).json({ message: 'User registered', user: userResponse });
   } catch (error) {
-    console.error('Error hashing password during registration:', error);
+    console.error('Error during user registration:', error);
     res.status(500).json({ error: 'Registration failed. Please try again.' });
   }
 });
@@ -383,15 +514,14 @@ router.post('/admin/add-user', verifyAdmin, async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized' });
     }
 
-    const users = readUsers();
-    
     // Validate input
     if (!email || !name || !email.includes('@')) {
       return res.status(400).json({ error: 'Invalid email or name' });
     }
 
-    // Check if user already exists
-    if (users.some(u => u.email === email)) {
+    // Check if user already exists in database
+    const existingUser = await dbModels.getUserByEmail(email);
+    if (existingUser) {
       return res.status(409).json({ error: 'User already exists' });
     }
 
@@ -401,28 +531,22 @@ router.post('/admin/add-user', verifyAdmin, async (req, res) => {
     const hashedPassword = await bcrypt.hash(tempPassword, 12);
 
     // Add the missing user with secure values
-    const newUser = {
+    const newUserData = {
       email,
-      password: hashedPassword,
+      password_hash: hashedPassword,
       name,
       phone: '',
-      idNumber: '',
       address: '',
       city: '',
       postalCode: '',
       ficaApproved: false,
       suspended: false,
-      registeredAt: new Date().toISOString(),
       watchlist: [],
-      deposits: [],
       idDocument: 'admin_created_pending.pdf',
       proofOfAddress: 'admin_created_pending.pdf',
-      tempPassword: tempPassword, // Send to admin for user notification
-      requirePasswordChange: true
     };
 
-    users.push(newUser);
-    writeUsers(users);
+    const createdUser = await dbModels.createUser(newUserData);
     
     console.log(`✅ Admin manually added user: ${email}`);
     res.status(201).json({ 
@@ -436,94 +560,161 @@ router.post('/admin/add-user', verifyAdmin, async (req, res) => {
 });
 
 router.put('/fica/:email', verifyAdmin, async (req, res) => {
-  const users = readUsers();
-  const user = users.find(u => u.email === req.params.email);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-
-  user.ficaApproved = true;
-  writeUsers(users);
-
-  // Send FICA approval email
   try {
-    await sendMail({
-      to: user.email,
-      subject: 'FICA Approved - All4You Auctions',
-      text: `Dear ${user.name || user.email},\n\nYour FICA documents have been approved. You can now participate fully in auctions.\n\nThank you!`,
-      html: `<p>Dear ${user.name || user.email},</p><p>Your FICA documents have been <b>approved</b>. You can now participate fully in auctions.</p><p>Thank you!</p>`
-    });
-  } catch (e) {
-    // Log but don't block approval
-    console.error('Failed to send FICA approval email:', e);
-  }
+    const email = req.params.email;
+    const user = await dbModels.getUserByEmail(email);
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-  res.json({ message: 'FICA approved', user });
+    // Update user's FICA approval in database
+    const updatedUser = await dbModels.updateFicaApproval(email, true);
+
+    // Send FICA approval email
+    try {
+      await sendMail({
+        to: user.email,
+        subject: 'FICA Approved - All4You Auctions',
+        text: `Dear ${user.name || user.email},\n\nYour FICA documents have been approved. You can now participate fully in auctions.\n\nThank you!`,
+        html: `<p>Dear ${user.name || user.email},</p><p>Your FICA documents have been <b>approved</b>. You can now participate fully in auctions.</p><p>Thank you!</p>`
+      });
+    } catch (e) {
+      // Log but don't block approval
+      console.error('Failed to send FICA approval email:', e);
+    }
+
+    // Transform response to match expected format
+    const userResponse = {
+      email: updatedUser.email,
+      name: updatedUser.name,
+      phone: updatedUser.phone,
+      address: updatedUser.address,
+      city: updatedUser.city,
+      postalCode: updatedUser.postal_code,
+      ficaApproved: updatedUser.fica_approved,
+      emailVerified: updatedUser.email_verified,
+      suspended: updatedUser.suspended,
+      suspensionReason: updatedUser.suspension_reason,
+      rejectionReason: updatedUser.rejection_reason,
+      registeredAt: updatedUser.created_at
+    };
+
+    res.json({ message: 'FICA approved', user: userResponse });
+  } catch (error) {
+    console.error('Error approving FICA:', error);
+    res.status(500).json({ error: 'Failed to approve FICA' });
+  }
 });
 
 // ✅ PUT: Reject FICA with reason
 router.put('/reject/:email', verifyAdmin, async (req, res) => {
-  const users = readUsers();
-  const user = users.find(u => u.email === req.params.email);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-
-  const { reason } = req.body;
-  if (!reason) return res.status(400).json({ error: 'Rejection reason required' });
-
-  user.ficaApproved = false;
-  user.rejectionReason = reason;
-  user.rejectedAt = new Date().toISOString();
-  writeUsers(users);
-
-  // Send FICA rejection email
   try {
-    await sendMail({
-      to: user.email,
-      subject: 'FICA Documents Need Review - All4You Auctions',
-      text: `Dear ${user.name || user.email},\n\nYour FICA documents have been reviewed and need to be updated.\n\nReason: ${reason}\n\nPlease log in to your account and re-upload the required documents.\n\nThank you!`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #d97706;">FICA Documents Review Required</h2>
-          <p>Dear ${user.name || user.email},</p>
-          <p>Your FICA documents have been reviewed and need to be updated.</p>
-          <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0;">
-            <h4 style="margin: 0 0 8px 0; color: #92400e;">Reason for Review:</h4>
-            <p style="margin: 0; color: #92400e;">${reason}</p>
-          </div>
-          <p>Please log in to your account and re-upload the required documents. Once updated, our team will review them again.</p>
-          <p>If you have any questions, please don't hesitate to contact us.</p>
-          <p>Thank you for your understanding!</p>
-          <p>Best regards,<br>All4You Auctions Team</p>
-        </div>
-      `
-    });
-  } catch (e) {
-    console.error('Failed to send FICA rejection email:', e);
-  }
+    const email = req.params.email;
+    const user = await dbModels.getUserByEmail(email);
+    if (!user) return res.status(404).json({ error: 'User not found' });
 
-  res.json({ message: 'FICA documents rejected', user, reason });
+    const { reason } = req.body;
+    if (!reason) return res.status(400).json({ error: 'Rejection reason required' });
+
+    // Update user's FICA rejection in database
+    const updatedUser = await dbModels.updateFicaApproval(email, false, reason);
+
+    // Send FICA rejection email
+    try {
+      await sendMail({
+        to: user.email,
+        subject: 'FICA Documents Need Review - All4You Auctions',
+        text: `Dear ${user.name || user.email},\n\nYour FICA documents have been reviewed and need to be updated.\n\nReason: ${reason}\n\nPlease log in to your account and re-upload the required documents.\n\nThank you!`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #d97706;">FICA Documents Review Required</h2>
+            <p>Dear ${user.name || user.email},</p>
+            <p>Your FICA documents have been reviewed and need to be updated.</p>
+            <div style="background-color: #fef3c7; border-left: 4px solid #f59e0b; padding: 16px; margin: 20px 0;">
+              <h4 style="margin: 0 0 8px 0; color: #92400e;">Reason for Review:</h4>
+              <p style="margin: 0; color: #92400e;">${reason}</p>
+            </div>
+            <p>Please log in to your account and re-upload the required documents. Once updated, our team will review them again.</p>
+            <p>If you have any questions, please don't hesitate to contact us.</p>
+            <p>Thank you for your understanding!</p>
+            <p>Best regards,<br>All4You Auctions Team</p>
+          </div>
+        `
+      });
+    } catch (e) {
+      console.error('Failed to send FICA rejection email:', e);
+    }
+
+    // Transform response to match expected format
+    const userResponse = {
+      email: updatedUser.email,
+      name: updatedUser.name,
+      phone: updatedUser.phone,
+      address: updatedUser.address,
+      city: updatedUser.city,
+      postalCode: updatedUser.postal_code,
+      ficaApproved: updatedUser.fica_approved,
+      emailVerified: updatedUser.email_verified,
+      suspended: updatedUser.suspended,
+      suspensionReason: updatedUser.suspension_reason,
+      rejectionReason: updatedUser.rejection_reason,
+      registeredAt: updatedUser.created_at,
+      rejectedAt: new Date().toISOString()
+    };
+
+    res.json({ message: 'FICA documents rejected', user: userResponse, reason });
+  } catch (error) {
+    console.error('Error rejecting FICA:', error);
+    res.status(500).json({ error: 'Failed to reject FICA' });
+  }
 });
 
 
 // ✅ PUT: Suspend user (admin only)
-router.put('/suspend/:email', verifyAdmin, (req, res) => {
+router.put('/suspend/:email', verifyAdmin, async (req, res) => {
   console.log('Suspend endpoint called for email:', req.params.email);
   console.log('Request body:', req.body);
   
-  const users = readUsers();
-  const user = users.find(u => u.email === req.params.email);
-  if (!user) {
-    console.log('User not found:', req.params.email);
-    return res.status(404).json({ error: 'User not found' });
-  }
+  try {
+    const email = req.params.email;
+    const user = await dbModels.getUserByEmail(email);
+    if (!user) {
+      console.log('User not found:', email);
+      return res.status(404).json({ error: 'User not found' });
+    }
 
-  // Set suspended to the value provided in the request body
-  if (typeof req.body.suspended === 'boolean') {
-    user.suspended = req.body.suspended;
-    writeUsers(users);
-    console.log('User suspend status updated:', user.suspended);
-    res.json({ message: `User ${user.suspended ? 'suspended' : 'unsuspended'}`, user });
-  } else {
-    console.log('Invalid suspended value:', req.body.suspended);
-    res.status(400).json({ error: 'Missing or invalid suspended value' });
+    // Set suspended to the value provided in the request body
+    if (typeof req.body.suspended === 'boolean') {
+      const updatedUser = await dbModels.updateUserSuspension(
+        email, 
+        req.body.suspended, 
+        req.body.reason || null
+      );
+      
+      console.log('User suspend status updated:', updatedUser.suspended);
+      
+      // Transform response to match expected format
+      const userResponse = {
+        email: updatedUser.email,
+        name: updatedUser.name,
+        phone: updatedUser.phone,
+        address: updatedUser.address,
+        city: updatedUser.city,
+        postalCode: updatedUser.postal_code,
+        ficaApproved: updatedUser.fica_approved,
+        emailVerified: updatedUser.email_verified,
+        suspended: updatedUser.suspended,
+        suspensionReason: updatedUser.suspension_reason,
+        rejectionReason: updatedUser.rejection_reason,
+        registeredAt: updatedUser.created_at
+      };
+      
+      res.json({ message: `User ${updatedUser.suspended ? 'suspended' : 'unsuspended'}`, user: userResponse });
+    } else {
+      console.log('Invalid suspended value:', req.body.suspended);
+      res.status(400).json({ error: 'Missing or invalid suspended value' });
+    }
+  } catch (error) {
+    console.error('Error updating user suspension:', error);
+    res.status(500).json({ error: 'Failed to update user suspension' });
   }
 });
 

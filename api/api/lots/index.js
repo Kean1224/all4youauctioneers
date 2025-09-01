@@ -23,6 +23,7 @@ try {
 
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('../../middleware/auth');
+const dbModels = require('../../database/models');
 
 // Email notifications (with error handling)
 let sendMail = null;
@@ -221,20 +222,8 @@ function writeAuctions(data) {
   fs.writeFileSync(auctionsPath, JSON.stringify(data, null, 2), 'utf-8');
 }
 
-// Multer setup for image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/lots');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `lot-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`);
-  }
-});
+// Multer setup for memory storage (images will be stored in PostgreSQL)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -294,59 +283,81 @@ router.get('/:auctionId', (req, res) => {
 });
 
 // ✅ POST: Add a new lot to an auction
-router.post('/:auctionId', verifyAdmin, upload.fields([{ name: 'images', maxCount: 10 }]), (req, res) => {
-  const { auctionId } = req.params;
-  const { title, description, startPrice, bidIncrement, endTime, sellerEmail, condition } = req.body;
-  // Handle multiple images
-  let images = [];
-  if (req.files && req.files.images) {
-    images = req.files.images.map(file => `/uploads/lots/${file.filename}`);
-  }
-  const image = images.length > 0 ? images[0] : ''; // Use first image as primary
-
-  const auctions = readAuctions();
-  const auction = auctions.find(a => a.id === auctionId);
-  if (!auction) return res.status(404).json({ error: 'Auction not found' });
-
-  auction.lots = auction.lots || [];
-  // Find the highest lotNumber in this auction
-  let maxLotNumber = 0;
-  auction.lots.forEach(lot => {
-    if (typeof lot.lotNumber === 'number' && lot.lotNumber > maxLotNumber) {
-      maxLotNumber = lot.lotNumber;
+router.post('/:auctionId', verifyAdmin, upload.fields([{ name: 'images', maxCount: 10 }]), async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    const { title, description, startPrice, bidIncrement, endTime, sellerEmail, condition } = req.body;
+    
+    // Handle multiple images - store in PostgreSQL
+    let imageUrls = [];
+    if (req.files && req.files.images) {
+      for (const file of req.files.images) {
+        const imageUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+        imageUrls.push(imageUrl);
+      }
     }
-  });
-  
-  // Create staggered end time if not provided
-  let lotEndTime = endTime;
-  if (!lotEndTime) {
-    const now = new Date();
-    // Each lot ends 1 minute after the previous lot
-    // First lot (lotNumber 1) ends in 5 minutes from now
-    // Second lot (lotNumber 2) ends in 6 minutes from now, etc.
-    const minutesToAdd = 5 + maxLotNumber; // maxLotNumber is current count, so new lot will be maxLotNumber + 1
-    lotEndTime = new Date(now.getTime() + minutesToAdd * 60 * 1000).toISOString();
-    console.log(`📅 Auto-scheduled lot ${maxLotNumber + 1} to end at: ${new Date(lotEndTime).toLocaleString()}`);
+
+    // Get auction to check if it exists
+    const auction = await dbModels.getAuctionWithLots(auctionId);
+    if (!auction) return res.status(404).json({ error: 'Auction not found' });
+
+    // Find the highest lotNumber in this auction
+    let maxLotNumber = 0;
+    if (auction.lots) {
+      auction.lots.forEach(lot => {
+        if (typeof lot.lot_number === 'number' && lot.lot_number > maxLotNumber) {
+          maxLotNumber = lot.lot_number;
+        }
+      });
+    }
+    
+    // Create staggered end time if not provided
+    let lotEndTime = endTime;
+    if (!lotEndTime) {
+      const now = new Date();
+      const minutesToAdd = 5 + maxLotNumber;
+      lotEndTime = new Date(now.getTime() + minutesToAdd * 60 * 1000).toISOString();
+      console.log(`📅 Auto-scheduled lot ${maxLotNumber + 1} to end at: ${new Date(lotEndTime).toLocaleString()}`);
+    }
+    
+    const newLotData = {
+      auction_id: auctionId,
+      title,
+      description,
+      starting_bid: parseFloat(startPrice),
+      current_bid: parseFloat(startPrice),
+      bid_increment: parseFloat(bidIncrement) || 10,
+      image_urls: imageUrls,
+      seller_email: sellerEmail || null,
+      condition: condition || 'Good',
+      lot_number: maxLotNumber + 1,
+      end_time: lotEndTime
+    };
+    
+    const createdLot = await dbModels.createLot(newLotData);
+    
+    // Format response to match expected format
+    const responseData = {
+      id: createdLot.id,
+      title: createdLot.title,
+      description: createdLot.description,
+      startPrice: createdLot.starting_bid,
+      image: imageUrls.length > 0 ? imageUrls[0] : '',
+      currentBid: createdLot.current_bid,
+      bidIncrement: createdLot.bid_increment,
+      bidHistory: [],
+      endTime: createdLot.end_time || lotEndTime,
+      createdAt: createdLot.created_at,
+      sellerEmail: createdLot.seller_email,
+      lotNumber: createdLot.lot_number || (maxLotNumber + 1),
+      condition: createdLot.condition
+    };
+    
+    res.status(201).json(responseData);
+  } catch (error) {
+    console.error('Error creating lot:', error);
+    res.status(500).json({ error: 'Failed to create lot' });
   }
-  
-  const newLot = {
-    id: uuidv4(),
-    title,
-    description,
-    startPrice: parseFloat(startPrice),
-    image,
-    currentBid: parseFloat(startPrice),
-    bidIncrement: parseFloat(bidIncrement) || 10,
-    bidHistory: [],
-    endTime: lotEndTime,
-    createdAt: new Date().toISOString(),
-    sellerEmail: sellerEmail || null,
-    lotNumber: maxLotNumber + 1,
-    condition: condition || 'Good'
-  };
-  auction.lots.push(newLot);
-  writeAuctions(auctions);
-  res.status(201).json(newLot);
 });
 
 // ✅ PUT: Update a lot

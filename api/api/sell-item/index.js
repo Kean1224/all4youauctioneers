@@ -18,16 +18,8 @@ if (!fs.existsSync(SELL_UPLOADS_DIR)) {
   fs.mkdirSync(SELL_UPLOADS_DIR, { recursive: true });
 }
 
-// Configure multer for item image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, SELL_UPLOADS_DIR);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
+// Configure multer for memory storage (images will be stored in PostgreSQL)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage: storage,

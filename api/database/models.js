@@ -13,19 +13,33 @@ class DatabaseModels {
    */
   async createUser(userData) {
     const query = `
-      INSERT INTO users (email, password_hash, name, phone, address, city, postal_code)
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      INSERT INTO users (
+        email, password_hash, name, phone, address, city, postal_code,
+        fica_approved, fica_file_url, email_verified, suspended
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING *
     `;
     
+    // Handle FICA documents as JSON
+    const ficaFiles = {};
+    if (userData.idDocument) ficaFiles.idDocument = userData.idDocument;
+    if (userData.proofOfAddress) ficaFiles.proofOfAddress = userData.proofOfAddress;
+    if (userData.bankStatement) ficaFiles.bankStatement = userData.bankStatement;
+    if (userData.watchlist) ficaFiles.watchlist = userData.watchlist;
+    
     const values = [
       userData.email,
-      userData.password_hash,
+      userData.password_hash || userData.password, // Support both field names
       userData.name,
       userData.phone || null,
       userData.address || null,
       userData.city || null,
-      userData.postal_code || null
+      userData.postal_code || userData.postalCode || null, // Support both field names
+      userData.fica_approved || userData.ficaApproved || false,
+      Object.keys(ficaFiles).length > 0 ? JSON.stringify(ficaFiles) : null,
+      userData.email_verified || userData.emailVerified || false,
+      userData.suspended || false
     ];
     
     const result = await dbManager.query(query, values);
@@ -64,19 +78,202 @@ class DatabaseModels {
   }
 
   /**
-   * Get all users (admin)
+   * Update user details (including FICA document filenames and status)
+   */
+  async updateUser(email, userData) {
+    const fields = [];
+    const values = [email];
+    let paramIndex = 2;
+
+    // Dynamically build the SET clause based on provided fields
+    const allowedFields = [
+      'name', 'phone', 'address', 'city', 'postal_code', 'fica_approved', 
+      'suspended', 'suspension_reason', 'rejection_reason', 'email_verified'
+    ];
+
+    for (const field of allowedFields) {
+      if (userData.hasOwnProperty(field)) {
+        fields.push(`${field} = $${paramIndex}`);
+        values.push(userData[field]);
+        paramIndex++;
+      }
+    }
+
+    // Handle FICA document filenames (stored as JSON in fica_file_url for now)
+    if (userData.idDocument || userData.proofOfAddress || userData.bankStatement) {
+      const ficaFiles = {};
+      if (userData.idDocument) ficaFiles.idDocument = userData.idDocument;
+      if (userData.proofOfAddress) ficaFiles.proofOfAddress = userData.proofOfAddress;
+      if (userData.bankStatement) ficaFiles.bankStatement = userData.bankStatement;
+      
+      fields.push(`fica_file_url = $${paramIndex}`);
+      values.push(JSON.stringify(ficaFiles));
+      paramIndex++;
+    }
+
+    if (fields.length === 0) {
+      throw new Error('No fields to update');
+    }
+
+    fields.push('updated_at = CURRENT_TIMESTAMP');
+
+    const query = `
+      UPDATE users 
+      SET ${fields.join(', ')}
+      WHERE email = $1
+      RETURNING *
+    `;
+
+    const result = await dbManager.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Suspend/unsuspend user
+   */
+  async updateUserSuspension(email, suspended, reason = null) {
+    const query = `
+      UPDATE users 
+      SET suspended = $2, suspension_reason = $3, updated_at = CURRENT_TIMESTAMP
+      WHERE email = $1
+      RETURNING *
+    `;
+    
+    const result = await dbManager.query(query, [email, suspended, reason]);
+    return result.rows[0];
+  }
+
+  /**
+   * Update user's FICA approval status with rejection reason
+   */
+  async updateFicaApproval(email, approved, rejectionReason = null) {
+    const fields = ['fica_approved = $2', 'updated_at = CURRENT_TIMESTAMP'];
+    const values = [email, approved];
+    let paramIndex = 3;
+
+    if (!approved && rejectionReason) {
+      fields.push(`rejection_reason = $${paramIndex}`);
+      values.push(rejectionReason);
+      paramIndex++;
+    } else if (approved) {
+      // Clear rejection reason when approving
+      fields.push('rejection_reason = NULL');
+    }
+
+    const query = `
+      UPDATE users 
+      SET ${fields.join(', ')}
+      WHERE email = $1
+      RETURNING *
+    `;
+
+    const result = await dbManager.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Update user's watchlist
+   */
+  async updateUserWatchlist(email, watchlist) {
+    const query = `
+      UPDATE users 
+      SET fica_file_url = COALESCE(fica_file_url, '{}')::jsonb || jsonb_build_object('watchlist', $2::jsonb),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE email = $1
+      RETURNING *
+    `;
+    
+    const result = await dbManager.query(query, [email, JSON.stringify(watchlist)]);
+    return result.rows[0];
+  }
+
+  /**
+   * Verify user email
+   */
+  async verifyUserEmail(email) {
+    const query = `
+      UPDATE users 
+      SET email_verified = TRUE, updated_at = CURRENT_TIMESTAMP
+      WHERE email = $1
+      RETURNING *
+    `;
+    
+    const result = await dbManager.query(query, [email]);
+    return result.rows[0];
+  }
+
+  /**
+   * Get user with extended data (including parsed FICA files)
+   */
+  async getUserWithExtendedData(email) {
+    const user = await this.getUserByEmail(email);
+    if (!user) return null;
+
+    // Parse FICA file URLs if they exist
+    let ficaFiles = {};
+    if (user.fica_file_url) {
+      try {
+        ficaFiles = JSON.parse(user.fica_file_url);
+      } catch (e) {
+        // Legacy single file URL
+        ficaFiles = { legacy: user.fica_file_url };
+      }
+    }
+
+    return {
+      ...user,
+      idDocument: ficaFiles.idDocument,
+      proofOfAddress: ficaFiles.proofOfAddress,
+      bankStatement: ficaFiles.bankStatement,
+      watchlist: ficaFiles.watchlist || []
+    };
+  }
+
+  /**
+   * Get all users (admin) - returns data compatible with existing API
    */
   async getAllUsers(limit = 100, offset = 0) {
     const query = `
-      SELECT id, email, name, phone, city, fica_approved, email_verified, 
-             suspended, created_at, updated_at
+      SELECT id, email, name, phone, address, city, postal_code, 
+             fica_approved, fica_file_url, email_verified, suspended, 
+             suspension_reason, rejection_reason, created_at, updated_at
       FROM users 
       ORDER BY created_at DESC 
       LIMIT $1 OFFSET $2
     `;
     
     const result = await dbManager.query(query, [limit, offset]);
-    return result.rows;
+    
+    // Transform data to match the existing API format
+    return result.rows.map(user => {
+      let ficaFiles = {};
+      if (user.fica_file_url) {
+        try {
+          ficaFiles = JSON.parse(user.fica_file_url);
+        } catch (e) {
+          ficaFiles = { legacy: user.fica_file_url };
+        }
+      }
+      
+      return {
+        email: user.email,
+        name: user.name,
+        phone: user.phone,
+        address: user.address,
+        city: user.city,
+        postalCode: user.postal_code,
+        ficaApproved: user.fica_approved,
+        emailVerified: user.email_verified,
+        suspended: user.suspended,
+        suspensionReason: user.suspension_reason,
+        rejectionReason: user.rejection_reason,
+        registeredAt: user.created_at,
+        idDocument: ficaFiles.idDocument,
+        proofOfAddress: ficaFiles.proofOfAddress,
+        bankStatement: ficaFiles.bankStatement,
+        watchlist: ficaFiles.watchlist || []
+      };
+    });
   }
 
   // ===================== AUCTIONS MODEL =====================
@@ -86,8 +283,8 @@ class DatabaseModels {
    */
   async createAuction(auctionData) {
     const query = `
-      INSERT INTO auctions (title, description, status, start_time, end_time, created_by)
-      VALUES ($1, $2, $3, $4, $5, $6)
+      INSERT INTO auctions (title, description, status, start_time, end_time, created_by, image_urls)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `;
     
@@ -97,7 +294,30 @@ class DatabaseModels {
       auctionData.status || 'draft',
       auctionData.start_time || null,
       auctionData.end_time || null,
-      auctionData.created_by || null
+      auctionData.created_by || null,
+      auctionData.image_urls || []
+    ];
+    
+    const result = await dbManager.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Store auction image as base64 in PostgreSQL
+   */
+  async storeAuctionImage(imageData) {
+    const query = `
+      INSERT INTO auction_images (auction_id, file_url, original_filename, file_size, mime_type)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `;
+    
+    const values = [
+      imageData.auction_id,
+      imageData.file_url,
+      imageData.original_filename,
+      imageData.file_size,
+      imageData.mime_type
     ];
     
     const result = await dbManager.query(query, values);
@@ -417,6 +637,46 @@ class DatabaseModels {
     `;
     
     const result = await dbManager.query(query, [userEmail]);
+    return result.rows[0] || null;
+  }
+
+  // ===================== COMPANY ASSETS MODEL =====================
+
+  /**
+   * Store company logo
+   */
+  async storeCompanyLogo(logoData) {
+    const query = `
+      INSERT INTO company_assets (asset_type, file_url, original_filename, file_size, mime_type)
+      VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (asset_type) 
+      DO UPDATE SET 
+        file_url = EXCLUDED.file_url,
+        original_filename = EXCLUDED.original_filename,
+        file_size = EXCLUDED.file_size,
+        mime_type = EXCLUDED.mime_type,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `;
+    
+    const values = [
+      'logo',
+      logoData.file_url,
+      logoData.original_filename,
+      logoData.file_size,
+      logoData.mime_type
+    ];
+    
+    const result = await dbManager.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Get company logo
+   */
+  async getCompanyLogo() {
+    const query = 'SELECT * FROM company_assets WHERE asset_type = $1';
+    const result = await dbManager.query(query, ['logo']);
     return result.rows[0] || null;
   }
 

@@ -5,21 +5,10 @@ const path = require('path');
 const multer = require('multer');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
+const dbModels = require('../../database/models');
 
-// Configure multer for auction image uploads
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    const uploadDir = path.join(__dirname, '../../uploads/auctions');
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    cb(null, uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueName = `auction-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(file.originalname)}`;
-    cb(null, uniqueName);
-  }
-});
+// Configure multer for memory storage (images will be stored in PostgreSQL)
+const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
@@ -95,7 +84,7 @@ router.get('/:id', (req, res) => {
 });
 
 // POST new auction (admin only)
-router.post('/', verifyAdmin, upload.any(), (req, res) => {
+router.post('/', verifyAdmin, upload.any(), async (req, res) => {
   try {
     console.log('🎯 Auction creation request received:', {
       body: req.body,
@@ -111,39 +100,59 @@ router.post('/', verifyAdmin, upload.any(), (req, res) => {
       return res.status(400).json({ error: 'Missing required fields.' });
     }
 
-  const auctions = readAuctions();
-  console.log('📊 Current auctions count:', auctions.length);
-
   // Parse numeric values safely
   const parsedIncrement = parseInt(increment) || 10;
   const parsedDepositAmount = depositRequired ? Number(depositAmount) || 0 : 0;
   
   console.log('🔢 Parsed values:', { parsedIncrement, depositRequired, parsedDepositAmount });
 
-  const newAuction = {
-    id: uuidv4(),
+  // Handle image upload to PostgreSQL
+  let imageUrl = null;
+  if (req.files && req.files.length > 0) {
+    const imageFile = req.files.find(f => f.fieldname === 'auctionImage');
+    if (imageFile) {
+      // Store image as base64 in PostgreSQL
+      imageUrl = `data:${imageFile.mimetype};base64,${imageFile.buffer.toString('base64')}`;
+      console.log('🖼️ Image stored in PostgreSQL');
+    }
+  }
+
+  const newAuctionData = {
     title,
     description: description || '',
     location: location || '',
-    startTime,
-    endTime,
+    start_time: startTime,
+    end_time: endTime,
     increment: parsedIncrement,
-    depositRequired: !!depositRequired,
-    depositAmount: parsedDepositAmount,
-    auctionImage: (req.files && req.files.length > 0) ? `/uploads/auctions/${req.files.find(f => f.fieldname === 'auctionImage')?.filename}` : null,
-    lots: [],
-    createdAt: new Date().toISOString(),
+    deposit_required: !!depositRequired,
+    deposit_amount: parsedDepositAmount,
+    image_urls: imageUrl ? [imageUrl] : [],
+    created_by: req.user?.email || 'admin',
+    status: 'draft'
   };
   
-  console.log('📋 New auction object:', JSON.stringify(newAuction, null, 2));
+  console.log('📋 Creating auction in database...');
 
-  auctions.push(newAuction);
-  console.log('💾 Writing auctions to file...');
-  writeAuctions(auctions);
-  console.log('💾 File write completed');
+  // Create auction in PostgreSQL
+  const createdAuction = await dbModels.createAuction(newAuctionData);
+  console.log('💾 Auction created in database successfully');
 
-  console.log('✅ Auction created successfully:', newAuction.id, newAuction.title);
-  res.status(201).json(newAuction);
+  console.log('✅ Auction created successfully:', createdAuction.id, createdAuction.title);
+  res.status(201).json({
+    id: createdAuction.id,
+    title: createdAuction.title,
+    description: createdAuction.description,
+    location: location || '',
+    startTime: createdAuction.start_time,
+    endTime: createdAuction.end_time,
+    increment: createdAuction.increment,
+    depositRequired: !!createdAuction.deposit_required,
+    depositAmount: createdAuction.deposit_amount,
+    auctionImage: imageUrl,
+    lots: [],
+    createdAt: createdAuction.created_at,
+    status: createdAuction.status
+  });
   
   } catch (error) {
     console.error('🚨 Auction creation error:', error);

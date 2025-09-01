@@ -207,6 +207,26 @@ class MigrationManager {
           );
         `,
         down: 'DROP TABLE IF EXISTS migrations CASCADE;'
+      },
+
+      {
+        version: 9,
+        name: 'create_company_assets_table',
+        up: `
+          CREATE TABLE IF NOT EXISTS company_assets (
+            id SERIAL PRIMARY KEY,
+            asset_type VARCHAR(50) UNIQUE NOT NULL,
+            file_url TEXT NOT NULL,
+            original_filename VARCHAR(255),
+            file_size INTEGER,
+            mime_type VARCHAR(100),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE INDEX IF NOT EXISTS idx_company_assets_type ON company_assets(asset_type);
+        `,
+        down: 'DROP TABLE IF EXISTS company_assets CASCADE;'
       }
     ];
   }
