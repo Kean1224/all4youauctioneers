@@ -228,7 +228,7 @@ if (!JWT_SECRET) {
 });
 
 // POST /api/auth/verify-email - Email verification endpoint
-router.post('/verify-email', (req, res) => {
+router.post('/verify-email', async (req, res) => {
   const { token } = req.body;
   
   if (!token) {
@@ -240,25 +240,26 @@ router.post('/verify-email', (req, res) => {
     const decoded = jwt.verify(token, JWT_SECRET);
     const { email } = decoded;
     
-    // Find the user
-    const users = readUsers();
-    const userIndex = users.findIndex(u => u.email === email);
+    // Find the user in PostgreSQL database
+    const dbModels = require('../../database/models');
+    const user = await dbModels.getUserByEmail(email);
     
-    if (userIndex === -1) {
+    if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
     
     // Check if already verified
-    if (users[userIndex].emailVerified) {
+    if (user.email_verified) {
       return res.status(400).json({ error: 'Email already verified' });
     }
     
-    // Mark as verified
-    users[userIndex].emailVerified = true;
-    users[userIndex].verifiedAt = new Date().toISOString();
+    // Mark as verified in PostgreSQL
+    const updatedUser = await dbModels.updateUser(email, { 
+      email_verified: true,
+      verified_at: new Date().toISOString()
+    });
     
-    // Write back to file
-    fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+    console.log(`✅ Email verified for user: ${email}`);
     
     // Create login token for immediate access
     const loginToken = jwt.sign(
@@ -271,9 +272,9 @@ router.post('/verify-email', (req, res) => {
       message: 'Email verified successfully! You are now logged in.',
       token: loginToken,
       user: {
-        email: users[userIndex].email,
-        name: users[userIndex].name,
-        ficaApproved: users[userIndex].ficaApproved
+        email: user.email,
+        name: user.name,
+        ficaApproved: user.fica_approved
       }
     });
     
@@ -289,7 +290,7 @@ router.post('/verify-email', (req, res) => {
   }
 });
 
-// POST /api/auth/resend-verification - Resend verification email
+// POST /api/auth/resend-verification - Resend verification email (MIGRATED TO POSTGRESQL)
 router.post('/resend-verification', async (req, res) => {
   const { email } = req.body;
   
@@ -298,14 +299,14 @@ router.post('/resend-verification', async (req, res) => {
   }
   
   try {
-    const users = readUsers();
-    const user = users.find(u => u.email === email);
+    const dbModels = require('../../database/models');
+    const user = await dbModels.getUserByEmail(email);
     
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    if (user.emailVerified) {
+    if (user.email_verified) {
       return res.status(400).json({ error: 'Email is already verified' });
     }
     
