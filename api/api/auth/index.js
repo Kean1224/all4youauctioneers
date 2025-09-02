@@ -12,15 +12,9 @@ if (!JWT_SECRET) {
   console.error('Generate a strong secret with: openssl rand -base64 64');
   throw new Error('JWT_SECRET environment variable is required');
 }
-const usersPath = path.join(__dirname, '../users/../../data/users.json');
+// Removed usersPath - now using PostgreSQL database
 
-// Helper function to read users
-function readUsers() {
-  if (!fs.existsSync(usersPath)) return [];
-  return JSON.parse(fs.readFileSync(usersPath, 'utf-8'));
-}
-
-// POST /api/auth/login - User login endpoint
+// POST /api/auth/login - User login endpoint (MIGRATED TO POSTGRESQL)
 router.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
@@ -28,51 +22,29 @@ router.post('/login', async (req, res) => {
     return res.status(400).json({ error: 'Email and password are required' });
   }
 
-  const users = readUsers();
-  const user = users.find(u => u.email === email);
-
-  if (!user) {
-    // Security logging
-    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
-    console.log(`[SECURITY] ${new Date().toISOString()}: USER_LOGIN_FAILED - User not found`, {
-      email,
-      ip: clientIP,
-      userAgent: req.headers['user-agent']
-    });
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
-
-  // Check if user is suspended
-  if (user.suspended) {
-    return res.status(403).json({ error: 'Account suspended. Please contact support.' });
-  }
-
-  // Check password using bcrypt with migration support
   try {
-    let isPasswordValid = false;
-    
-    // Check if password is already hashed
-    if (user.password.startsWith('$2a$') || user.password.startsWith('$2b$')) {
-      // Use bcrypt to compare hashed password
-      isPasswordValid = await bcrypt.compare(password, user.password);
-    } else {
-      // Legacy plain text password - check and migrate
-      isPasswordValid = user.password === password;
-      if (isPasswordValid) {
-        // Migrate password to bcrypt hash
-        const saltRounds = 12;
-        const hashedPassword = await bcrypt.hash(password, saltRounds);
-        
-        // Update user in users.json
-        const users = readUsers();
-        const userIndex = users.findIndex(u => u.email === email);
-        if (userIndex !== -1) {
-          users[userIndex].password = hashedPassword;
-          fs.writeFileSync(usersPath, JSON.stringify(users, null, 2), 'utf-8');
-          console.log(`[SECURITY] Password migrated to bcrypt for user: ${email}`);
-        }
-      }
+    // Get user from PostgreSQL database
+    const dbModels = require('../../database/models');
+    const user = await dbModels.getUserByEmail(email);
+
+    if (!user) {
+      // Security logging
+      const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
+      console.log(`[SECURITY] ${new Date().toISOString()}: USER_LOGIN_FAILED - User not found`, {
+        email,
+        ip: clientIP,
+        userAgent: req.headers['user-agent']
+      });
+      return res.status(401).json({ error: 'Invalid credentials' });
     }
+
+    // Check if user is suspended
+    if (user.suspended) {
+      return res.status(403).json({ error: 'Account suspended. Please contact support.' });
+    }
+
+    // Check password using bcrypt (passwords are now stored hashed in PostgreSQL)
+    const isPasswordValid = await bcrypt.compare(password, user.password_hash);
     
     if (!isPasswordValid) {
       // Security logging
@@ -84,41 +56,42 @@ router.post('/login', async (req, res) => {
       });
       return res.status(401).json({ error: 'Invalid credentials' });
     }
-  } catch (error) {
-    console.error('Error comparing password during login:', error);
-    return res.status(500).json({ error: 'Authentication failed. Please try again.' });
-  }
 
-  // Generate JWT token
-  const issuedAt = Math.floor(Date.now() / 1000);
-  const token = jwt.sign(
-    {
+    // Generate JWT token
+    const issuedAt = Math.floor(Date.now() / 1000);
+    const token = jwt.sign(
+      {
+        email: user.email,
+        role: 'user',
+        iat: issuedAt
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    // Security logging for successful login
+    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
+    console.log(`[SECURITY] ${new Date().toISOString()}: USER_LOGIN_SUCCESS`, {
+      email: user.email,
+      ip: clientIP,
+      userAgent: req.headers['user-agent']
+    });
+
+    // Return success response
+    res.json({
+      token,
       email: user.email,
       role: 'user',
-      iat: issuedAt
-    },
-    JWT_SECRET,
-    { expiresIn: '24h' }
-  );
+      ficaApproved: user.fica_approved,
+      suspended: user.suspended,
+      expiresAt: issuedAt + (24 * 60 * 60), // 24 hours from now
+      message: 'Login successful'
+    });
 
-  // Security logging for successful login
-  const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
-  console.log(`[SECURITY] ${new Date().toISOString()}: USER_LOGIN_SUCCESS`, {
-    email: user.email,
-    ip: clientIP,
-    userAgent: req.headers['user-agent']
-  });
-
-  // Return success response
-  res.json({
-    token,
-    email: user.email,
-    role: 'user',
-    ficaApproved: user.ficaApproved,
-    suspended: user.suspended,
-    expiresAt: issuedAt + (24 * 60 * 60), // 24 hours from now
-    message: 'Login successful'
-  });
+  } catch (error) {
+    console.error('Error during login:', error);
+    res.status(500).json({ error: 'Authentication failed. Please try again.' });
+  }
 });
 
 // Import and use admin login

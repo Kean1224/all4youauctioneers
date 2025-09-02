@@ -5,17 +5,13 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('../../middleware/auth');
 const verifyAdmin = require('../auth/verify-admin');
+const dbModels = require('../../database/models');
 
 const router = express.Router();
 
-// Deposit storage paths
+// Legacy paths for backward compatibility (not used with PostgreSQL)
 const DEPOSITS_FILE = path.join(__dirname, '../../data/auctionDeposits.json');
 const DEPOSITS_UPLOAD_DIR = path.join(__dirname, '../../uploads/deposits');
-
-// Ensure upload directory exists
-if (!fs.existsSync(DEPOSITS_UPLOAD_DIR)) {
-  fs.mkdirSync(DEPOSITS_UPLOAD_DIR, { recursive: true });
-}
 
 // Configure multer for memory storage (files will be stored in PostgreSQL)
 const storage = multer.memoryStorage();
@@ -35,39 +31,24 @@ const upload = multer({
   }
 });
 
-// Helper functions
-const readDeposits = () => {
+// Helper functions - migrated from JSON files to PostgreSQL
+const getAuctionById = async (auctionId) => {
   try {
-    if (fs.existsSync(DEPOSITS_FILE)) {
-      const data = fs.readFileSync(DEPOSITS_FILE, 'utf8');
-      return JSON.parse(data);
-    }
-    return [];
-  } catch (error) {
-    console.error('Error reading deposits file:', error);
-    return [];
-  }
-};
-
-const writeDeposits = (deposits) => {
-  try {
-    fs.writeFileSync(DEPOSITS_FILE, JSON.stringify(deposits, null, 2));
-  } catch (error) {
-    console.error('Error writing deposits file:', error);
-  }
-};
-
-const readAuctions = () => {
-  try {
+    // Try PostgreSQL first
+    const auction = await dbModels.getAuctionById(auctionId);
+    if (auction) return auction;
+    
+    // Fall back to JSON file for legacy compatibility
     const auctionsPath = path.join(__dirname, '../../data/auctions.json');
     if (fs.existsSync(auctionsPath)) {
       const data = fs.readFileSync(auctionsPath, 'utf8');
-      return JSON.parse(data);
+      const auctions = JSON.parse(data);
+      return auctions.find(a => a.id === auctionId);
     }
-    return [];
+    return null;
   } catch (error) {
-    console.error('Error reading auctions file:', error);
-    return [];
+    console.error('Error getting auction:', error);
+    return null;
   }
 };
 
@@ -81,7 +62,7 @@ try {
   sendMail = async () => Promise.resolve();
 }
 
-// 📤 Submit deposit proof (User endpoint)
+// 📤 Submit deposit proof (User endpoint) - MIGRATED TO POSTGRESQL
 router.post('/submit', authenticateToken, upload.single('depositProof'), async (req, res) => {
   try {
     const { auctionId, amount, paymentMethod, referenceNumber, notes } = req.body;
@@ -100,22 +81,14 @@ router.post('/submit', authenticateToken, upload.single('depositProof'), async (
     }
 
     // Get auction details
-    const auctions = readAuctions();
-    const auction = auctions.find(a => a.id === auctionId);
-    
+    const auction = await getAuctionById(auctionId);
     if (!auction) {
       return res.status(404).json({ error: 'Auction not found' });
     }
 
     // Check if deposit already submitted for this auction
-    const deposits = readDeposits();
-    const existingDeposit = deposits.find(d => 
-      d.userEmail === userEmail && 
-      d.auctionId === auctionId && 
-      d.status !== 'rejected'
-    );
-
-    if (existingDeposit) {
+    const existingDeposit = await dbModels.getDepositByUserAndAuction(userEmail, auctionId);
+    if (existingDeposit && existingDeposit.status !== 'rejected') {
       return res.status(400).json({ 
         error: 'Deposit already submitted for this auction', 
         status: existingDeposit.status 
@@ -123,28 +96,21 @@ router.post('/submit', authenticateToken, upload.single('depositProof'), async (
     }
 
     // Create new deposit record
-    const deposit = {
-      id: uuidv4(),
-      userEmail,
-      auctionId,
-      auctionTitle: auction.title,
+    const depositData = {
+      user_email: userEmail,
+      auction_id: auctionId,
+      auction_title: auction.title,
       amount: parseFloat(amount),
-      requiredAmount: auction.depositAmount || 0,
-      paymentMethod,
-      referenceNumber: referenceNumber || '',
+      required_amount: auction.depositAmount || 0,
+      payment_method: paymentMethod,
+      reference_number: referenceNumber || '',
       notes: notes || '',
-      proofFilename: req.file.filename,
-      proofOriginalName: req.file.originalname,
-      proofPath: req.file.path,
-      submittedAt: new Date().toISOString(),
-      status: 'pending', // pending, approved, rejected
-      reviewedAt: null,
-      reviewedBy: null,
-      reviewNotes: ''
+      proof_file_data: `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+      proof_original_name: req.file.originalname,
+      status: 'pending'
     };
 
-    deposits.push(deposit);
-    writeDeposits(deposits);
+    const deposit = await dbModels.createDeposit(depositData);
 
     res.json({ 
       message: 'Deposit proof submitted successfully', 
@@ -158,35 +124,31 @@ router.post('/submit', authenticateToken, upload.single('depositProof'), async (
   }
 });
 
-// 📋 Get user's deposit status for an auction
-router.get('/status/:auctionId', authenticateToken, (req, res) => {
+// 📋 Get user's deposit status for an auction - MIGRATED TO POSTGRESQL
+router.get('/status/:auctionId', authenticateToken, async (req, res) => {
   try {
     const { auctionId } = req.params;
     const userEmail = req.user.email;
 
-    const deposits = readDeposits();
-    const deposit = deposits.find(d => 
-      d.userEmail === userEmail && 
-      d.auctionId === auctionId
-    );
+    const deposit = await dbModels.getDepositByUserAndAuction(userEmail, auctionId);
 
     if (!deposit) {
       return res.json({ status: 'not_submitted', deposit: null });
     }
 
-    // Remove sensitive file paths from response
+    // Remove sensitive file data from response
     const safeDeposit = {
       id: deposit.id,
-      auctionId: deposit.auctionId,
-      auctionTitle: deposit.auctionTitle,
+      auctionId: deposit.auction_id,
+      auctionTitle: deposit.auction_title,
       amount: deposit.amount,
-      requiredAmount: deposit.requiredAmount,
-      paymentMethod: deposit.paymentMethod,
-      referenceNumber: deposit.referenceNumber,
-      submittedAt: deposit.submittedAt,
+      requiredAmount: deposit.required_amount,
+      paymentMethod: deposit.payment_method,
+      referenceNumber: deposit.reference_number,
+      submittedAt: deposit.submitted_at,
       status: deposit.status,
-      reviewedAt: deposit.reviewedAt,
-      reviewNotes: deposit.reviewNotes
+      reviewedAt: deposit.reviewed_at,
+      reviewNotes: deposit.review_notes
     };
 
     res.json({ status: deposit.status, deposit: safeDeposit });
@@ -197,10 +159,10 @@ router.get('/status/:auctionId', authenticateToken, (req, res) => {
   }
 });
 
-// 📊 Get all deposits (Admin only)
-router.get('/admin/all', verifyAdmin, (req, res) => {
+// 📊 Get all deposits (Admin only) - MIGRATED TO POSTGRESQL
+router.get('/admin/all', verifyAdmin, async (req, res) => {
   try {
-    const deposits = readDeposits();
+    const deposits = await dbModels.getAllDeposits();
     
     // Add summary statistics
     const stats = {
@@ -210,7 +172,26 @@ router.get('/admin/all', verifyAdmin, (req, res) => {
       rejected: deposits.filter(d => d.status === 'rejected').length
     };
 
-    res.json({ deposits, stats });
+    // Transform database fields to match frontend expectations
+    const transformedDeposits = deposits.map(d => ({
+      id: d.id,
+      userEmail: d.user_email,
+      auctionId: d.auction_id,
+      auctionTitle: d.auction_title,
+      amount: d.amount,
+      requiredAmount: d.required_amount,
+      paymentMethod: d.payment_method,
+      referenceNumber: d.reference_number,
+      notes: d.notes,
+      proofOriginalName: d.proof_original_name,
+      submittedAt: d.submitted_at,
+      status: d.status,
+      reviewedAt: d.reviewed_at,
+      reviewedBy: d.reviewed_by,
+      reviewNotes: d.review_notes
+    }));
+
+    res.json({ deposits: transformedDeposits, stats });
 
   } catch (error) {
     console.error('Error getting deposits:', error);
@@ -218,32 +199,25 @@ router.get('/admin/all', verifyAdmin, (req, res) => {
   }
 });
 
-// ✅ Approve deposit (Admin only)
+// ✅ Approve deposit (Admin only) - MIGRATED TO POSTGRESQL
 router.post('/admin/:depositId/approve', verifyAdmin, async (req, res) => {
   try {
     const { depositId } = req.params;
     const { reviewNotes } = req.body;
     const adminEmail = req.user.email;
 
-    const deposits = readDeposits();
-    const depositIndex = deposits.findIndex(d => d.id === depositId);
-
-    if (depositIndex === -1) {
+    const deposit = await dbModels.getDepositById(depositId);
+    if (!deposit) {
       return res.status(404).json({ error: 'Deposit not found' });
     }
 
-    const deposit = deposits[depositIndex];
-    
     // Update deposit status
-    deposits[depositIndex] = {
-      ...deposit,
-      status: 'approved',
-      reviewedAt: new Date().toISOString(),
-      reviewedBy: adminEmail,
-      reviewNotes: reviewNotes || ''
+    const reviewData = {
+      reviewed_by: adminEmail,
+      review_notes: reviewNotes || ''
     };
 
-    writeDeposits(deposits);
+    await dbModels.updateDepositStatus(depositId, 'approved', reviewData);
     res.json({ message: 'Deposit approved successfully' });
 
   } catch (error) {
@@ -252,32 +226,25 @@ router.post('/admin/:depositId/approve', verifyAdmin, async (req, res) => {
   }
 });
 
-// ❌ Reject deposit (Admin only)
+// ❌ Reject deposit (Admin only) - MIGRATED TO POSTGRESQL
 router.post('/admin/:depositId/reject', verifyAdmin, async (req, res) => {
   try {
     const { depositId } = req.params;
     const { reviewNotes } = req.body;
     const adminEmail = req.user.email;
 
-    const deposits = readDeposits();
-    const depositIndex = deposits.findIndex(d => d.id === depositId);
-
-    if (depositIndex === -1) {
+    const deposit = await dbModels.getDepositById(depositId);
+    if (!deposit) {
       return res.status(404).json({ error: 'Deposit not found' });
     }
 
-    const deposit = deposits[depositIndex];
-    
     // Update deposit status
-    deposits[depositIndex] = {
-      ...deposit,
-      status: 'rejected',
-      reviewedAt: new Date().toISOString(),
-      reviewedBy: adminEmail,
-      reviewNotes: reviewNotes || ''
+    const reviewData = {
+      reviewed_by: adminEmail,
+      review_notes: reviewNotes || ''
     };
 
-    writeDeposits(deposits);
+    await dbModels.updateDepositStatus(depositId, 'rejected', reviewData);
     res.json({ message: 'Deposit review completed' });
 
   } catch (error) {
@@ -286,48 +253,124 @@ router.post('/admin/:depositId/reject', verifyAdmin, async (req, res) => {
   }
 });
 
-// Legacy endpoints for backward compatibility
-router.get('/:auctionId/:email', (req, res) => {
-  const { auctionId, email } = req.params;
-  const deposits = readDeposits();
-  const entry = deposits.find(d => d.auctionId === auctionId && d.email === email);
-  res.json(entry || { auctionId, email, status: 'not_paid' });
+// Legacy endpoints for backward compatibility - MIGRATED TO POSTGRESQL
+router.get('/:auctionId/:email', async (req, res) => {
+  try {
+    const { auctionId, email } = req.params;
+    const deposit = await dbModels.getDepositByUserAndAuction(email, auctionId);
+    
+    if (!deposit) {
+      return res.json({ auctionId, email, status: 'not_paid' });
+    }
+    
+    // Transform to legacy format
+    const legacyDeposit = {
+      id: deposit.id,
+      auctionId: deposit.auction_id,
+      email: deposit.user_email,
+      status: deposit.status,
+      amount: deposit.amount,
+      submittedAt: deposit.submitted_at
+    };
+    
+    res.json(legacyDeposit);
+  } catch (error) {
+    console.error('Error getting deposit:', error);
+    res.status(500).json({ error: 'Failed to get deposit' });
+  }
 });
 
 // POST: User marks deposit as paid (pending admin approval)
-router.post('/:auctionId/:email', (req, res) => {
-  const { auctionId, email } = req.params;
-  const deposits = readDeposits();
-  let entry = deposits.find(d => d.auctionId === auctionId && d.email === email);
-  if (!entry) {
-    entry = { auctionId, email, status: 'pending', notified: false };
-    deposits.push(entry);
-  } else {
-    entry.status = 'pending';
-    entry.notified = false;
+router.post('/:auctionId/:email', async (req, res) => {
+  try {
+    const { auctionId, email } = req.params;
+    
+    let deposit = await dbModels.getDepositByUserAndAuction(email, auctionId);
+    
+    if (!deposit) {
+      // Create new deposit entry
+      const depositData = {
+        user_email: email,
+        auction_id: auctionId,
+        auction_title: 'Legacy Entry',
+        amount: 0,
+        payment_method: 'legacy',
+        status: 'pending'
+      };
+      deposit = await dbModels.createDeposit(depositData);
+    } else {
+      // Update existing deposit
+      await dbModels.updateDepositStatus(deposit.id, 'pending');
+      deposit.status = 'pending';
+    }
+    
+    res.json({
+      id: deposit.id,
+      auctionId: deposit.auction_id,
+      email: deposit.user_email,
+      status: 'pending',
+      notified: false
+    });
+  } catch (error) {
+    console.error('Error updating deposit:', error);
+    res.status(500).json({ error: 'Failed to update deposit' });
   }
-  writeDeposits(deposits);
-  res.json(entry);
 });
 
 // PUT: Admin approves deposit - ADMIN AUTHENTICATION REQUIRED
-router.put('/:auctionId/:email', verifyAdmin, (req, res) => {
-  const { auctionId, email } = req.params;
-  const deposits = readDeposits();
-  let entry = deposits.find(d => d.auctionId === auctionId && d.email === email);
-  if (!entry) {
-    return res.status(404).json({ error: 'No deposit record found' });
+router.put('/:auctionId/:email', verifyAdmin, async (req, res) => {
+  try {
+    const { auctionId, email } = req.params;
+    const { status = 'approved' } = req.body;
+    
+    const deposit = await dbModels.getDepositByUserAndAuction(email, auctionId);
+    if (!deposit) {
+      return res.status(404).json({ error: 'No deposit record found' });
+    }
+    
+    const reviewData = {
+      reviewed_by: req.user?.email || 'admin',
+      review_notes: 'Legacy approval'
+    };
+    
+    const updatedDeposit = await dbModels.updateDepositStatus(deposit.id, status, reviewData);
+    
+    res.json({
+      id: updatedDeposit.id,
+      auctionId: updatedDeposit.auction_id,
+      email: updatedDeposit.user_email,
+      status: updatedDeposit.status
+    });
+  } catch (error) {
+    console.error('Error approving deposit:', error);
+    res.status(500).json({ error: 'Failed to approve deposit' });
   }
-  entry.status = req.body.status || 'approved';
-  writeDeposits(deposits);
-  res.json(entry);
 });
 
-// GET: List all deposits for an auction (admin) - temporarily remove verifyAdmin
-router.get('/auction/:auctionId', (req, res) => {
-  const { auctionId } = req.params;
-  const deposits = readDeposits().filter(d => d.auctionId === auctionId);
-  res.json(deposits);
+// GET: List all deposits for an auction (admin)
+router.get('/auction/:auctionId', async (req, res) => {
+  try {
+    const { auctionId } = req.params;
+    const deposits = await dbModels.getDepositsByAuction(auctionId);
+    
+    // Transform to legacy format
+    const legacyDeposits = deposits.map(d => ({
+      id: d.id,
+      auctionId: d.auction_id,
+      email: d.user_email,
+      userEmail: d.user_email,
+      status: d.status,
+      amount: d.amount,
+      paymentMethod: d.payment_method,
+      submittedAt: d.submitted_at,
+      reviewedAt: d.reviewed_at
+    }));
+    
+    res.json(legacyDeposits);
+  } catch (error) {
+    console.error('Error getting auction deposits:', error);
+    res.status(500).json({ error: 'Failed to get auction deposits' });
+  }
 });
 
 module.exports = router;

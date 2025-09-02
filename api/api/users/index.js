@@ -124,27 +124,22 @@ router.post('/fica-reupload/:email', upload.fields([
   }
 });
 
-// ✅ GET pending registrations (admin only)
-router.get('/pending', verifyAdmin, (req, res) => {
-  const PENDING_USERS_FILE = path.join(__dirname, '../../data/pending-registrations.json');
-  
+// ✅ GET pending registrations (admin only) - MIGRATED TO POSTGRESQL
+router.get('/pending', verifyAdmin, async (req, res) => {
   try {
-    if (!fs.existsSync(PENDING_USERS_FILE)) {
-      return res.json([]);
-    }
-    
-    const pendingUsers = JSON.parse(fs.readFileSync(PENDING_USERS_FILE, 'utf-8'));
+    // Get unverified users from database (pending email verification)
+    const pendingUsers = await dbModels.getPendingUsers();
     
     // Remove sensitive data before sending to frontend
     const safePendingUsers = pendingUsers.map(user => ({
       email: user.email,
       name: user.name,
-      username: user.username,
-      cell: user.cell,
-      createdAt: user.createdAt,
-      expiresAt: user.expiresAt,
-      idDocument: user.idDocument,
-      proofOfAddress: user.proofOfAddress
+      phone: user.phone,
+      createdAt: user.created_at,
+      emailVerified: user.email_verified,
+      ficaApproved: user.fica_approved,
+      idDocument: user.idDocument ? 'Uploaded' : 'Not uploaded',
+      proofOfAddress: user.proofOfAddress ? 'Uploaded' : 'Not uploaded'
     }));
     
     res.json(safePendingUsers);
@@ -160,18 +155,14 @@ router.get('/', async (req, res) => {
     // Get users from database instead of JSON file
     const users = await dbModels.getAllUsers();
     
-    // Load deposit data and merge it with users (legacy deposits still in JSON)
-    const depositsPath = path.join(__dirname, '../deposits/../../data/auctionDeposits.json');
-    let deposits = [];
-    if (fs.existsSync(depositsPath)) {
-      deposits = JSON.parse(fs.readFileSync(depositsPath, 'utf-8'));
-    }
+    // Get deposit data from database and merge it with users
+    const deposits = await dbModels.getAllDeposits();
     
     // Add deposit information to each user
     const usersWithDeposits = users.map(user => ({
       ...user,
-      deposits: deposits.filter(d => d.email === user.email).map(d => ({
-        auctionId: d.auctionId,
+      deposits: deposits.filter(d => d.user_email === user.email).map(d => ({
+        auctionId: d.auction_id,
         status: d.status === 'approved' ? 'paid' : d.status === 'pending' ? 'pending' : d.status,
         returned: d.status === 'returned'
       }))
@@ -764,37 +755,48 @@ router.put('/:email/watchlist', authenticateToken, async (req, res) => {
   }
 });
 
-// ✅ POST: Manually verify email (admin only) 
-router.post('/:email/verify-email', verifyAdmin, (req, res) => {
-  const { createVerifiedUser } = require('../auth/email-verification');
-  const PENDING_USERS_FILE = path.join(__dirname, '../../data/pending-registrations.json');
-  
+// ✅ POST: Manually verify email (admin only) - MIGRATED TO POSTGRESQL
+router.post('/:email/verify-email', verifyAdmin, async (req, res) => {
   try {
-    // Read pending users
-    if (!fs.existsSync(PENDING_USERS_FILE)) {
-      return res.status(404).json({ error: 'No pending registrations found' });
+    const email = decodeURIComponent(req.params.email);
+    
+    // Find user in database
+    const user = await dbModels.getUserByEmail(email);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
     }
     
-    const pendingUsers = JSON.parse(fs.readFileSync(PENDING_USERS_FILE, 'utf-8'));
-    const pendingUser = pendingUsers.find(u => u.email === req.params.email);
-    
-    if (!pendingUser) {
-      return res.status(404).json({ error: 'Pending registration not found' });
+    if (user.email_verified) {
+      return res.status(400).json({ error: 'Email already verified' });
     }
     
-    // Create verified user
-    const newUser = createVerifiedUser(pendingUser);
+    // Mark email as verified in database
+    const updatedUser = await dbModels.updateUser(email, {
+      email_verified: true,
+      verified_at: new Date().toISOString()
+    });
     
-    // Remove from pending users
-    const updatedPending = pendingUsers.filter(u => u.email !== req.params.email);
-    fs.writeFileSync(PENDING_USERS_FILE, JSON.stringify(updatedPending, null, 2));
+    console.log(`✅ Admin manually verified email for: ${email}`);
     
-    console.log(`✅ Admin manually verified email for: ${req.params.email}`);
-    res.json({ message: 'Email verified successfully', user: newUser });
+    // Transform response to match expected format
+    const userResponse = {
+      email: updatedUser.email,
+      name: updatedUser.name,
+      phone: updatedUser.phone,
+      address: updatedUser.address,
+      city: updatedUser.city,
+      postalCode: updatedUser.postal_code,
+      ficaApproved: updatedUser.fica_approved,
+      emailVerified: updatedUser.email_verified,
+      suspended: updatedUser.suspended,
+      registeredAt: updatedUser.created_at
+    };
+    
+    res.json({ message: 'Email verified successfully', user: userResponse });
     
   } catch (error) {
     console.error('Manual email verification error:', error);
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ error: 'Failed to verify email' });
   }
 });
 

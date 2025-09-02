@@ -1120,6 +1120,127 @@ class DatabaseModels {
   }
 
   /**
+   * Get pending users (users with unverified email)
+   */
+  async getPendingUsers() {
+    const query = `
+      SELECT * FROM users 
+      WHERE email_verified = false 
+      ORDER BY created_at DESC
+    `;
+    const result = await dbManager.query(query);
+    return result.rows;
+  }
+
+  /**
+   * Get all deposits (for legacy compatibility)
+   */
+  async getAllDeposits() {
+    try {
+      const query = 'SELECT * FROM auction_deposits ORDER BY created_at DESC';
+      const result = await dbManager.query(query);
+      return result.rows;
+    } catch (error) {
+      console.log('Deposits table not found, returning empty array');
+      return []; // Return empty array if deposits table doesn't exist yet
+    }
+  }
+
+  // ===================== DEPOSITS MODEL =====================
+
+  /**
+   * Create a new deposit
+   */
+  async createDeposit(depositData) {
+    const query = `
+      INSERT INTO auction_deposits (
+        user_email, auction_id, auction_title, amount, required_amount, 
+        payment_method, reference_number, notes, proof_file_data,
+        proof_original_name, status, submitted_at
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *
+    `;
+    
+    const values = [
+      depositData.user_email,
+      depositData.auction_id,
+      depositData.auction_title,
+      depositData.amount,
+      depositData.required_amount || 0,
+      depositData.payment_method,
+      depositData.reference_number || '',
+      depositData.notes || '',
+      depositData.proof_file_data,
+      depositData.proof_original_name,
+      depositData.status || 'pending',
+      depositData.submitted_at || new Date().toISOString()
+    ];
+    
+    const result = await dbManager.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Find deposit by user and auction
+   */
+  async getDepositByUserAndAuction(userEmail, auctionId) {
+    const query = `
+      SELECT * FROM auction_deposits 
+      WHERE user_email = $1 AND auction_id = $2
+      ORDER BY created_at DESC
+      LIMIT 1
+    `;
+    const result = await dbManager.query(query, [userEmail, auctionId]);
+    return result.rows[0] || null;
+  }
+
+  /**
+   * Get deposits by auction
+   */
+  async getDepositsByAuction(auctionId) {
+    const query = `
+      SELECT * FROM auction_deposits 
+      WHERE auction_id = $1
+      ORDER BY created_at DESC
+    `;
+    const result = await dbManager.query(query, [auctionId]);
+    return result.rows;
+  }
+
+  /**
+   * Update deposit status
+   */
+  async updateDepositStatus(depositId, status, reviewData = {}) {
+    const query = `
+      UPDATE auction_deposits 
+      SET status = $2, reviewed_at = $3, reviewed_by = $4, review_notes = $5, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const values = [
+      depositId,
+      status,
+      reviewData.reviewed_at || new Date().toISOString(),
+      reviewData.reviewed_by || null,
+      reviewData.review_notes || ''
+    ];
+    
+    const result = await dbManager.query(query, values);
+    return result.rows[0];
+  }
+
+  /**
+   * Get deposit by ID
+   */
+  async getDepositById(depositId) {
+    const query = 'SELECT * FROM auction_deposits WHERE id = $1';
+    const result = await dbManager.query(query, [depositId]);
+    return result.rows[0] || null;
+  }
+
+  /**
    * Get database statistics
    */
   async getStats() {

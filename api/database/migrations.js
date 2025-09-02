@@ -305,6 +305,45 @@ class MigrationManager {
           -- Revert back to VARCHAR(500) - note: this may fail if data is too long
           ALTER TABLE fica_documents ALTER COLUMN file_url TYPE VARCHAR(500);
         `
+      },
+      
+      {
+        version: 14,
+        name: 'create_auction_deposits_table',
+        up: `
+          CREATE TABLE IF NOT EXISTS auction_deposits (
+            id SERIAL PRIMARY KEY,
+            user_email VARCHAR(255) NOT NULL,
+            auction_id VARCHAR(255) NOT NULL,
+            auction_title VARCHAR(500),
+            amount DECIMAL(10, 2) NOT NULL,
+            required_amount DECIMAL(10, 2) DEFAULT 0,
+            payment_method VARCHAR(100),
+            reference_number VARCHAR(255),
+            notes TEXT,
+            proof_file_data TEXT, -- Store base64 encoded file data
+            proof_original_name VARCHAR(255),
+            status VARCHAR(50) DEFAULT 'pending', -- pending, approved, rejected, returned
+            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            reviewed_at TIMESTAMP,
+            reviewed_by VARCHAR(255),
+            review_notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Indexes for performance
+          CREATE INDEX IF NOT EXISTS idx_deposits_user_email ON auction_deposits(user_email);
+          CREATE INDEX IF NOT EXISTS idx_deposits_auction_id ON auction_deposits(auction_id);
+          CREATE INDEX IF NOT EXISTS idx_deposits_status ON auction_deposits(status);
+          CREATE INDEX IF NOT EXISTS idx_deposits_submitted_at ON auction_deposits(submitted_at);
+          
+          -- Foreign key constraint (soft - auction_id can be from JSON or PostgreSQL)
+          -- No foreign key constraint on user_email since we're migrating gradually
+        `,
+        down: `
+          DROP TABLE IF EXISTS auction_deposits CASCADE;
+        `
       }
     ];
   }
