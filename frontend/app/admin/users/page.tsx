@@ -50,6 +50,9 @@ type User = {
   email: string;
   name: string;
   username?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
   role?: 'admin' | 'user';
   suspended?: boolean;
   ficaApproved?: boolean;
@@ -221,6 +224,9 @@ export default function AdminUsersPage() {
                     <th className="p-5">Name</th>
                     <th className="p-5">Username</th>
                     <th className="p-5">Email</th>
+                    <th className="p-5">Cell Number</th>
+                    <th className="p-5">Address</th>
+                    <th className="p-5">City</th>
                     <th className="p-5">Role</th>
                     <th className="p-5">FICA</th>
                     <th className="p-5">Suspended</th>
@@ -240,6 +246,9 @@ export default function AdminUsersPage() {
                       <td className="p-5 font-bold text-white text-lg">{user.name}</td>
                       <td className="p-5 text-green-200 font-semibold">{user.username || '-'}</td>
                       <td className="p-5 text-green-100 break-all font-mono">{user.email}</td>
+                      <td className="p-5 text-green-100">{user.phone || '-'}</td>
+                      <td className="p-5 text-green-100">{user.address || '-'}</td>
+                      <td className="p-5 text-green-100">{user.city || '-'}</td>
                       <td className="p-5 text-green-300 font-bold uppercase">{user.role || 'user'}</td>
                       <td className="p-5">
                         {user.ficaApproved ? (
