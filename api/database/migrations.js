@@ -500,9 +500,8 @@ class MigrationManager {
       {
         version: 20,
         name: 'create_invoices_table',
-        up: `
-          -- Create invoices table
-          CREATE TABLE IF NOT EXISTS invoices (
+        up: [
+          `CREATE TABLE IF NOT EXISTS invoices (
             id SERIAL PRIMARY KEY,
             invoice_number VARCHAR(100) UNIQUE NOT NULL,
             auction_id VARCHAR(255),
@@ -524,17 +523,13 @@ class MigrationManager {
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          );
-          
-          -- Create indexes after table creation
-          CREATE INDEX IF NOT EXISTS idx_invoices_buyer_email ON invoices(buyer_email);
-          CREATE INDEX IF NOT EXISTS idx_invoices_auction_id ON invoices(auction_id);
-          CREATE INDEX IF NOT EXISTS idx_invoices_payment_status ON invoices(payment_status);
-          CREATE INDEX IF NOT EXISTS idx_invoices_invoice_date ON invoices(invoice_date);
-        `,
-        down: `
-          DROP TABLE IF EXISTS invoices CASCADE;
-        `
+          )`,
+          `CREATE INDEX IF NOT EXISTS idx_invoices_buyer_email ON invoices(buyer_email)`,
+          `CREATE INDEX IF NOT EXISTS idx_invoices_auction_id ON invoices(auction_id)`,
+          `CREATE INDEX IF NOT EXISTS idx_invoices_payment_status ON invoices(payment_status)`,
+          `CREATE INDEX IF NOT EXISTS idx_invoices_invoice_date ON invoices(invoice_date)`
+        ],
+        down: `DROP TABLE IF EXISTS invoices CASCADE`
       }
     ];
   }
@@ -583,8 +578,22 @@ class MigrationManager {
     console.log(`🔄 Running migration: ${migration.name} (v${migration.version})`);
     
     await dbManager.transaction(async (client) => {
-      // Execute migration
-      await client.query(migration.up);
+      // Handle both string and array formats for migration.up
+      let statements = [];
+      
+      if (Array.isArray(migration.up)) {
+        statements = migration.up;
+      } else {
+        statements = migration.up.split(';').filter(stmt => stmt.trim());
+      }
+      
+      for (const statement of statements) {
+        const trimmed = statement.trim();
+        if (trimmed) {
+          console.log(`🔄 Executing: ${trimmed.substring(0, 50)}...`);
+          await client.query(trimmed);
+        }
+      }
       
       // Record migration
       await client.query(

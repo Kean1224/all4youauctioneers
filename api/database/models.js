@@ -1665,6 +1665,103 @@ class DatabaseModels {
   }
 
   /**
+   * Get invoice by ID
+   */
+  async getInvoiceById(invoiceId) {
+    try {
+      const query = 'SELECT * FROM invoices WHERE id = $1';
+      const result = await dbManager.query(query, [invoiceId]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('Error getting invoice by ID:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get invoice by invoice number
+   */
+  async getInvoiceByNumber(invoiceNumber) {
+    try {
+      const query = 'SELECT * FROM invoices WHERE invoice_number = $1';
+      const result = await dbManager.query(query, [invoiceNumber]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('Error getting invoice by number:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get invoices by buyer email
+   */
+  async getInvoicesByBuyer(buyerEmail) {
+    try {
+      const query = `
+        SELECT * FROM invoices 
+        WHERE buyer_email = $1 
+        ORDER BY created_at DESC
+      `;
+      const result = await dbManager.query(query, [buyerEmail]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting invoices by buyer:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get invoices by payment status
+   */
+  async getInvoicesByStatus(status) {
+    try {
+      const query = `
+        SELECT * FROM invoices 
+        WHERE payment_status = $1 
+        ORDER BY created_at DESC
+      `;
+      const result = await dbManager.query(query, [status]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting invoices by status:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Mark invoice as paid (admin action)
+   */
+  async markInvoiceAsPaid(invoiceId, adminData) {
+    try {
+      const query = `
+        UPDATE invoices 
+        SET payment_status = 'paid', 
+            payment_method = $2, 
+            payment_date = $3, 
+            payment_reference = $4,
+            notes = COALESCE(notes, '') || CASE WHEN notes IS NOT NULL AND notes != '' THEN E'\\n\\n' ELSE '' END || $5,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      `;
+      
+      const values = [
+        invoiceId,
+        adminData.payment_method || 'EFT',
+        adminData.payment_date || new Date().toISOString(),
+        adminData.payment_reference || '',
+        `Payment confirmed by admin (${adminData.confirmed_by || 'admin'}) on ${new Date().toISOString()}`
+      ];
+      
+      const result = await dbManager.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error marking invoice as paid:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get database statistics
    */
   async getStats() {

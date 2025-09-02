@@ -710,4 +710,245 @@ router.post('/admin/:invoiceId/mark-paid', verifyAdmin, async (req, res) => {
   }
 });
 
+// ==================== ADMIN PAYMENT MANAGEMENT ENDPOINTS ====================
+
+// 📊 GET: All invoices for admin management
+router.get('/admin/all', verifyAdmin, async (req, res) => {
+  try {
+    // Get all invoices from PostgreSQL
+    const invoices = await dbModels.getAllInvoices();
+    
+    if (invoices.length > 0) {
+      // Transform to expected format
+      const transformedInvoices = invoices.map(inv => ({
+        id: inv.id,
+        invoiceNumber: inv.invoice_number,
+        auctionId: inv.auction_id,
+        lotId: inv.lot_id,
+        buyerEmail: inv.buyer_email,
+        sellerEmail: inv.seller_email,
+        itemTitle: inv.item_title,
+        winningBid: inv.winning_bid,
+        buyersPremium: inv.buyers_premium,
+        vatAmount: inv.vat_amount,
+        totalAmount: inv.total_amount,
+        paymentStatus: inv.payment_status,
+        paymentMethod: inv.payment_method,
+        paymentDate: inv.payment_date,
+        paymentReference: inv.payment_reference,
+        invoiceDate: inv.invoice_date,
+        dueDate: inv.due_date,
+        notes: inv.notes,
+        createdAt: inv.created_at,
+        updatedAt: inv.updated_at
+      }));
+      
+      // Add summary statistics
+      const stats = {
+        total: transformedInvoices.length,
+        pending: transformedInvoices.filter(i => i.paymentStatus === 'pending').length,
+        paid: transformedInvoices.filter(i => i.paymentStatus === 'paid').length,
+        overdue: transformedInvoices.filter(i => i.paymentStatus === 'overdue').length
+      };
+      
+      return res.json({ invoices: transformedInvoices, stats });
+    }
+    
+    // Fallback to JSON file
+    const jsonInvoices = readInvoices();
+    const stats = {
+      total: jsonInvoices.length,
+      pending: jsonInvoices.filter(i => i.paymentStatus === 'pending').length,
+      paid: jsonInvoices.filter(i => i.paymentStatus === 'paid').length,
+      overdue: jsonInvoices.filter(i => i.paymentStatus === 'overdue').length
+    };
+    
+    res.json({ invoices: jsonInvoices, stats });
+    
+  } catch (error) {
+    console.error('Error fetching admin invoices:', error);
+    res.status(500).json({ error: 'Failed to fetch invoices' });
+  }
+});
+
+// 💰 GET: Pending payments (invoices awaiting payment)
+router.get('/admin/pending', verifyAdmin, async (req, res) => {
+  try {
+    const pendingInvoices = await dbModels.getInvoicesByStatus('pending');
+    
+    const transformedInvoices = pendingInvoices.map(inv => ({
+      id: inv.id,
+      invoiceNumber: inv.invoice_number,
+      buyerEmail: inv.buyer_email,
+      itemTitle: inv.item_title,
+      totalAmount: inv.total_amount,
+      invoiceDate: inv.invoice_date,
+      dueDate: inv.due_date,
+      daysOverdue: inv.due_date ? Math.floor((Date.now() - new Date(inv.due_date).getTime()) / (1000 * 60 * 60 * 24)) : 0
+    }));
+    
+    res.json({ pendingInvoices: transformedInvoices });
+  } catch (error) {
+    console.error('Error fetching pending invoices:', error);
+    res.status(500).json({ error: 'Failed to fetch pending invoices' });
+  }
+});
+
+// ✅ POST: Mark invoice as paid manually (after EFT confirmation)
+router.post('/admin/:invoiceId/mark-paid', verifyAdmin, async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    const { paymentReference, paymentMethod, paymentDate, notes } = req.body;
+    const adminEmail = req.user?.email || 'admin';
+    
+    // Get invoice details first
+    const invoice = await dbModels.getInvoiceById(invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    
+    if (invoice.payment_status === 'paid') {
+      return res.status(400).json({ error: 'Invoice is already marked as paid' });
+    }
+    
+    // Mark as paid
+    const adminData = {
+      payment_method: paymentMethod || 'EFT',
+      payment_date: paymentDate || new Date().toISOString(),
+      payment_reference: paymentReference || '',
+      confirmed_by: adminEmail,
+      admin_notes: notes || ''
+    };
+    
+    const updatedInvoice = await dbModels.markInvoiceAsPaid(invoiceId, adminData);
+    
+    if (!updatedInvoice) {
+      return res.status(500).json({ error: 'Failed to update invoice payment status' });
+    }
+    
+    // Send payment confirmation email to buyer
+    try {
+      await sendMail({
+        to: invoice.buyer_email,
+        subject: `Payment Confirmed - Invoice ${invoice.invoice_number}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #059669;">✅ Payment Confirmed</h2>
+            <p>Dear Customer,</p>
+            <p>We have confirmed receipt of your payment for the following invoice:</p>
+            
+            <div style="background: #f0fdf4; padding: 15px; border-radius: 8px; margin: 15px 0;">
+              <h3>Payment Details:</h3>
+              <p><strong>Invoice Number:</strong> ${invoice.invoice_number}</p>
+              <p><strong>Amount Paid:</strong> R${invoice.total_amount}</p>
+              <p><strong>Payment Method:</strong> ${adminData.payment_method}</p>
+              <p><strong>Payment Reference:</strong> ${adminData.payment_reference}</p>
+              <p><strong>Payment Date:</strong> ${new Date(adminData.payment_date).toLocaleDateString()}</p>
+            </div>
+            
+            <p>Your payment has been processed successfully. You can now collect your items or we will arrange delivery as per auction terms.</p>
+            
+            <p>Thank you for your business!</p>
+            <p>Best regards,<br><strong>All4You Auctions Team</strong></p>
+          </div>
+        `,
+        text: `Payment Confirmed - Invoice ${invoice.invoice_number}
+
+Your payment of R${invoice.total_amount} has been confirmed.
+Payment Reference: ${adminData.payment_reference}
+Payment Date: ${new Date(adminData.payment_date).toLocaleDateString()}
+
+Thank you for your business!
+- All4You Auctions Team`
+      });
+    } catch (emailError) {
+      console.error('Failed to send payment confirmation email:', emailError);
+      // Don't fail the payment update if email fails
+    }
+    
+    res.json({
+      message: 'Invoice marked as paid successfully',
+      invoice: {
+        id: updatedInvoice.id,
+        invoiceNumber: updatedInvoice.invoice_number,
+        buyerEmail: updatedInvoice.buyer_email,
+        totalAmount: updatedInvoice.total_amount,
+        paymentStatus: updatedInvoice.payment_status,
+        paymentMethod: updatedInvoice.payment_method,
+        paymentDate: updatedInvoice.payment_date,
+        paymentReference: updatedInvoice.payment_reference
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error marking invoice as paid:', error);
+    res.status(500).json({ error: 'Failed to mark invoice as paid' });
+  }
+});
+
+// 📧 GET: Invoice details by ID (for admin review)
+router.get('/admin/:invoiceId', verifyAdmin, async (req, res) => {
+  try {
+    const { invoiceId } = req.params;
+    
+    const invoice = await dbModels.getInvoiceById(invoiceId);
+    if (!invoice) {
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+    
+    // Transform to expected format
+    const invoiceDetails = {
+      id: invoice.id,
+      invoiceNumber: invoice.invoice_number,
+      auctionId: invoice.auction_id,
+      lotId: invoice.lot_id,
+      buyerEmail: invoice.buyer_email,
+      sellerEmail: invoice.seller_email,
+      itemTitle: invoice.item_title,
+      winningBid: invoice.winning_bid,
+      buyersPremium: invoice.buyers_premium,
+      vatAmount: invoice.vat_amount,
+      totalAmount: invoice.total_amount,
+      paymentStatus: invoice.payment_status,
+      paymentMethod: invoice.payment_method,
+      paymentDate: invoice.payment_date,
+      paymentReference: invoice.payment_reference,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      notes: invoice.notes,
+      createdAt: invoice.created_at,
+      updatedAt: invoice.updated_at
+    };
+    
+    res.json({ invoice: invoiceDetails });
+  } catch (error) {
+    console.error('Error fetching invoice details:', error);
+    res.status(500).json({ error: 'Failed to fetch invoice details' });
+  }
+});
+
+// 🔍 GET: Search invoices by buyer email
+router.get('/admin/search/buyer/:email', verifyAdmin, async (req, res) => {
+  try {
+    const buyerEmail = decodeURIComponent(req.params.email);
+    
+    const invoices = await dbModels.getInvoicesByBuyer(buyerEmail);
+    
+    const transformedInvoices = invoices.map(inv => ({
+      id: inv.id,
+      invoiceNumber: inv.invoice_number,
+      itemTitle: inv.item_title,
+      totalAmount: inv.total_amount,
+      paymentStatus: inv.payment_status,
+      invoiceDate: inv.invoice_date,
+      paymentDate: inv.payment_date
+    }));
+    
+    res.json({ invoices: transformedInvoices, buyerEmail });
+  } catch (error) {
+    console.error('Error searching invoices by buyer:', error);
+    res.status(500).json({ error: 'Failed to search invoices' });
+  }
+});
+
 module.exports = router;
