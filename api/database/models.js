@@ -15,18 +15,11 @@ class DatabaseModels {
     const query = `
       INSERT INTO users (
         email, password_hash, name, phone, address, city, postal_code,
-        fica_approved, fica_file_url, email_verified, suspended
+        fica_approved, email_verified, suspended
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
       RETURNING *
     `;
-    
-    // Handle FICA documents as JSON
-    const ficaFiles = {};
-    if (userData.idDocument) ficaFiles.idDocument = userData.idDocument;
-    if (userData.proofOfAddress) ficaFiles.proofOfAddress = userData.proofOfAddress;
-    if (userData.bankStatement) ficaFiles.bankStatement = userData.bankStatement;
-    if (userData.watchlist) ficaFiles.watchlist = userData.watchlist;
     
     const values = [
       userData.email,
@@ -37,7 +30,6 @@ class DatabaseModels {
       userData.city || null,
       userData.postal_code || userData.postalCode || null, // Support both field names
       userData.fica_approved || userData.ficaApproved || false,
-      Object.keys(ficaFiles).length > 0 ? JSON.stringify(ficaFiles) : null,
       userData.email_verified || userData.emailVerified || false,
       userData.suspended || false
     ];

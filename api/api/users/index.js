@@ -334,10 +334,7 @@ router.post('/register', upload.fields([
       city: city || '',
       postalCode: postalCode || '',
       ficaApproved: false,
-      suspended: false,
-      idDocument: idDocData.file_url,
-      proofOfAddress: proofDocData.file_url,
-      watchlist: []
+      suspended: false
     };
 
     // Create user in database instead of JSON file

@@ -292,6 +292,19 @@ class MigrationManager {
           ALTER TABLE lots DROP COLUMN IF EXISTS watchers;
           ALTER TABLE lots DROP COLUMN IF EXISTS bid_count;
         `
+      },
+      
+      {
+        version: 13,
+        name: 'fix_fica_file_url_constraint',
+        up: `
+          -- Change file_url from VARCHAR(500) to TEXT to handle base64 data URLs
+          ALTER TABLE fica_documents ALTER COLUMN file_url TYPE TEXT;
+        `,
+        down: `
+          -- Revert back to VARCHAR(500) - note: this may fail if data is too long
+          ALTER TABLE fica_documents ALTER COLUMN file_url TYPE VARCHAR(500);
+        `
       }
     ];
   }
