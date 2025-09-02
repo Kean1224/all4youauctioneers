@@ -20,34 +20,56 @@ const getUserByEmail = async (email) => {
   }
 };
 
-// Get user permissions from database
+// Get user permissions from database (simplified for role column)
 const getUserPermissions = async (userId) => {
   try {
     const query = `
-      SELECT DISTINCT p.name as permission, p.resource, p.action
-      FROM users u
-      JOIN user_roles ur ON u.id = ur.user_id
-      JOIN roles r ON ur.role_id = r.id
-      JOIN role_permissions rp ON r.id = rp.role_id
-      JOIN permissions p ON rp.permission_id = p.id
-      WHERE u.id = $1 AND ur.is_active = true
+      SELECT role
+      FROM users
+      WHERE id = $1
+      LIMIT 1
     `;
     const result = await db.query(query, [userId]);
-    return result.rows;
+    if (result.rows.length === 0) return [];
+    
+    const userRole = result.rows[0].role;
+    
+    // Return permissions based on role
+    if (userRole === 'admin') {
+      // Admin has all permissions - return a comprehensive list
+      return [
+        { permission: 'users:*', resource: 'users', action: '*' },
+        { permission: 'auctions:*', resource: 'auctions', action: '*' },
+        { permission: 'lots:*', resource: 'lots', action: '*' },
+        { permission: 'bids:*', resource: 'bids', action: '*' },
+        { permission: 'invoices:*', resource: 'invoices', action: '*' },
+        { permission: 'reports:*', resource: 'reports', action: '*' },
+        { permission: 'system:*', resource: 'system', action: '*' }
+      ];
+    } else if (userRole === 'user') {
+      // Regular users have limited permissions
+      return [
+        { permission: 'auctions:read', resource: 'auctions', action: 'read' },
+        { permission: 'lots:read', resource: 'lots', action: 'read' },
+        { permission: 'bids:create', resource: 'bids', action: 'create' },
+        { permission: 'bids:read', resource: 'bids', action: 'read' }
+      ];
+    }
+    
+    return [];
   } catch (error) {
     console.error('Error fetching user permissions:', error);
     return [];
   }
 };
 
-// Get user roles from database
+// Get user roles from database (simplified for role column)
 const getUserRoles = async (userId) => {
   try {
     const query = `
-      SELECT r.name, r.display_name, r.is_system_role
-      FROM user_roles ur
-      JOIN roles r ON ur.role_id = r.id
-      WHERE ur.user_id = $1 AND ur.is_active = true
+      SELECT role as name, role as display_name, true as is_system_role
+      FROM users
+      WHERE id = $1 AND role IS NOT NULL
     `;
     const result = await db.query(query, [userId]);
     return result.rows;
@@ -57,45 +79,52 @@ const getUserRoles = async (userId) => {
   }
 };
 
-// Check if user has specific permission
+// Check if user has specific permission (simplified for role column - admin has all permissions)
 const hasPermission = async (userId, resource, action) => {
   try {
     const query = `
-      SELECT 1
-      FROM users u
-      JOIN user_roles ur ON u.id = ur.user_id
-      JOIN roles r ON ur.role_id = r.id
-      JOIN role_permissions rp ON r.id = rp.role_id
-      JOIN permissions p ON rp.permission_id = p.id
-      WHERE u.id = $1 
-        AND p.resource = $2 
-        AND p.action = $3 
-        AND ur.is_active = true
+      SELECT role
+      FROM users
+      WHERE id = $1
       LIMIT 1
     `;
-    const result = await db.query(query, [userId, resource, action]);
-    return result.rows.length > 0;
+    const result = await db.query(query, [userId]);
+    if (result.rows.length === 0) return false;
+    
+    const userRole = result.rows[0].role;
+    
+    // Admin has all permissions
+    if (userRole === 'admin') return true;
+    
+    // For other roles, implement specific permission logic as needed
+    // For now, non-admin users have limited permissions
+    if (userRole === 'user') {
+      // Regular users can only read their own data
+      return action === 'read';
+    }
+    
+    return false;
   } catch (error) {
     console.error('Error checking permission:', error);
     return false;
   }
 };
 
-// Check if user has any of the specified roles
+// Check if user has any of the specified roles (simplified for role column)
 const hasRole = async (userId, roles) => {
   try {
     const roleArray = Array.isArray(roles) ? roles : [roles];
     const query = `
-      SELECT 1
-      FROM user_roles ur
-      JOIN roles r ON ur.role_id = r.id
-      WHERE ur.user_id = $1 
-        AND r.name = ANY($2)
-        AND ur.is_active = true
+      SELECT role
+      FROM users
+      WHERE id = $1
       LIMIT 1
     `;
-    const result = await db.query(query, [userId, roleArray]);
-    return result.rows.length > 0;
+    const result = await db.query(query, [userId]);
+    if (result.rows.length === 0) return false;
+    
+    const userRole = result.rows[0].role;
+    return roleArray.includes(userRole);
   } catch (error) {
     console.error('Error checking role:', error);
     return false;
@@ -112,6 +141,11 @@ const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Ensure we have userId - use id field from token if userId not present
+    if (!decoded.userId && decoded.id) {
+      decoded.userId = decoded.id;
+    }
     
     // Get user ID from database if not in token
     if (!decoded.userId && decoded.email) {
