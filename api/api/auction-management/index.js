@@ -6,23 +6,7 @@ const PDFDocument = require('pdfkit');
 const { v4: uuidv4 } = require('uuid');
 const router = express.Router();
 
-// Data paths
-const auctionsPath = path.join(__dirname, '../../data/auctions.json');
-const lotsPath = path.join(__dirname, '../../data/lots.json');
-const usersPath = path.join(__dirname, '../../data/users.json');
-const invoicesPath = path.join(__dirname, '../../data/invoices.json');
-
-// Helper functions
-function readJSON(filePath) {
-  if (!fs.existsSync(filePath)) return [];
-  return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-}
-
-function writeJSON(filePath, data) {
-  fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
-}
-
-// Import database models
+// Import database models - PostgreSQL only
 const dbModels = require('../../database/models');
 
 // POST: Complete auction and generate all invoices

@@ -31,18 +31,7 @@ function readLotsForAuction(auction) {
   return (auction.lots || []).map(lot => ({ ...lot }));
 }
 
-const dataPath = path.join(__dirname, '../../data/auctions.json');
-
-// Helper: read auctions
-function readAuctions() {
-  if (!fs.existsSync(dataPath)) return [];
-  return JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
-}
-
-// Helper: write auctions
-function writeAuctions(auctions) {
-  fs.writeFileSync(dataPath, JSON.stringify(auctions, null, 2), 'utf-8');
-}
+// Removed JSON file dependencies - using PostgreSQL only
 
 // Helper: Check if auction is completed (all lots have ended)
 function isAuctionCompleted(auction) {

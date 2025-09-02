@@ -5,16 +5,7 @@ const verifyAdmin = require('../auth/verify-admin');
 const dbModels = require('../../database/models');
 const router = express.Router();
 
-const dataPath = path.join(__dirname, '../../data/refundRequests.json');
-
-// Legacy JSON file operations (fallback)
-function readRefunds() {
-  if (!fs.existsSync(dataPath)) return [];
-  return JSON.parse(fs.readFileSync(dataPath, 'utf-8'));
-}
-function writeRefunds(refunds) {
-  fs.writeFileSync(dataPath, JSON.stringify(refunds, null, 2), 'utf-8');
-}
+// Removed JSON file dependencies - using PostgreSQL only
 
 // POST: Buyer requests refund for deposit - MIGRATED TO POSTGRESQL
 router.post('/:auctionId/:email', async (req, res) => {

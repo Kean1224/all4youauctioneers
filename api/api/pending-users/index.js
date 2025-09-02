@@ -4,23 +4,8 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 
-const PENDING_PATH = path.join(__dirname, '../../data/pending_users.json');
-const USERS_PATH = path.join(__dirname, '../../data/users.json');
-
-function readPending() {
-  if (!fs.existsSync(PENDING_PATH)) return [];
-  return JSON.parse(fs.readFileSync(PENDING_PATH, 'utf8'));
-}
-function writePending(data) {
-  fs.writeFileSync(PENDING_PATH, JSON.stringify(data, null, 2));
-}
-function readUsers() {
-  if (!fs.existsSync(USERS_PATH)) return [];
-  return JSON.parse(fs.readFileSync(USERS_PATH, 'utf8'));
-}
-function writeUsers(data) {
-  fs.writeFileSync(USERS_PATH, JSON.stringify(data, null, 2));
-}
+// Import database models - PostgreSQL only
+const dbModels = require('../../database/models');
 
 // Register new user (pending)
 router.post('/', (req, res) => {

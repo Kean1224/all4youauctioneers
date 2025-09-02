@@ -3,34 +3,8 @@ const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 
-// Data file paths
-const invoicesPath = path.join(__dirname, '../../data/invoices.json');
-const depositsPath = path.join(__dirname, '../../data/auctionDeposits.json');
-const usersPath = path.join(__dirname, '../../data/users.json');
-
-// Helper functions
-const readJsonFile = (filePath) => {
-  try {
-    if (!fs.existsSync(filePath)) {
-      return [];
-    }
-    const data = fs.readFileSync(filePath, 'utf8');
-    return data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.error(`Error reading ${filePath}:`, error);
-    return [];
-  }
-};
-
-const writeJsonFile = (filePath, data) => {
-  try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
-    return true;
-  } catch (error) {
-    console.error(`Error writing ${filePath}:`, error);
-    return false;
-  }
-};
+// Import database models - PostgreSQL only
+const dbModels = require('../../database/models');
 
 // GET /api/payments/invoices - Get all invoices with payment status
 router.get('/invoices', (req, res) => {

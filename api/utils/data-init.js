@@ -1,210 +1,172 @@
 const fs = require('fs');
 const path = require('path');
+const dbModels = require('../database/models');
 
-// 🗄️ Production Data Initialization System
+// 🗄️ PostgreSQL Data Validation System (Removed JSON Dependencies)
 class DataInitializer {
   constructor() {
     this.dataDir = path.join(__dirname, '../data');
     this.backupDir = path.join(__dirname, '../backups');
   }
 
-  // Initialize all required data files for production
+  // PostgreSQL-only data validation (no JSON files created)
   async initializeDataFiles() {
-    console.log('🔄 Initializing production data files...');
+    console.log('🔄 Validating PostgreSQL data integrity...');
     
-    // Ensure data directory exists
-    if (!fs.existsSync(this.dataDir)) {
-      fs.mkdirSync(this.dataDir, { recursive: true });
-      console.log('✅ Created data directory');
-    }
-
-    // Ensure backup directory exists
-    if (!fs.existsSync(this.backupDir)) {
-      fs.mkdirSync(this.backupDir, { recursive: true });
-      console.log('✅ Created backup directory');
-    }
-
-    const dataFiles = {
-      'auctions.json': [],
-      'users.json': [],
-      'invoices.json': [],
-      'auctionDeposits.json': [],
-      'contact_inbox.json': [],
-      'fica.json': [],
-      'item_offers.json': [],
-      'lots.json': [],
-      'pending-registrations.json': [],
-      'pending_items.json': [],
-      'pending_users.json': [],
-      'refundRequests.json': []
-    };
-
-    let initialized = 0;
-    let existing = 0;
-
-    for (const [filename, defaultData] of Object.entries(dataFiles)) {
-      const filePath = path.join(this.dataDir, filename);
+    try {
+      // Validate key database tables exist and have data
+      const validationResults = await this.validateDatabaseTables();
       
-      if (!fs.existsSync(filePath)) {
-        try {
-          fs.writeFileSync(filePath, JSON.stringify(defaultData, null, 2));
-          initialized++;
-          console.log(`✅ Initialized: ${filename}`);
-        } catch (error) {
-          console.error(`❌ Failed to initialize ${filename}:`, error.message);
-        }
+      console.log(`🔍 Validating data integrity...`);
+      
+      if (validationResults.allValid) {
+        console.log('✅ Data integrity check passed');
       } else {
-        existing++;
-        console.log(`ℹ️  Already exists: ${filename}`);
+        console.log('⚠️  Some tables are empty - this is normal for new installations');
+      }
+      
+      // Legacy: Keep directories for any remaining file operations  
+      if (!fs.existsSync(this.dataDir)) {
+        fs.mkdirSync(this.dataDir, { recursive: true });
+      }
+      if (!fs.existsSync(this.backupDir)) {
+        fs.mkdirSync(this.backupDir, { recursive: true });
+      }
+      
+      return { 
+        initialized: 0, 
+        existing: 0, // No JSON files created
+        databaseValid: validationResults.allValid,
+        tableStatus: validationResults.tables
+      };
+      
+    } catch (error) {
+      console.error('❌ Data validation failed:', error.message);
+      return { initialized: 0, existing: 0, databaseValid: false };
+    }
+  }
+
+  // Validate that key database tables exist and are accessible
+  async validateDatabaseTables() {
+    const tables = [
+      { name: 'users', description: 'User accounts' },
+      { name: 'auctions', description: 'Auction listings' },
+      { name: 'lots', description: 'Auction lots' },
+      { name: 'fica_documents', description: 'FICA documents' },
+      { name: 'auction_deposits', description: 'Auction deposits' },
+      { name: 'pending_items', description: 'Pending items' }
+    ];
+
+    const results = { allValid: true, tables: {} };
+
+    for (const table of tables) {
+      try {
+        // Simple count query to verify table exists and is accessible
+        const dbManager = require('../database/connection');
+        const countResult = await dbManager.query(`SELECT COUNT(*) as count FROM ${table.name}`);
+        const count = parseInt(countResult.rows[0].count);
+        
+        results.tables[table.name] = { 
+          exists: true, 
+          count: count,
+          description: table.description 
+        };
+        
+        console.log(`✅ ${table.description}: ${count} records`);
+        
+      } catch (error) {
+        console.log(`❌ ${table.description}: Table validation failed`);
+        results.tables[table.name] = { 
+          exists: false, 
+          error: error.message,
+          description: table.description 
+        };
+        results.allValid = false;
       }
     }
 
-    console.log(`📊 Data initialization complete: ${initialized} created, ${existing} existing`);
-    return { initialized, existing };
+    return results;
   }
 
-  // Create backup of current data
-  async createBackup(suffix = '') {
+  // Database backup using PostgreSQL dump (replaces JSON backup)
+  async createDatabaseBackup(suffix = '') {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const backupSuffix = suffix || timestamp;
     
-    try {
-      const files = fs.readdirSync(this.dataDir).filter(f => f.endsWith('.json'));
-      let backed = 0;
-      
-      for (const file of files) {
-        const sourcePath = path.join(this.dataDir, file);
-        const backupName = `${file.replace('.json', '')}-backup-${backupSuffix}.json`;
-        const backupPath = path.join(this.backupDir, backupName);
-        
-        fs.copyFileSync(sourcePath, backupPath);
-        backed++;
-      }
-      
-      console.log(`💾 Created backup: ${backed} files backed up with suffix ${backupSuffix}`);
-      return backupSuffix;
-    } catch (error) {
-      console.error('❌ Backup failed:', error.message);
-      throw error;
-    }
+    console.log(`🗄️  Database backup should be handled by your PostgreSQL hosting provider`);
+    console.log(`   Render automatically handles database backups`);
+    console.log(`   For manual backup, use: pg_dump DATABASE_URL > backup_${backupSuffix}.sql`);
+    
+    return { success: true, message: 'Database backup info provided' };
   }
 
-  // Validate data integrity
-  async validateDataIntegrity() {
-    console.log('🔍 Validating data integrity...');
-    const issues = [];
+  // Remove legacy JSON files
+  async cleanupLegacyJsonFiles() {
+    console.log('🧹 Cleaning up legacy JSON files...');
     
-    const requiredFiles = [
+    const legacyFiles = [
       'auctions.json',
       'users.json', 
       'invoices.json',
-      'auctionDeposits.json'
+      'auctionDeposits.json',
+      'contact_inbox.json',
+      'fica.json',
+      'item_offers.json',
+      'lots.json',
+      'pending-registrations.json',
+      'pending_items.json',
+      'pending_users.json',
+      'refundRequests.json'
     ];
 
-    for (const file of requiredFiles) {
-      const filePath = path.join(this.dataDir, file);
+    let removed = 0;
+    let notFound = 0;
+
+    for (const filename of legacyFiles) {
+      const filePath = path.join(this.dataDir, filename);
       
-      try {
-        if (!fs.existsSync(filePath)) {
-          issues.push(`Missing critical file: ${file}`);
-          continue;
+      if (fs.existsSync(filePath)) {
+        try {
+          // Create backup before removal
+          const backupPath = path.join(this.backupDir, `legacy_${filename}_${Date.now()}`);
+          fs.copyFileSync(filePath, backupPath);
+          fs.unlinkSync(filePath);
+          
+          removed++;
+          console.log(`🗑️  Removed: ${filename} (backed up)`);
+        } catch (error) {
+          console.error(`❌ Failed to remove ${filename}:`, error.message);
         }
-
-        const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-        
-        if (!Array.isArray(data)) {
-          issues.push(`${file} should contain an array`);
-        }
-
-        // File-specific validations
-        if (file === 'users.json' && data.length === 0) {
-          console.log('⚠️  Warning: No users in database');
-        }
-
-      } catch (error) {
-        issues.push(`${file} is corrupted: ${error.message}`);
+      } else {
+        notFound++;
       }
     }
 
-    if (issues.length > 0) {
-      console.error('❌ Data integrity issues found:');
-      issues.forEach(issue => console.error(`   - ${issue}`));
-      return false;
-    }
-
-    console.log('✅ Data integrity check passed');
-    return true;
+    console.log(`🧹 Legacy cleanup complete: ${removed} removed, ${notFound} not found`);
+    return { removed, notFound };
   }
 
-  // Get system statistics
-  getSystemStats() {
+  // Health check for PostgreSQL-only system
+  async healthCheck() {
     try {
-      const stats = {};
-      const files = ['users.json', 'auctions.json', 'invoices.json', 'auctionDeposits.json'];
+      const validation = await this.validateDatabaseTables();
       
-      files.forEach(file => {
-        const filePath = path.join(this.dataDir, file);
-        if (fs.existsSync(filePath)) {
-          const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-          stats[file.replace('.json', '')] = {
-            count: Array.isArray(data) ? data.length : 'N/A',
-            lastModified: fs.statSync(filePath).mtime
-          };
-        }
-      });
-
-      return stats;
+      return {
+        status: validation.allValid ? 'healthy' : 'degraded',
+        database: 'postgresql',
+        jsonFiles: 'removed',
+        tables: validation.tables,
+        timestamp: new Date().toISOString()
+      };
     } catch (error) {
-      console.error('Error getting system stats:', error);
-      return {};
+      return {
+        status: 'error',
+        database: 'postgresql',
+        error: error.message,
+        timestamp: new Date().toISOString()
+      };
     }
   }
-
-  // Clean up old backups (keep last 10)
-  async cleanupOldBackups() {
-    try {
-      if (!fs.existsSync(this.backupDir)) return;
-      
-      const backupFiles = fs.readdirSync(this.backupDir)
-        .filter(f => f.includes('-backup-'))
-        .map(f => ({
-          name: f,
-          path: path.join(this.backupDir, f),
-          mtime: fs.statSync(path.join(this.backupDir, f)).mtime
-        }))
-        .sort((a, b) => b.mtime - a.mtime);
-
-      // Keep only the 10 most recent backups
-      const toDelete = backupFiles.slice(10);
-      
-      for (const backup of toDelete) {
-        fs.unlinkSync(backup.path);
-        console.log(`🗑️  Removed old backup: ${backup.name}`);
-      }
-      
-      if (toDelete.length > 0) {
-        console.log(`📁 Cleanup complete: ${toDelete.length} old backups removed`);
-      }
-    } catch (error) {
-      console.error('Error during backup cleanup:', error);
-    }
-  }
-}
-
-// Initialize on startup if running directly
-if (require.main === module) {
-  const initializer = new DataInitializer();
-  initializer.initializeDataFiles()
-    .then(() => initializer.validateDataIntegrity())
-    .then(() => initializer.cleanupOldBackups())
-    .then(() => {
-      console.log('📋 System Statistics:', initializer.getSystemStats());
-      console.log('🎉 Data initialization complete!');
-    })
-    .catch(error => {
-      console.error('❌ Data initialization failed:', error);
-      process.exit(1);
-    });
 }
 
 module.exports = DataInitializer;
