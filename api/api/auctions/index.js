@@ -117,7 +117,33 @@ router.get('/:id', async (req, res) => {
     console.log('📦 getAuctionWithLots result:', auctionWithLots ? 'Found auction' : 'NULL');
     console.log('📦 Lots data:', auctionWithLots?.lots ? `${auctionWithLots.lots.length} lots` : 'No lots');
     
-    const lots = auctionWithLots?.lots || [];
+    const rawLots = auctionWithLots?.lots || [];
+    
+    // Transform lots to match frontend expectations - same as in lots endpoint
+    const transformedLots = rawLots.map(lot => ({
+      id: lot.id,
+      title: lot.title || 'Untitled Lot',
+      description: lot.description || '',
+      startPrice: parseFloat(lot.starting_bid) || 0,
+      startingPrice: parseFloat(lot.starting_bid) || 0, // Frontend expects this field
+      currentBid: parseFloat(lot.current_bid) || parseFloat(lot.starting_bid) || 0,
+      bidIncrement: parseFloat(lot.bid_increment) || 10,
+      image: lot.image_urls && lot.image_urls.length > 0 ? lot.image_urls[0] : '',
+      imageUrl: lot.image_urls && lot.image_urls.length > 0 ? lot.image_urls[0] : '', // Fallback field
+      images: lot.image_urls || [],
+      bidHistory: [], // Will be populated by separate call if needed
+      endTime: lot.end_time,
+      lotNumber: lot.lot_number || 0,
+      sellerEmail: lot.seller_email || null,
+      condition: lot.condition || 'Good',
+      createdAt: lot.created_at,
+      status: lot.status || 'active',
+      bid_count: parseInt(lot.bid_count) || 0,
+      views: parseInt(lot.views) || 0,
+      watchers: parseInt(lot.watchers) || 0
+    }));
+    
+    console.log('🔄 Transformed', transformedLots.length, 'lots for frontend compatibility');
     
     // Transform auction to match frontend expectations
     const transformedAuction = {
@@ -130,11 +156,11 @@ router.get('/:id', async (req, res) => {
       endTime: auction.end_time,
       auctionImage: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
       image: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
-      lots: lots,
+      lots: transformedLots,
       createdAt: auction.created_at
     };
 
-    console.log('🚀 Sending response with', lots.length, 'lots');
+    console.log('🚀 Sending response with', transformedLots.length, 'lots');
     
     // TODO: Implement view count increment in database if needed
     res.json(transformedAuction);
