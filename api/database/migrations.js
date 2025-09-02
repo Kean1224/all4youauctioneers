@@ -123,32 +123,13 @@ class MigrationManager {
 
       {
         version: 5,
-        name: 'create_invoices_table',
+        name: 'placeholder_for_old_invoices_table',
         up: `
-          CREATE TABLE IF NOT EXISTS invoices (
-            id SERIAL PRIMARY KEY,
-            invoice_number VARCHAR(100) UNIQUE NOT NULL,
-            user_email VARCHAR(255) NOT NULL,
-            auction_id INTEGER REFERENCES auctions(id),
-            invoice_type VARCHAR(50) NOT NULL, -- 'buyer' or 'seller'
-            subtotal DECIMAL(10,2) NOT NULL,
-            commission DECIMAL(10,2) NOT NULL,
-            total DECIMAL(10,2) NOT NULL,
-            status VARCHAR(50) DEFAULT 'pending',
-            due_date DATE,
-            paid_date TIMESTAMP,
-            payment_method VARCHAR(100),
-            payment_reference VARCHAR(255),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          );
-          
-          CREATE INDEX IF NOT EXISTS idx_invoices_number ON invoices(invoice_number);
-          CREATE INDEX IF NOT EXISTS idx_invoices_user_email ON invoices(user_email);
-          CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
-          CREATE INDEX IF NOT EXISTS idx_invoices_type ON invoices(invoice_type);
+          -- This migration has been replaced by version 20
+          -- Keeping placeholder to maintain version sequence
+          SELECT 1;
         `,
-        down: 'DROP TABLE IF EXISTS invoices CASCADE;'
+        down: 'SELECT 1;'
       },
 
       {
@@ -499,30 +480,36 @@ class MigrationManager {
       
       {
         version: 20,
-        name: 'create_invoices_table',
-        up: `CREATE TABLE IF NOT EXISTS invoices (
-          id SERIAL PRIMARY KEY,
-          invoice_number VARCHAR(100) UNIQUE NOT NULL,
-          auction_id VARCHAR(255),
-          lot_id VARCHAR(255),
-          buyer_email VARCHAR(255) NOT NULL,
-          seller_email VARCHAR(255),
-          item_title VARCHAR(500),
-          winning_bid DECIMAL(10, 2) NOT NULL,
-          buyers_premium DECIMAL(10, 2) DEFAULT 0,
-          vat_amount DECIMAL(10, 2) DEFAULT 0,
-          total_amount DECIMAL(10, 2) NOT NULL,
-          payment_status VARCHAR(50) DEFAULT 'pending',
-          payment_method VARCHAR(100),
-          payment_date TIMESTAMP,
-          payment_reference VARCHAR(255),
-          invoice_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          due_date TIMESTAMP,
-          pdf_data TEXT,
-          notes TEXT,
-          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-          updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )`,
+        name: 'migrate_invoices_table_structure',
+        up: `
+          -- Drop the old invoices table if it exists (from migration v5)
+          DROP TABLE IF EXISTS invoices CASCADE;
+          
+          -- Create the new invoices table with the correct structure
+          CREATE TABLE invoices (
+            id SERIAL PRIMARY KEY,
+            invoice_number VARCHAR(100) UNIQUE NOT NULL,
+            auction_id VARCHAR(255),
+            lot_id VARCHAR(255),
+            buyer_email VARCHAR(255) NOT NULL,
+            seller_email VARCHAR(255),
+            item_title VARCHAR(500),
+            winning_bid DECIMAL(10, 2) NOT NULL,
+            buyers_premium DECIMAL(10, 2) DEFAULT 0,
+            vat_amount DECIMAL(10, 2) DEFAULT 0,
+            total_amount DECIMAL(10, 2) NOT NULL,
+            payment_status VARCHAR(50) DEFAULT 'pending',
+            payment_method VARCHAR(100),
+            payment_date TIMESTAMP,
+            payment_reference VARCHAR(255),
+            invoice_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            due_date TIMESTAMP,
+            pdf_data TEXT,
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+        `,
         down: `DROP TABLE IF EXISTS invoices CASCADE`
       },
       
