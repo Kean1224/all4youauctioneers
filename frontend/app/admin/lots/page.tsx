@@ -51,6 +51,14 @@ export default function AdminLotsPage() {
     condition: 'Good',
   });
 
+  // Edit modal state
+  const [editModal, setEditModal] = useState<{
+    open: boolean;
+    auctionId: string;
+    lot: Lot | null;
+    form: any;
+  }>({ open: false, auctionId: '', lot: null, form: {} });
+
   // Helper to get admin auth headers
   const getAdminHeaders = () => {
     const token = localStorage.getItem('admin_jwt');
@@ -255,6 +263,63 @@ export default function AdminLotsPage() {
     if (!confirm(message)) return;
     
     try {
+
+  // --- Edit Lot Logic ---
+  const openEditModal = (auctionId: string, lot: Lot) => {
+    setEditModal({
+      open: true,
+      auctionId,
+      lot,
+      form: {
+        title: lot.title || '',
+        description: lot.description || '',
+        startPrice: lot.startPrice?.toString() || '',
+        bidIncrement: lot.bidIncrement?.toString() || '',
+        endTime: lot.endTime ? lot.endTime.slice(0, 16) : '', // for datetime-local
+        sellerEmail: lot.sellerEmail || '',
+        condition: lot.condition || 'Good',
+      },
+    });
+  };
+
+  const closeEditModal = () => setEditModal({ open: false, auctionId: '', lot: null, form: {} });
+
+  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setEditModal((prev) => ({
+      ...prev,
+      form: { ...prev.form, [e.target.name]: e.target.value },
+    }));
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editModal.lot || !editModal.auctionId) return;
+    try {
+      const body = {
+        ...editModal.form,
+        startPrice: parseFloat(editModal.form.startPrice),
+        bidIncrement: editModal.form.bidIncrement ? parseFloat(editModal.form.bidIncrement) : undefined,
+      };
+      const res = await fetch(`${getApiUrl()}/api/lots/${editModal.auctionId}/${editModal.lot.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(localStorage.getItem('admin_jwt') && { 'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}` })
+        },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        alert('Failed to update lot: ' + (err.error || 'Unknown error'));
+        return;
+      }
+      closeEditModal();
+      await fetchAuctions();
+      alert('Lot updated successfully!');
+    } catch (error) {
+      alert('Network error occurred while updating lot');
+    }
+  };
       const response = await fetch(`${getApiUrl()}/api/lots/${auctionId}/${lotId}`, { 
         method: 'DELETE',
         headers: getAdminHeaders()
@@ -517,12 +582,20 @@ export default function AdminLotsPage() {
                               className="w-24 h-20 object-cover rounded border border-green-200 bg-white"
                             />
                           )}
-                          <button
-                            onClick={() => handleDelete(auction.id, lot.id, lot.lotNumber, auction.title)}
-                            className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors font-semibold mt-2"
-                          >
-                            🗑️ Delete
-                          </button>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => openEditModal(auction.id, lot)}
+                              className="bg-blue-600 text-white px-3 py-1 rounded text-xs hover:bg-blue-700 transition-colors font-semibold"
+                            >
+                              ✏️ Edit
+                            </button>
+                            <button
+                              onClick={() => handleDelete(auction.id, lot.id, lot.lotNumber, auction.title)}
+                              className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors font-semibold"
+                            >
+                              🗑️ Delete
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -534,5 +607,114 @@ export default function AdminLotsPage() {
         </div>
       </div>
     </ModernAdminLayout>
+    {/* Edit Lot Modal */}
+    {editModal.open && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+        <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-lg relative">
+          <button
+            onClick={closeEditModal}
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
+            aria-label="Close"
+          >
+            ×
+          </button>
+          <h2 className="text-xl font-bold mb-4 text-blue-700">Edit Lot</h2>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Title</label>
+              <input
+                type="text"
+                name="title"
+                required
+                value={editModal.form.title}
+                onChange={handleEditChange}
+                className="w-full border border-gray-300 px-3 py-2 rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Description</label>
+              <textarea
+                name="description"
+                value={editModal.form.description}
+                onChange={handleEditChange}
+                className="w-full border border-gray-300 px-3 py-2 rounded"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Start Price (R)</label>
+                <input
+                  type="number"
+                  name="startPrice"
+                  required
+                  value={editModal.form.startPrice}
+                  onChange={handleEditChange}
+                  className="w-full border border-gray-300 px-3 py-2 rounded"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Bid Increment (R)</label>
+                <input
+                  type="number"
+                  name="bidIncrement"
+                  value={editModal.form.bidIncrement}
+                  onChange={handleEditChange}
+                  className="w-full border border-gray-300 px-3 py-2 rounded"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">End Time</label>
+              <input
+                type="datetime-local"
+                name="endTime"
+                value={editModal.form.endTime}
+                onChange={handleEditChange}
+                className="w-full border border-gray-300 px-3 py-2 rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Seller Email</label>
+              <input
+                type="email"
+                name="sellerEmail"
+                value={editModal.form.sellerEmail}
+                onChange={handleEditChange}
+                className="w-full border border-gray-300 px-3 py-2 rounded"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Condition</label>
+              <select
+                name="condition"
+                value={editModal.form.condition}
+                onChange={handleEditChange}
+                className="w-full border border-gray-300 px-3 py-2 rounded"
+              >
+                <option value="New">New</option>
+                <option value="Like New">Like New</option>
+                <option value="Good">Good</option>
+                <option value="Fair">Fair</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeEditModal}
+                className="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700 font-semibold"
+              >
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
   );
 }
