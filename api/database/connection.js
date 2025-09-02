@@ -14,6 +14,65 @@ class DatabaseManager {
   }
 
   /**
+   * Get secure SSL configuration based on environment
+   */
+  getSSLConfiguration() {
+    const nodeEnv = process.env.NODE_ENV;
+    const databaseUrl = process.env.DATABASE_URL;
+    const dbHost = process.env.DB_HOST;
+    
+    // Check if using a managed database service (Render, Heroku, etc.)
+    const isManaged = databaseUrl && (
+      databaseUrl.includes('render.com') ||
+      databaseUrl.includes('heroku') ||
+      databaseUrl.includes('amazonaws') ||
+      (dbHost && !dbHost.includes('localhost'))
+    );
+    
+    // For truly local development (localhost)
+    if ((nodeEnv === 'development' && !isManaged) || dbHost === 'localhost') {
+      console.log('🔧 Using local database - SSL disabled');
+      return false;
+    }
+    
+    // For managed database services (even in development)
+    if (isManaged) {
+      console.log('🔒 Using managed database with secure SSL');
+      
+      // Check if we should use strict SSL validation
+      const useStrictSSL = process.env.DB_SSL_STRICT !== 'false';
+      
+      if (useStrictSSL) {
+        return {
+          // Enable SSL certificate validation (secure by default)
+          rejectUnauthorized: true,
+          // For managed services, use system CA certificates
+          ca: undefined, // Use system certificate authorities
+          // Allow custom certificate authority if provided
+          ...(process.env.DB_SSL_CA && { ca: process.env.DB_SSL_CA }),
+          // Allow custom certificate if provided
+          ...(process.env.DB_SSL_CERT && { cert: process.env.DB_SSL_CERT }),
+          // Allow custom private key if provided
+          ...(process.env.DB_SSL_KEY && { key: process.env.DB_SSL_KEY })
+        };
+      } else {
+        console.log('⚠️  SSL validation relaxed for compatibility (set DB_SSL_STRICT=true for production)');
+        return {
+          rejectUnauthorized: false, // Temporary compatibility mode
+          // Still require SSL connection, just don't validate certificate
+          require: true
+        };
+      }
+    }
+    
+    // Fallback for other production environments
+    console.log('🔒 Using production database with SSL validation');
+    return {
+      rejectUnauthorized: true
+    };
+  }
+
+  /**
    * Initialize database connection
    */
   async initialize() {
@@ -33,14 +92,12 @@ class DatabaseManager {
         password: process.env.DB_PASS || process.env.DB_PASSWORD || 'password',
         
         // Connection pool settings
-        max: 20, // Maximum number of clients
+        max: parseInt(process.env.DB_POOL_SIZE) || 20, // Maximum number of clients (configurable)
         idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
         connectionTimeoutMillis: 10000, // Return error if connection takes longer than 10 seconds
         
-        // SSL configuration for Render PostgreSQL (always required)
-        ssl: {
-          rejectUnauthorized: false
-        }
+        // SSL configuration - secure by default
+        ssl: this.getSSLConfiguration()
       };
 
       // Create connection pool
