@@ -588,6 +588,154 @@ class MigrationManager {
           DROP INDEX IF EXISTS idx_users_role;
           ALTER TABLE users DROP COLUMN IF EXISTS role;
         `
+      },
+      
+      {
+        version: 25,
+        name: 'create_rbac_system',
+        up: `
+          -- Create roles table
+          CREATE TABLE IF NOT EXISTS roles (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) UNIQUE NOT NULL,
+            display_name VARCHAR(200) NOT NULL,
+            description TEXT,
+            is_system_role BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Create permissions table
+          CREATE TABLE IF NOT EXISTS permissions (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(100) UNIQUE NOT NULL,
+            display_name VARCHAR(200) NOT NULL,
+            description TEXT,
+            resource VARCHAR(100) NOT NULL,
+            action VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Create role-permission mapping table
+          CREATE TABLE IF NOT EXISTS role_permissions (
+            id SERIAL PRIMARY KEY,
+            role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+            permission_id INTEGER REFERENCES permissions(id) ON DELETE CASCADE,
+            granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            granted_by INTEGER REFERENCES users(id),
+            UNIQUE(role_id, permission_id)
+          );
+          
+          -- Create user-role assignments table (many-to-many)
+          CREATE TABLE IF NOT EXISTS user_roles (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+            role_id INTEGER REFERENCES roles(id) ON DELETE CASCADE,
+            assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            assigned_by INTEGER REFERENCES users(id),
+            expires_at TIMESTAMP,
+            is_active BOOLEAN DEFAULT TRUE,
+            UNIQUE(user_id, role_id)
+          );
+          
+          -- Create indexes for performance
+          CREATE INDEX IF NOT EXISTS idx_roles_name ON roles(name);
+          CREATE INDEX IF NOT EXISTS idx_permissions_resource_action ON permissions(resource, action);
+          CREATE INDEX IF NOT EXISTS idx_role_permissions_role_id ON role_permissions(role_id);
+          CREATE INDEX IF NOT EXISTS idx_role_permissions_permission_id ON role_permissions(permission_id);
+          CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id);
+          CREATE INDEX IF NOT EXISTS idx_user_roles_role_id ON user_roles(role_id);
+          CREATE INDEX IF NOT EXISTS idx_user_roles_active ON user_roles(is_active);
+        `,
+        down: `
+          DROP INDEX IF EXISTS idx_user_roles_active;
+          DROP INDEX IF EXISTS idx_user_roles_role_id;
+          DROP INDEX IF EXISTS idx_user_roles_user_id;
+          DROP INDEX IF EXISTS idx_role_permissions_permission_id;
+          DROP INDEX IF EXISTS idx_role_permissions_role_id;
+          DROP INDEX IF EXISTS idx_permissions_resource_action;
+          DROP INDEX IF EXISTS idx_roles_name;
+          DROP TABLE IF EXISTS user_roles CASCADE;
+          DROP TABLE IF EXISTS role_permissions CASCADE;
+          DROP TABLE IF EXISTS permissions CASCADE;
+          DROP TABLE IF EXISTS roles CASCADE;
+        `
+      },
+      
+      {
+        version: 26,
+        name: 'populate_default_rbac_data',
+        up: `
+          -- Insert default roles
+          INSERT INTO roles (name, display_name, description, is_system_role) VALUES
+          ('admin', 'Administrator', 'Full system administrator with all permissions', true),
+          ('auctioneer', 'Auctioneer', 'Manages auctions and lots', true),
+          ('moderator', 'Moderator', 'Moderates users and content', true),
+          ('seller', 'Seller', 'Can create and manage their own lots', true),
+          ('bidder', 'Bidder', 'Can participate in auctions and place bids', true),
+          ('viewer', 'Viewer', 'Read-only access to public auction data', true)
+          ON CONFLICT (name) DO NOTHING;
+          
+          -- Insert default permissions
+          INSERT INTO permissions (name, display_name, description, resource, action) VALUES
+          -- User management
+          ('users.create', 'Create Users', 'Create new user accounts', 'users', 'create'),
+          ('users.read', 'View Users', 'View user information', 'users', 'read'),
+          ('users.update', 'Update Users', 'Edit user information', 'users', 'update'),
+          ('users.delete', 'Delete Users', 'Delete user accounts', 'users', 'delete'),
+          ('users.suspend', 'Suspend Users', 'Suspend/unsuspend user accounts', 'users', 'suspend'),
+          
+          -- Role management
+          ('roles.create', 'Create Roles', 'Create new roles', 'roles', 'create'),
+          ('roles.read', 'View Roles', 'View role information', 'roles', 'read'),
+          ('roles.update', 'Update Roles', 'Edit role information', 'roles', 'update'),
+          ('roles.delete', 'Delete Roles', 'Delete roles', 'roles', 'delete'),
+          ('roles.assign', 'Assign Roles', 'Assign roles to users', 'roles', 'assign'),
+          
+          -- Auction management
+          ('auctions.create', 'Create Auctions', 'Create new auctions', 'auctions', 'create'),
+          ('auctions.read', 'View Auctions', 'View auction information', 'auctions', 'read'),
+          ('auctions.update', 'Update Auctions', 'Edit auction information', 'auctions', 'update'),
+          ('auctions.delete', 'Delete Auctions', 'Delete auctions', 'auctions', 'delete'),
+          ('auctions.start', 'Start Auctions', 'Start auction bidding', 'auctions', 'start'),
+          ('auctions.end', 'End Auctions', 'End auction bidding', 'auctions', 'end'),
+          
+          -- Lot management
+          ('lots.create', 'Create Lots', 'Add lots to auctions', 'lots', 'create'),
+          ('lots.read', 'View Lots', 'View lot information', 'lots', 'read'),
+          ('lots.update', 'Update Lots', 'Edit lot information', 'lots', 'update'),
+          ('lots.delete', 'Delete Lots', 'Remove lots from auctions', 'lots', 'delete'),
+          ('lots.approve', 'Approve Lots', 'Approve lots for auction', 'lots', 'approve'),
+          
+          -- Bidding
+          ('bids.create', 'Place Bids', 'Place bids on lots', 'bids', 'create'),
+          ('bids.read', 'View Bids', 'View bidding information', 'bids', 'read'),
+          ('bids.cancel', 'Cancel Bids', 'Cancel own bids', 'bids', 'cancel'),
+          
+          -- Financial management
+          ('invoices.create', 'Create Invoices', 'Generate invoices', 'invoices', 'create'),
+          ('invoices.read', 'View Invoices', 'View invoice information', 'invoices', 'read'),
+          ('invoices.update', 'Update Invoices', 'Edit invoice information', 'invoices', 'update'),
+          ('invoices.send', 'Send Invoices', 'Send invoices to buyers', 'invoices', 'send'),
+          
+          -- Reports and analytics
+          ('reports.auctions', 'Auction Reports', 'View auction performance reports', 'reports', 'read'),
+          ('reports.financial', 'Financial Reports', 'View financial reports', 'reports', 'read'),
+          ('reports.users', 'User Reports', 'View user activity reports', 'reports', 'read'),
+          
+          -- System administration
+          ('system.settings', 'System Settings', 'Manage system configuration', 'system', 'update'),
+          ('system.maintenance', 'System Maintenance', 'Perform system maintenance', 'system', 'maintain'),
+          ('system.logs', 'View System Logs', 'Access system logs', 'system', 'read')
+          
+          ON CONFLICT (name) DO NOTHING;
+        `,
+        down: `
+          DELETE FROM role_permissions;
+          DELETE FROM user_roles;
+          DELETE FROM permissions;
+          DELETE FROM roles;
+        `
       }
     ];
   }
@@ -659,9 +807,14 @@ class MigrationManager {
         [migration.version, migration.name]
       );
       
-      // Special handling for role system migration
+      // Special handling for different migrations
       if (migration.version === 24) {
         await this.createInitialAdminUser(client);
+      }
+      
+      if (migration.version === 26) {
+        await this.assignDefaultRolePermissions(client);
+        await this.migrateExistingUserRoles(client);
       }
       
       console.log(`✅ Migration completed: ${migration.name}`);
@@ -714,6 +867,144 @@ class MigrationManager {
       }
     } catch (error) {
       console.error('❌ Failed to create admin user:', error);
+      // Don't throw - migration should continue
+    }
+  }
+  
+  /**
+   * Assign default permissions to roles after RBAC system creation
+   */
+  async assignDefaultRolePermissions(client) {
+    try {
+      console.log('🔐 Assigning default permissions to roles...');
+      
+      // Define role-permission mappings
+      const rolePermissions = {
+        'admin': [
+          // Full access to everything
+          'users.create', 'users.read', 'users.update', 'users.delete', 'users.suspend',
+          'roles.create', 'roles.read', 'roles.update', 'roles.delete', 'roles.assign',
+          'auctions.create', 'auctions.read', 'auctions.update', 'auctions.delete', 'auctions.start', 'auctions.end',
+          'lots.create', 'lots.read', 'lots.update', 'lots.delete', 'lots.approve',
+          'bids.create', 'bids.read', 'bids.cancel',
+          'invoices.create', 'invoices.read', 'invoices.update', 'invoices.send',
+          'reports.auctions', 'reports.financial', 'reports.users',
+          'system.settings', 'system.maintenance', 'system.logs'
+        ],
+        'auctioneer': [
+          // Auction and lot management
+          'auctions.create', 'auctions.read', 'auctions.update', 'auctions.start', 'auctions.end',
+          'lots.create', 'lots.read', 'lots.update', 'lots.approve',
+          'bids.read',
+          'invoices.create', 'invoices.read', 'invoices.send',
+          'reports.auctions', 'users.read'
+        ],
+        'moderator': [
+          // User moderation and content management
+          'users.read', 'users.update', 'users.suspend',
+          'auctions.read', 'lots.read', 'lots.approve',
+          'bids.read', 'bids.cancel',
+          'reports.users'
+        ],
+        'seller': [
+          // Can manage their own lots
+          'lots.create', 'lots.read', 'lots.update',
+          'auctions.read', 'bids.read',
+          'invoices.read'
+        ],
+        'bidder': [
+          // Can participate in auctions
+          'auctions.read', 'lots.read',
+          'bids.create', 'bids.read', 'bids.cancel',
+          'invoices.read'
+        ],
+        'viewer': [
+          // Read-only access
+          'auctions.read', 'lots.read', 'bids.read'
+        ]
+      };
+      
+      // Assign permissions to each role
+      for (const [roleName, permissions] of Object.entries(rolePermissions)) {
+        // Get role ID
+        const roleResult = await client.query('SELECT id FROM roles WHERE name = $1', [roleName]);
+        if (roleResult.rows.length === 0) {
+          console.log(`⚠️  Role ${roleName} not found, skipping...`);
+          continue;
+        }
+        const roleId = roleResult.rows[0].id;
+        
+        // Assign permissions
+        for (const permissionName of permissions) {
+          const permResult = await client.query('SELECT id FROM permissions WHERE name = $1', [permissionName]);
+          if (permResult.rows.length === 0) {
+            console.log(`⚠️  Permission ${permissionName} not found, skipping...`);
+            continue;
+          }
+          const permissionId = permResult.rows[0].id;
+          
+          // Insert role-permission mapping
+          await client.query(`
+            INSERT INTO role_permissions (role_id, permission_id)
+            VALUES ($1, $2)
+            ON CONFLICT (role_id, permission_id) DO NOTHING
+          `, [roleId, permissionId]);
+        }
+        
+        console.log(`✅ Assigned ${permissions.length} permissions to role: ${roleName}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ Failed to assign role permissions:', error);
+      // Don't throw - migration should continue
+    }
+  }
+  
+  /**
+   * Migrate existing users to the new RBAC system
+   */
+  async migrateExistingUserRoles(client) {
+    try {
+      console.log('👥 Migrating existing users to RBAC system...');
+      
+      // Get all users with their current roles
+      const users = await client.query('SELECT id, email, role FROM users');
+      
+      for (const user of users.rows) {
+        if (!user.role) continue;
+        
+        // Get the role ID from the roles table
+        const roleResult = await client.query('SELECT id FROM roles WHERE name = $1', [user.role]);
+        if (roleResult.rows.length === 0) {
+          console.log(`⚠️  Role ${user.role} not found for user ${user.email}, assigning bidder role...`);
+          // Assign default bidder role if role not found
+          const bidderRole = await client.query('SELECT id FROM roles WHERE name = $1', ['bidder']);
+          if (bidderRole.rows.length > 0) {
+            await client.query(`
+              INSERT INTO user_roles (user_id, role_id)
+              VALUES ($1, $2)
+              ON CONFLICT (user_id, role_id) DO NOTHING
+            `, [user.id, bidderRole.rows[0].id]);
+          }
+          continue;
+        }
+        
+        const roleId = roleResult.rows[0].id;
+        
+        // Assign the role to the user in the new RBAC system
+        await client.query(`
+          INSERT INTO user_roles (user_id, role_id)
+          VALUES ($1, $2)
+          ON CONFLICT (user_id, role_id) DO NOTHING
+        `, [user.id, roleId]);
+        
+        console.log(`✅ Migrated user ${user.email} to role: ${user.role}`);
+      }
+      
+      console.log(`✅ Migrated ${users.rows.length} users to RBAC system`);
+      
+    } catch (error) {
+      console.error('❌ Failed to migrate user roles:', error);
       // Don't throw - migration should continue
     }
   }

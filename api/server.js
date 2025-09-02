@@ -14,8 +14,7 @@ const {
   securityConfig,
   sanitizeInput,
   securityLogger,
-  validateFileUpload,
-  csrfProtection
+  validateFileUpload
 } = require('./middleware/security');
 
 // 📊 Import performance monitoring
@@ -144,6 +143,7 @@ const systemBackupRouter = require('./api/system/backup');
 const refundsRouter = require('./api/refunds/index');
 const companyLogoRouter = require('./api/company/logo');
 const testPDFRouter = require('./api/invoices/test-pdf');
+const adminRolesRouter = require('./api/admin/roles');
 
 // 🔗 Connect routes
 app.use('/api/deposits', depositsRouter);
@@ -165,6 +165,7 @@ app.use('/api/system/backup', systemBackupRouter);
 app.use('/api/refunds', refundsRouter);
 app.use('/api/company/logo', companyLogoRouter);
 app.use('/api/invoices/test-pdf', testPDFRouter);
+app.use('/api/admin/roles', adminRolesRouter);
 
 // Example route
 app.get('/', (req, res) => {

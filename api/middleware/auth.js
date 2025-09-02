@@ -1,4 +1,6 @@
 const jwt = require('jsonwebtoken');
+const { hasRole, requireAdmin } = require('./rbac');
+
 const JWT_SECRET = process.env.JWT_SECRET;
 
 if (!JWT_SECRET) {
@@ -18,32 +20,8 @@ function authenticateToken(req, res, next) {
   });
 }
 
-function verifyAdmin(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  
-  if (!token) {
-    return res.status(401).json({ error: 'Admin access token required' });
-  }
-
-  try {
-    jwt.verify(token, JWT_SECRET, (err, decoded) => {
-      if (err) {
-        return res.status(403).json({ error: 'Invalid admin token' });
-      }
-      
-      // Use proper role-based authorization (removed hardcoded email backdoor)
-      if (decoded.role !== 'admin') {
-        return res.status(403).json({ error: 'Admin privileges required' });
-      }
-      
-      req.user = decoded;
-      next();
-    });
-  } catch (error) {
-    return res.status(403).json({ error: 'Admin token verification failed' });
-  }
-}
+// Updated to use RBAC system
+const verifyAdmin = requireAdmin;
 
 module.exports = {
   authenticateToken,

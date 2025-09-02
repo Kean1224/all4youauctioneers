@@ -241,6 +241,5 @@ module.exports = {
   securityConfig,
   sanitizeInput,
   securityLogger,
-  validateFileUpload,
-  csrfProtection
+  validateFileUpload
 };
