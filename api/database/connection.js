@@ -56,10 +56,10 @@ class DatabaseManager {
           ...(process.env.DB_SSL_KEY && { key: process.env.DB_SSL_KEY })
         };
       } else {
-        console.log('⚠️  SSL validation relaxed for compatibility (set DB_SSL_STRICT=true for production)');
+        console.log('🔒 Using secure SSL with system certificate authorities');
         return {
-          rejectUnauthorized: false, // Temporary compatibility mode
-          // Still require SSL connection, just don't validate certificate
+          rejectUnauthorized: true, // Secure SSL validation
+          ca: undefined, // Use system certificate authorities
           require: true
         };
       }

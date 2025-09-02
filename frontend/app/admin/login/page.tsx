@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
+import { loginWithCookies, clearLegacyTokens } from '../../../utils/cookieAuth';
 
 // Separate component for handling search params to avoid SSR issues
 function LoginForm() {
@@ -18,13 +19,8 @@ function LoginForm() {
       setError('Your session has expired. Please login again.');
     }
 
-    // Clear any existing admin data on login page load
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('admin_jwt');
-      localStorage.removeItem('userEmail');
-      localStorage.removeItem('userRole');
-      localStorage.removeItem('admin_login_time');
-    }
+    // Clear any existing legacy localStorage tokens
+    clearLegacyTokens();
   }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -37,34 +33,16 @@ function LoginForm() {
     }
 
     try {
-      const { getApiUrl } = await import('../../../lib/api');
-      const apiUrl = `${getApiUrl()}/api/auth/admin-login`;
-      console.log('Attempting admin login to:', apiUrl);
-      console.log('Credentials:', { email, password: password ? '***' : 'empty' });
+      console.log('Attempting admin login with cookie-based auth');
       
-      const res = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
+      const result = await loginWithCookies(email, password, true);
       
-      console.log('Response status:', res.status);
-      const data = await res.json();
-      console.log('Response data:', data);
-      
-      if (res.ok && data.token) {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('admin_jwt', data.token);
-          localStorage.setItem('userEmail', data.email);
-          localStorage.setItem('userRole', 'admin');
-          localStorage.setItem('admin_login_time', Date.now().toString());
-        }
-        console.log('Admin login successful, token and timestamp stored');
-        // Always redirect to /admin/dashboard after login
-        console.log('Redirecting to /admin/dashboard');
+      if (result.success) {
+        console.log('Admin login successful, redirecting to dashboard...');
         setTimeout(() => router.push('/admin/dashboard'), 100);
       } else {
-        setError(data.error || 'Invalid credentials');
+        console.error('Login failed:', result.error);
+        setError(result.error || 'Invalid credentials');
       }
     } catch (err) {
       console.error('Login error:', err);

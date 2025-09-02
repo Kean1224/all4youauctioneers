@@ -48,7 +48,26 @@
       "Bash(PORT=5557 timeout 5 npm start)",
       "Bash(PORT=5558 timeout 5 npm start)",
       "Bash(PORT=9001 timeout 5 npm start)",
-      "Bash(PORT=9002 timeout 5 npm start)"
+      "Bash(PORT=9002 timeout 5 npm start)",
+      "Bash(PORT=9003 timeout 10 npm start)",
+      "Bash(PORT=9003 timeout 15 npm start)",
+      "Bash(PORT=9004 timeout 10 npm start)",
+      "Bash(PORT=9005 npm start)",
+      "Bash(PORT=9006 timeout 10 npm start)",
+      "Bash(PORT=9007 timeout 15 npm start)",
+      "Bash(PORT=9008 npm start)",
+      "Bash(PORT=9009 timeout 15 npm start)",
+      "Bash(PORT=9010 timeout 10 npm start)",
+      "Bash(PORT=9011 timeout 15 npm start)",
+      "Bash(npm audit:*)",
+      "Bash(PORT=9012 timeout 15 npm start)",
+      "Bash(PORT=9013 timeout 15 npm start)",
+      "Bash(PORT=9014 timeout 15 npm start)",
+      "Bash(timeout 10 npm start)",
+      "Bash(PORT=9015 timeout 10 npm start)",
+      "Bash(PORT=9015 timeout 20 npm start)",
+      "Bash(PORT=9016 timeout 10 npm start)",
+      "Bash(PORT=9017 timeout 15 npm start)"
     ],
     "deny": []
   }
