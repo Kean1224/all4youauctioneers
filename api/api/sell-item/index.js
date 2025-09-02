@@ -59,6 +59,9 @@ const writeSellItems = (items) => {
   }
 };
 
+// Add missing variable declaration
+let newItem;
+
 // Email notification imports
 let sendMail = null;
 try {
@@ -69,7 +72,7 @@ try {
   sendMail = async () => Promise.resolve();
 }
 
-// 📝 Submit item for sale (with image uploads)
+// 📝 Submit item for sale (with image uploads) - MIGRATED TO POSTGRESQL
 // Accept any image field name (upload.any())
 router.post('/submit', upload.any(), authenticateToken, async (req, res) => {
   try {
@@ -93,39 +96,86 @@ router.post('/submit', upload.any(), authenticateToken, async (req, res) => {
 
     const userEmail = req.user.email;
 
-    // Process uploaded images
-    const uploadedImages = req.files ? req.files.map(file => ({
-      filename: file.filename,
-      originalName: file.originalname,
-      size: file.size,
-      path: file.path
-    })) : [];
+    // Process uploaded images - store as base64 in database
+    let imageData = null;
+    let originalFilename = null;
+    if (req.files && req.files.length > 0) {
+      const file = req.files[0]; // Take first image for now
+      imageData = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
+      originalFilename = file.originalname;
+    }
 
-    const sellItems = readSellItems();
-    
-    const newItem = {
-      id: uuidv4(),
-      submittedBy: userEmail,
-      itemTitle: itemTitle.trim(),
-      itemDescription: itemDescription.trim(),
+    const itemData = {
+      title: itemTitle.trim(),
+      description: itemDescription.trim(),
       category: category.trim(),
       condition: condition || 'Good',
-      askingPrice: parseFloat(askingPrice) || 0,
-      location: location || '',
-      dimensions: dimensions ? JSON.parse(dimensions) : { length: '', width: '', height: '' },
-      notes: notes ? notes.trim() : '',
-      images: uploadedImages,
-      status: 'pending', // pending, approved, rejected, countered, accepted, sold
-      submittedAt: new Date().toISOString(),
-      reviewedAt: null,
-      reviewedBy: null,
-      adminNotes: '',
-      adminOffer: null, // for counter-offer
-      finalSalePrice: null
+      starting_price: parseFloat(askingPrice) || 0,
+      seller_email: userEmail,
+      image_data: imageData,
+      original_filename: originalFilename,
+      status: 'active'
     };
+    
+    // Try PostgreSQL first
+    const sellItem = await dbModels.createSellItem(itemData);
+    
+    if (sellItem) {
+      const newItem = {
+        id: sellItem.id.toString(),
+        submittedBy: userEmail,
+        itemTitle: itemTitle.trim(),
+        itemDescription: itemDescription.trim(),
+        category: category.trim(),
+        condition: condition || 'Good',
+        askingPrice: parseFloat(askingPrice) || 0,
+        location: location || '',
+        dimensions: dimensions ? JSON.parse(dimensions) : { length: '', width: '', height: '' },
+        notes: notes ? notes.trim() : '',
+        images: imageData ? [{ stored_in_database: true }] : [],
+        status: 'pending',
+        submittedAt: sellItem.created_at,
+        reviewedAt: null,
+        reviewedBy: null,
+        adminNotes: '',
+        adminOffer: null,
+        finalSalePrice: null
+      };
+    } else {
+      // Fallback to JSON file
+      const uploadedImages = req.files ? req.files.map(file => ({
+        filename: file.filename,
+        originalName: file.originalname,
+        size: file.size,
+        path: file.path
+      })) : [];
 
-    sellItems.push(newItem);
-    writeSellItems(sellItems);
+      const sellItems = readSellItems();
+      
+      const newItem = {
+        id: uuidv4(),
+        submittedBy: userEmail,
+        itemTitle: itemTitle.trim(),
+        itemDescription: itemDescription.trim(),
+        category: category.trim(),
+        condition: condition || 'Good',
+        askingPrice: parseFloat(askingPrice) || 0,
+        location: location || '',
+        dimensions: dimensions ? JSON.parse(dimensions) : { length: '', width: '', height: '' },
+        notes: notes ? notes.trim() : '',
+        images: uploadedImages,
+        status: 'pending',
+        submittedAt: new Date().toISOString(),
+        reviewedAt: null,
+        reviewedBy: null,
+        adminNotes: '',
+        adminOffer: null,
+        finalSalePrice: null
+      };
+
+      sellItems.push(newItem);
+      writeSellItems(sellItems);
+    }
 
     // Send confirmation email to user
     try {

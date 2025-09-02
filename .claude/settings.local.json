@@ -46,7 +46,9 @@
       "Bash(PORT=9000 npm start)",
       "Bash(PORT=5556 timeout 5 npm start)",
       "Bash(PORT=5557 timeout 5 npm start)",
-      "Bash(PORT=5558 timeout 5 npm start)"
+      "Bash(PORT=5558 timeout 5 npm start)",
+      "Bash(PORT=9001 timeout 5 npm start)",
+      "Bash(PORT=9002 timeout 5 npm start)"
     ],
     "deny": []
   }

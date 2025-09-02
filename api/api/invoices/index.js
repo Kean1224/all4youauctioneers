@@ -5,10 +5,11 @@ const PDFDocument = require('pdfkit');
 const { authenticateToken } = require('../../middleware/auth');
 const verifyAdmin = require('../auth/verify-admin');
 const { InvoicePDFGenerator } = require('../../utils/invoicePDFGenerator');
+const dbModels = require('../../database/models');
 
 const router = express.Router();
 
-// Invoice storage paths
+// Legacy invoice storage paths (fallback)
 const INVOICES_FILE = path.join(__dirname, '../../data/invoices.json');
 const INVOICES_DIR = path.join(__dirname, '../../uploads/invoices');
 
@@ -123,20 +124,46 @@ router.post('/generate/buyer/:auctionId/:userEmail', authenticateToken, async (r
       return res.status(404).json({ error: 'No won lots found for this user' });
     }
 
-    // Check if invoice already exists
-    const existingInvoices = readInvoices();
-    const existingInvoice = existingInvoices.find(inv => 
-      inv.auctionId === auctionId && 
-      inv.userEmail === userEmail && 
-      inv.type === 'buyer'
-    );
+    // Check if invoice already exists in PostgreSQL first
+    try {
+      const existingInvoices = await dbModels.getAllInvoices();
+      const existingInvoice = existingInvoices.find(inv => 
+        inv.auction_id === auctionId && 
+        inv.buyer_email === userEmail
+      );
 
-    if (existingInvoice) {
-      return res.json({ 
-        message: 'Invoice already exists', 
-        invoice: existingInvoice,
-        downloadUrl: `/api/invoices/download/${existingInvoice.id}`
-      });
+      if (existingInvoice) {
+        return res.json({ 
+          message: 'Invoice already exists', 
+          invoice: {
+            id: existingInvoice.id,
+            auctionId: existingInvoice.auction_id,
+            userEmail: existingInvoice.buyer_email,
+            invoiceNumber: existingInvoice.invoice_number,
+            totalAmount: existingInvoice.total_amount,
+            paymentStatus: existingInvoice.payment_status
+          },
+          downloadUrl: `/api/invoices/download/${existingInvoice.id}`
+        });
+      }
+    } catch (error) {
+      console.log('Error checking existing invoices in PostgreSQL, checking JSON fallback');
+      
+      // Fallback to JSON file check
+      const existingInvoices = readInvoices();
+      const existingInvoice = existingInvoices.find(inv => 
+        inv.auctionId === auctionId && 
+        inv.userEmail === userEmail && 
+        inv.type === 'buyer'
+      );
+
+      if (existingInvoice) {
+        return res.json({ 
+          message: 'Invoice already exists', 
+          invoice: existingInvoice,
+          downloadUrl: `/api/invoices/download/${existingInvoice.id}`
+        });
+      }
     }
 
     // Calculate totals - CORRECTED VAT CALCULATION

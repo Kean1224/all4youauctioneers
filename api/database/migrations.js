@@ -501,6 +501,7 @@ class MigrationManager {
         version: 20,
         name: 'create_invoices_table',
         up: `
+          -- Create invoices table
           CREATE TABLE IF NOT EXISTS invoices (
             id SERIAL PRIMARY KEY,
             invoice_number VARCHAR(100) UNIQUE NOT NULL,
@@ -513,24 +514,23 @@ class MigrationManager {
             buyers_premium DECIMAL(10, 2) DEFAULT 0,
             vat_amount DECIMAL(10, 2) DEFAULT 0,
             total_amount DECIMAL(10, 2) NOT NULL,
-            payment_status VARCHAR(50) DEFAULT 'pending', -- pending, paid, overdue, cancelled
+            payment_status VARCHAR(50) DEFAULT 'pending',
             payment_method VARCHAR(100),
             payment_date TIMESTAMP,
             payment_reference VARCHAR(255),
             invoice_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             due_date TIMESTAMP,
-            pdf_data TEXT, -- Store generated PDF as base64
+            pdf_data TEXT,
             notes TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
           
-          -- Indexes for performance
+          -- Create indexes after table creation
           CREATE INDEX IF NOT EXISTS idx_invoices_buyer_email ON invoices(buyer_email);
           CREATE INDEX IF NOT EXISTS idx_invoices_auction_id ON invoices(auction_id);
           CREATE INDEX IF NOT EXISTS idx_invoices_payment_status ON invoices(payment_status);
           CREATE INDEX IF NOT EXISTS idx_invoices_invoice_date ON invoices(invoice_date);
-          CREATE INDEX IF NOT EXISTS idx_invoices_invoice_number ON invoices(invoice_number);
         `,
         down: `
           DROP TABLE IF EXISTS invoices CASCADE;
