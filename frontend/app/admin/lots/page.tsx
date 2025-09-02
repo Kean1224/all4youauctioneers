@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getApiUrl } from '../../../lib/api';
+import { getCsrfToken } from '../../../utils/csrf';
 import AdminSidebar from '../../../components/AdminSidebar';
 import ModernAdminLayout from '../../../components/ModernAdminLayout';
 
@@ -84,6 +85,7 @@ export default function AdminLotsPage() {
     e.preventDefault();
     if (!editModal.lot || !editModal.auctionId) return;
     try {
+      const csrfToken = await getCsrfToken();
       const body = {
         ...editModal.form,
         startPrice: parseFloat(editModal.form.startPrice),
@@ -93,7 +95,7 @@ export default function AdminLotsPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          // No Authorization header; rely on httpOnly cookie
+          'x-csrf-token': csrfToken,
         },
         body: JSON.stringify(body),
       });
@@ -262,6 +264,7 @@ export default function AdminLotsPage() {
     }
 
     try {
+      const csrfToken = await getCsrfToken();
       const formData = new FormData();
       formData.append('title', form.title);
       formData.append('description', form.description);
@@ -280,7 +283,7 @@ export default function AdminLotsPage() {
       const response = await fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}`, {
         method: 'POST',
         headers: {
-          // No Authorization header; rely on httpOnly cookie
+          'x-csrf-token': csrfToken,
         },
         body: formData
       });
@@ -323,95 +326,25 @@ export default function AdminLotsPage() {
   };
 
   const handleDelete = async (auctionId: string, lotId: string, lotNumber?: number, auctionTitle?: string) => {
-    const message = `Are you sure you want to delete Lot${lotNumber ? ' ' + lotNumber : ''} from Auction${auctionTitle ? ' \'' + auctionTitle + '\'' : ''}?`;
+    const message = `Are you sure you want to delete Lot${lotNumber ? ' ' + lotNumber : ''} from Auction${auctionTitle ? ' \'${auctionTitle}\'' : ''}?`;
     if (!confirm(message)) return;
-    
     try {
-
-  // --- Edit Lot Logic ---
-  const openEditModal = (auctionId: string, lot: Lot) => {
-    setEditModal({
-      open: true,
-      auctionId,
-      lot,
-      form: {
-        title: lot.title || '',
-        description: lot.description || '',
-        startPrice: lot.startPrice?.toString() || '',
-        bidIncrement: lot.bidIncrement?.toString() || '',
-        endTime: lot.endTime ? lot.endTime.slice(0, 16) : '', // for datetime-local
-        sellerEmail: lot.sellerEmail || '',
-        condition: lot.condition || 'Good',
-      },
-    });
-  };
-
-  const closeEditModal = () => setEditModal({
-    open: false,
-    auctionId: '',
-    lot: null,
-    form: {
-      title: '',
-      description: '',
-      startPrice: '',
-      bidIncrement: '',
-      endTime: '',
-      sellerEmail: '',
-      condition: 'Good',
-    },
-  });
-
-  const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setEditModal((prev) => ({
-      ...prev,
-      form: { ...prev.form, [e.target.name]: e.target.value },
-    }));
-  };
-
-  const handleEditSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editModal.lot || !editModal.auctionId) return;
-    try {
-      const body = {
-        ...editModal.form,
-        startPrice: parseFloat(editModal.form.startPrice),
-        bidIncrement: editModal.form.bidIncrement ? parseFloat(editModal.form.bidIncrement) : undefined,
-      };
-      const res = await fetch(`${getApiUrl()}/api/lots/${editModal.auctionId}/${editModal.lot.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          // No Authorization header; rely on httpOnly cookie
-        },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        alert('Failed to update lot: ' + (err.error || 'Unknown error'));
-        return;
-      }
-      closeEditModal();
-      await fetchAuctions();
-      alert('Lot updated successfully!');
-    } catch (error) {
-      alert('Network error occurred while updating lot');
-    }
-  };
+      const csrfToken = await getCsrfToken();
       const response = await fetch(`${getApiUrl()}/api/lots/${auctionId}/${lotId}`, { 
         method: 'DELETE',
-        headers: getAdminHeaders()
+        headers: {
+          ...getAdminHeaders(),
+          'x-csrf-token': csrfToken,
+        }
       });
-      
       if (response.status === 401) {
         router.push('/admin/login');
         return;
       }
-      
       if (!response.ok) {
         alert('Failed to delete lot');
         return;
       }
-      
       fetchAuctions();
     } catch (error) {
       console.error('Error deleting lot:', error);

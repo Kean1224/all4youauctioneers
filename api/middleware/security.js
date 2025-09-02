@@ -235,29 +235,6 @@ const validateFileUpload = (req, res, next) => {
   next();
 };
 
-// 🔐 CSRF Protection (manual implementation since csurf is deprecated)
-const csrfProtection = (req, res, next) => {
-  // Skip CSRF for GET, HEAD, OPTIONS
-  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-    return next();
-  }
-
-  // Skip CSRF for API authentication (JWT handles this)
-  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
-    return next();
-  }
-
-  // For form submissions, check referer
-  const referer = req.get('Referer');
-  const host = req.get('Host');
-  
-  if (!referer || !referer.includes(host)) {
-    console.log(`🚨 CSRF: Invalid referer from ${req.ip}: ${referer}`);
-    return res.status(403).json({ error: 'Invalid request origin' });
-  }
-
-  next();
-};
 
 module.exports = {
   rateLimits,

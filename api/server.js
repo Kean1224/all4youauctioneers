@@ -5,6 +5,8 @@ const cors = require('./cors-config');
 const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
+const cookieParser = require('cookie-parser');
+const csurf = require('csurf');
 
 // 🛡️ Import security middleware
 const {
@@ -32,7 +34,17 @@ app.use(sanitizeInput); // Input sanitization
 
 // Apply CORS middleware (after security)
 app.use(cors);
+
 app.use(bodyParser.json());
+app.use(cookieParser());
+
+// CSRF protection (use cookies)
+app.use(csurf({ cookie: { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production' } }));
+
+// Expose CSRF token to frontend
+app.get('/api/csrf-token', (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
 
 // 🛡️ Apply rate limiting to different routes
 app.use('/api/auth', rateLimits.auth);

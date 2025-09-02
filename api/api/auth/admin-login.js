@@ -63,8 +63,14 @@ module.exports = async (req, res) => {
       iat: issuedAt
     }, SECRET, { expiresIn: '4h' });
     
+      // Set JWT as httpOnly, secure cookie
+      res.cookie('jwt', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 4 * 60 * 60 * 1000 // 4 hours
+      });
       return res.json({ 
-        token, 
         email: admin.email,
         name: admin.name,
         role: admin.role,

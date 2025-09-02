@@ -77,9 +77,15 @@ router.post('/login', async (req, res) => {
       userAgent: req.headers['user-agent']
     });
 
-    // Return success response
+    // Set JWT as httpOnly, secure cookie
+    res.cookie('jwt', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+    // Return success response (no token in body)
     res.json({
-      token,
       email: user.email,
       role: 'user',
       ficaApproved: user.fica_approved,
@@ -87,6 +93,15 @@ router.post('/login', async (req, res) => {
       expiresAt: issuedAt + (24 * 60 * 60), // 24 hours from now
       message: 'Login successful'
     });
+// Logout endpoint to clear JWT cookie
+router.post('/logout', (req, res) => {
+  res.clearCookie('jwt', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
+  res.json({ message: 'Logged out' });
+});
 
   } catch (error) {
     console.error('Error during login:', error);
@@ -100,15 +115,12 @@ router.post('/admin-login', adminLogin);
 
 // Admin verification endpoint (direct implementation)
 const verifyAdminEndpoint = (req, res) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = req.cookies && req.cookies.jwt;
   const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
-  
   if (!token) {
-    console.log(`[SECURITY] ${new Date().toISOString()}: ADMIN_ACCESS_DENIED`, { reason: 'No token provided', ip: clientIP });
-    return res.status(401).json({ error: 'No token provided' });
+    console.log(`[SECURITY] ${new Date().toISOString()}: ADMIN_ACCESS_DENIED`, { reason: 'No token cookie', ip: clientIP });
+    return res.status(401).json({ error: 'No token cookie' });
   }
-
   const jwt = require('jsonwebtoken');
   jwt.verify(token, JWT_SECRET, (err, user) => {
     if (err) {
