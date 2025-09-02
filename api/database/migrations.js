@@ -572,6 +572,22 @@ class MigrationManager {
           CREATE INDEX IF NOT EXISTS idx_pending_users_expires_at ON pending_users(expires_at);
         `,
         down: `DROP TABLE IF EXISTS pending_users CASCADE`
+      },
+      
+      {
+        version: 24,
+        name: 'add_user_roles_system',
+        up: `
+          -- Add role column to users table
+          ALTER TABLE users ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'user';
+          
+          -- Create index for role-based queries
+          CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
+        `,
+        down: `
+          DROP INDEX IF EXISTS idx_users_role;
+          ALTER TABLE users DROP COLUMN IF EXISTS role;
+        `
       }
     ];
   }
@@ -643,8 +659,63 @@ class MigrationManager {
         [migration.version, migration.name]
       );
       
+      // Special handling for role system migration
+      if (migration.version === 24) {
+        await this.createInitialAdminUser(client);
+      }
+      
       console.log(`✅ Migration completed: ${migration.name}`);
     });
+  }
+  
+  /**
+   * Create initial admin user after role system migration
+   */
+  async createInitialAdminUser(client) {
+    try {
+      const bcrypt = require('bcryptjs');
+      
+      // Get admin credentials from environment
+      const adminEmail = process.env.ADMIN_EMAIL || 'admin@all4youauctions.co.za';
+      const adminPassword = process.env.ADMIN_PASSWORD || 'AdminPassword123!';
+      
+      // Check if admin user already exists
+      const existingAdmin = await client.query(
+        'SELECT id FROM users WHERE role = $1 OR email = $2',
+        ['admin', adminEmail]
+      );
+      
+      if (existingAdmin.rows.length > 0) {
+        console.log(`👤 Admin user already exists, updating role...`);
+        await client.query(
+          'UPDATE users SET role = $1 WHERE email = $2',
+          ['admin', adminEmail]
+        );
+      } else {
+        console.log(`👤 Creating initial admin user: ${adminEmail}`);
+        
+        // Hash the admin password
+        const hashedPassword = await bcrypt.hash(adminPassword, 12);
+        
+        // Create admin user
+        await client.query(`
+          INSERT INTO users (email, password_hash, name, role, email_verified, fica_approved, created_at, updated_at)
+          VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+        `, [
+          adminEmail,
+          hashedPassword,
+          'System Administrator',
+          'admin',
+          true,
+          true
+        ]);
+        
+        console.log(`✅ Admin user created successfully`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to create admin user:', error);
+      // Don't throw - migration should continue
+    }
   }
 
   /**

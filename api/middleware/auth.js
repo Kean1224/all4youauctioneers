@@ -32,7 +32,8 @@ function verifyAdmin(req, res, next) {
         return res.status(403).json({ error: 'Invalid admin token' });
       }
       
-      if (!decoded.isAdmin && decoded.email !== 'admin@all4youauctions.co.za') {
+      // Use proper role-based authorization (removed hardcoded email backdoor)
+      if (decoded.role !== 'admin') {
         return res.status(403).json({ error: 'Admin privileges required' });
       }
       
