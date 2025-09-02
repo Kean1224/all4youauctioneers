@@ -67,42 +67,26 @@ import { useRouter } from 'next/navigation';
 export default function AdminUsersPage() {
   const router = useRouter();
   useEffect(() => {
-    const token = localStorage.getItem('admin_jwt');
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.role !== 'admin' || !payload.email || !payload.exp || Date.now() / 1000 > payload.exp) {
-        router.push('/admin/login');
-        return;
-      }
-    } catch {
-      router.push('/admin/login');
-      return;
-    }
-    fetchUsers(token);
-    fetchAuctions(token);
+    // Auth is now handled by httpOnly cookie. No localStorage or token checks.
+    fetchUsers();
+    fetchAuctions();
   }, [router]);
   const [users, setUsers] = useState<User[]>([]);
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [depositActionLoading, setDepositActionLoading] = useState<string>('');
 
-  const fetchUsers = async (token: string) => {
+  const fetchUsers = async () => {
     const res = await fetch(`${getApiUrl()}/api/users`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
     const data = await res.json();
     setUsers(data);
   };
-  const fetchAuctions = async (token: string) => {
+  const fetchAuctions = async () => {
     const res = await fetch(`${getApiUrl()}/api/auctions`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -112,18 +96,14 @@ export default function AdminUsersPage() {
 
   // Helper to get admin auth headers
   const getAdminHeaders = () => {
-    const token = localStorage.getItem('admin_jwt');
-    console.log('Admin token:', token ? 'Found' : 'Not found');
     return {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+      'Content-Type': 'application/json'
     };
   };
 
   const toggleSuspend = async (email: string, suspended?: boolean) => {
     try {
-      const token = localStorage.getItem('admin_jwt');
-      console.log('JWT token from localStorage:', token ? 'present' : 'missing');
+  // No token; rely on httpOnly cookie
       console.log('Toggling suspend for:', email, 'current status:', suspended);
       
       const response = await fetch(`${getApiUrl()}/api/users/suspend/${encodeURIComponent(email)}`, {
@@ -144,7 +124,7 @@ export default function AdminUsersPage() {
       
       const successData = await response.json();
       console.log('Suspend toggle successful:', successData);
-      await fetchUsers(localStorage.getItem('admin_jwt') || '');
+  await fetchUsers();
     } catch (error) {
       console.error('Error toggling suspend:', error);
       alert('Network error occurred');
@@ -156,7 +136,7 @@ export default function AdminUsersPage() {
       method: 'PUT',
       headers: getAdminHeaders(),
     });
-    fetchUsers(localStorage.getItem('admin_jwt') || '');
+  fetchUsers();
   };
 
   // Admin marks deposit as returned or in progress
@@ -168,7 +148,7 @@ export default function AdminUsersPage() {
       body: JSON.stringify({ email, auctionId, status }),
     });
     setDepositActionLoading('');
-    fetchUsers(localStorage.getItem('admin_jwt') || '');
+  fetchUsers();
   };
 
   // Admin approves pending deposit
@@ -180,7 +160,7 @@ export default function AdminUsersPage() {
       body: JSON.stringify({ status: 'approved' }),
     });
     setDepositActionLoading('');
-    fetchUsers(localStorage.getItem('admin_jwt') || '');
+  fetchUsers();
   };
 
   // Delete user handler
@@ -200,7 +180,7 @@ export default function AdminUsersPage() {
         return;
       }
       
-      fetchUsers(localStorage.getItem('admin_jwt') || '');
+  fetchUsers();
     } catch (error) {
       console.error('Error deleting user:', error);
       alert('Network error occurred');

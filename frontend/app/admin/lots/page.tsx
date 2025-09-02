@@ -93,7 +93,7 @@ export default function AdminLotsPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(localStorage.getItem('admin_jwt') && { 'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}` })
+          // No Authorization header; rely on httpOnly cookie
         },
         body: JSON.stringify(body),
       });
@@ -150,32 +150,13 @@ export default function AdminLotsPage() {
   });
 
   const getAdminHeaders = () => {
-    const token = localStorage.getItem('admin_jwt');
     return {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
+      'Content-Type': 'application/json'
     };
   };
 
   useEffect(() => {
-    // Check authentication first
-    const token = localStorage.getItem('admin_jwt');
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
-    
-    // Verify token client-side
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.role !== 'admin' || !payload.email || !payload.exp || Date.now() / 1000 > payload.exp) {
-        router.push('/admin/login');
-        return;
-      }
-    } catch {
-      router.push('/admin/login');
-      return;
-    }
+  // Auth is now handled by httpOnly cookie. No localStorage or token checks.
 
   fetchAuctions();
   fetchUsers();
@@ -299,7 +280,7 @@ export default function AdminLotsPage() {
       const response = await fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}`, {
         method: 'POST',
         headers: {
-          ...(localStorage.getItem('admin_jwt') && { 'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}` })
+          // No Authorization header; rely on httpOnly cookie
         },
         body: formData
       });
@@ -400,7 +381,7 @@ export default function AdminLotsPage() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          ...(localStorage.getItem('admin_jwt') && { 'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}` })
+          // No Authorization header; rely on httpOnly cookie
         },
         body: JSON.stringify(body),
       });
@@ -444,7 +425,6 @@ export default function AdminLotsPage() {
       <>
         <div className="p-6 max-w-7xl mx-auto">
           <h1 className="text-3xl font-bold mb-6 text-green-700">Lot Management</h1>
-
           <div className="bg-white border border-green-200 rounded-lg p-4 mb-6 shadow-sm">
             <h2 className="font-semibold text-green-700 mb-2">📅 Lot Timing Information</h2>
             <ul className="text-sm text-gray-700 space-y-1">
@@ -454,19 +434,10 @@ export default function AdminLotsPage() {
               <li>• <strong>Custom timing:</strong> You can override by setting a specific end time</li>
             </ul>
           </div>
-
-          {/* Add New Lot Form */}
           <form onSubmit={handleCreate} className="bg-white p-4 rounded-xl shadow space-y-4 mb-10 border border-green-200">
-            <div className="md:grid md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-green-700">Assign Seller</label>
-                <input
-                  type="text"
-                  placeholder="Search seller by name or email"
-                  value={form.sellerSearch}
-                  onChange={e => setForm({ ...form, sellerSearch: e.target.value })}
-                  className="w-full border border-green-300 bg-white text-gray-900 px-4 py-2 rounded mb-2 focus:outline-none focus:ring-2 focus:ring-green-400"
-                />
+                <label className="block text-sm font-medium text-green-700">Select Seller</label>
                 <select
                   value={form.sellerEmail}
                   onChange={e => setForm({ ...form, sellerEmail: e.target.value })}
@@ -573,7 +544,6 @@ export default function AdminLotsPage() {
               ➕ Add Lot
             </button>
           </form>
-
           {/* View Lots per Auction */}
           <div className="space-y-8">
             {auctions.length === 0 ? (
@@ -590,7 +560,6 @@ export default function AdminLotsPage() {
                       {auction.lots?.length || 0} lots
                     </span>
                   </div>
-
                   {!auction.lots || auction.lots.length === 0 ? (
                     <div className="text-center py-8 bg-gray-50 rounded-lg">
                       <p className="text-gray-400 mb-2">No lots in this auction yet.</p>
