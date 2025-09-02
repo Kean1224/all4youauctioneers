@@ -58,16 +58,30 @@ router.get('/', async (req, res) => {
     const auctions = await dbModels.getAllAuctions();
     const activeAuctions = auctions.filter(auction => !isAuctionCompleted(auction));
     
-    // Transform auctions to match frontend expectations
-    const transformedAuctions = activeAuctions.map(auction => ({
-      ...auction,
-      // Add frontend-expected field names
-      startDate: auction.start_time,
-      endDate: auction.end_time,
-      auctionImage: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
-      image: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null
+    // Get lot counts for each auction
+    const transformedAuctions = await Promise.all(activeAuctions.map(async (auction) => {
+      // Get lot count for this auction
+      const lots = await dbModels.getLotsByAuctionId(auction.id);
+      const lotCount = lots ? lots.length : 0;
+      
+      // Calculate total views across all lots in this auction
+      const totalViews = lots ? lots.reduce((sum, lot) => sum + (parseInt(lot.views) || 0), 0) : 0;
+      
+      return {
+        ...auction,
+        // Add frontend-expected field names
+        startDate: auction.start_time,
+        endDate: auction.end_time,
+        auctionImage: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
+        image: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
+        // Add lot count and view count
+        totalLots: lotCount,
+        lots: [], // Don't include full lot data in list view for performance
+        viewCount: totalViews
+      };
     }));
     
+    console.log(`📋 Returning ${transformedAuctions.length} auctions with lot counts`);
     res.json(transformedAuctions);
   } catch (error) {
     console.error('Error fetching auctions:', error);
