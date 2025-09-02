@@ -854,10 +854,43 @@ export default function AuctionDetailPage() {
     }
   }, [watchlist]);
 
-  const toggleWatchlist = (lotId: string) => {
-    setWatchlist((prev) =>
-      prev.includes(lotId) ? prev.filter((id) => id !== lotId) : [...prev, lotId]
-    );
+  const toggleWatchlist = async (lotId: string) => {
+    const isCurrentlyWatched = watchlist.includes(lotId);
+    const token = localStorage.getItem('token');
+    
+    try {
+      if (isCurrentlyWatched) {
+        // Remove from watchlist
+        if (token) {
+          await fetch(`${API_URL}/api/lots/${lotId}/watch`, {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            }
+          });
+        }
+        setWatchlist((prev) => prev.filter((id) => id !== lotId));
+      } else {
+        // Add to watchlist
+        if (token) {
+          await fetch(`${API_URL}/api/lots/${lotId}/watch`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            }
+          });
+        }
+        setWatchlist((prev) => [...prev, lotId]);
+      }
+    } catch (error) {
+      console.log('Failed to update watchlist:', error);
+      // Still update local state even if API call fails
+      setWatchlist((prev) =>
+        isCurrentlyWatched ? prev.filter((id) => id !== lotId) : [...prev, lotId]
+      );
+    }
   };
 
   // Description toggle
@@ -902,6 +935,30 @@ export default function AuctionDetailPage() {
     // eslint-disable-next-line
   }, [auctionId, retryCount]);
 
+  // Track view counts for lots (throttled to prevent spam)
+  const trackLotViews = async (lots: any[]) => {
+    try {
+      // Track views for each lot with a small delay to avoid overwhelming the server
+      for (const lot of lots.slice(0, 5)) { // Limit to first 5 lots to avoid too many requests
+        if (lot.id) {
+          try {
+            await fetch(`${API_URL}/api/lots/${lot.id}/view`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              }
+            });
+          } catch (error) {
+            // Silently fail - view tracking shouldn't break the page
+            console.log(`Failed to track view for lot ${lot.id}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.log('Failed to track lot views:', error);
+    }
+  };
+
   const fetchAuction = async () => {
     try {
       setLoading(true);
@@ -938,6 +995,11 @@ export default function AuctionDetailPage() {
         return;
       }
       setAuction(auctionData);
+      
+      // Track views for all lots in this auction
+      if (auctionData?.lots?.length > 0) {
+        trackLotViews(auctionData.lots);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load auction');
       setNotifications((prev) => [

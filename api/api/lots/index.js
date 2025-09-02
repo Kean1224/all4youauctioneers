@@ -571,5 +571,122 @@ router.put('/:auctionId/:lotId/assign-seller', verifyAdmin, async (req, res) => 
   }
 });
 
+// ✅ POST: Increment view count for a lot (public endpoint)
+router.post('/:lotId/view', async (req, res) => {
+  try {
+    const { lotId } = req.params;
+    
+    // Validate lot exists
+    const lot = await dbModels.getLotById(lotId);
+    if (!lot) {
+      return res.status(404).json({ error: 'Lot not found' });
+    }
+    
+    // Increment view count
+    const newViewCount = await dbModels.incrementLotViewCount(lotId);
+    
+    console.log(`👁️ Lot ${lotId} view count incremented to ${newViewCount}`);
+    
+    res.json({
+      success: true,
+      lotId,
+      views: newViewCount
+    });
+    
+  } catch (error) {
+    console.error('Error incrementing lot view count:', error);
+    res.status(500).json({ error: 'Failed to increment view count' });
+  }
+});
+
+// ✅ POST: Add lot to watchlist (authenticated)
+router.post('/:lotId/watch', authenticateToken, async (req, res) => {
+  try {
+    const { lotId } = req.params;
+    const userEmail = req.user.email;
+    
+    // Validate lot exists
+    const lot = await dbModels.getLotById(lotId);
+    if (!lot) {
+      return res.status(404).json({ error: 'Lot not found' });
+    }
+    
+    // Add to user's watchlist (existing endpoint in users)
+    // We'll need to call the existing watchlist endpoint
+    const response = await fetch(`${process.env.BASE_URL || 'http://localhost:5000'}/api/users/${userEmail}/watchlist`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization
+      },
+      body: JSON.stringify({ lotId, action: 'add' })
+    });
+    
+    if (response.ok) {
+      // Increment watcher count for the lot
+      const newWatcherCount = await dbModels.incrementLotWatcherCount(lotId);
+      
+      console.log(`⭐ User ${userEmail} added lot ${lotId} to watchlist. Watchers: ${newWatcherCount}`);
+      
+      res.json({
+        success: true,
+        lotId,
+        watchers: newWatcherCount,
+        message: 'Added to watchlist'
+      });
+    } else {
+      res.status(400).json({ error: 'Failed to add to watchlist' });
+    }
+    
+  } catch (error) {
+    console.error('Error adding lot to watchlist:', error);
+    res.status(500).json({ error: 'Failed to add to watchlist' });
+  }
+});
+
+// ✅ DELETE: Remove lot from watchlist (authenticated) 
+router.delete('/:lotId/watch', authenticateToken, async (req, res) => {
+  try {
+    const { lotId } = req.params;
+    const userEmail = req.user.email;
+    
+    // Validate lot exists
+    const lot = await dbModels.getLotById(lotId);
+    if (!lot) {
+      return res.status(404).json({ error: 'Lot not found' });
+    }
+    
+    // Remove from user's watchlist
+    const response = await fetch(`${process.env.BASE_URL || 'http://localhost:5000'}/api/users/${userEmail}/watchlist`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': req.headers.authorization
+      },
+      body: JSON.stringify({ lotId, action: 'remove' })
+    });
+    
+    if (response.ok) {
+      // Decrement watcher count for the lot
+      const newWatcherCount = await dbModels.decrementLotWatcherCount(lotId);
+      
+      console.log(`⭐ User ${userEmail} removed lot ${lotId} from watchlist. Watchers: ${newWatcherCount}`);
+      
+      res.json({
+        success: true,
+        lotId,
+        watchers: newWatcherCount,
+        message: 'Removed from watchlist'
+      });
+    } else {
+      res.status(400).json({ error: 'Failed to remove from watchlist' });
+    }
+    
+  } catch (error) {
+    console.error('Error removing lot from watchlist:', error);
+    res.status(500).json({ error: 'Failed to remove from watchlist' });
+  }
+});
+
 module.exports = router;
 

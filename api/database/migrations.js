@@ -269,6 +269,29 @@ class MigrationManager {
           ALTER TABLE lots DROP COLUMN IF EXISTS lot_number;
           ALTER TABLE lots DROP COLUMN IF EXISTS end_time;
         `
+      },
+      
+      {
+        version: 12,
+        name: 'add_views_and_watchers_to_lots',
+        up: `
+          ALTER TABLE lots ADD COLUMN IF NOT EXISTS views INTEGER DEFAULT 0;
+          ALTER TABLE lots ADD COLUMN IF NOT EXISTS watchers INTEGER DEFAULT 0;
+          ALTER TABLE lots ADD COLUMN IF NOT EXISTS bid_count INTEGER DEFAULT 0;
+          
+          -- Create indexes for better performance
+          CREATE INDEX IF NOT EXISTS idx_lots_views ON lots(views);
+          CREATE INDEX IF NOT EXISTS idx_lots_watchers ON lots(watchers);
+          CREATE INDEX IF NOT EXISTS idx_lots_bid_count ON lots(bid_count);
+        `,
+        down: `
+          DROP INDEX IF EXISTS idx_lots_views;
+          DROP INDEX IF EXISTS idx_lots_watchers;
+          DROP INDEX IF EXISTS idx_lots_bid_count;
+          ALTER TABLE lots DROP COLUMN IF EXISTS views;
+          ALTER TABLE lots DROP COLUMN IF EXISTS watchers;
+          ALTER TABLE lots DROP COLUMN IF EXISTS bid_count;
+        `
       }
     ];
   }

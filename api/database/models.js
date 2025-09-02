@@ -695,9 +695,13 @@ class DatabaseModels {
       
       const bidResult = await client.query(insertBidQuery, bidValues);
       
-      // 5. Update lot's current bid
+      // 5. Update lot's current bid and bid count
       await client.query(
-        'UPDATE lots SET current_bid = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+        `UPDATE lots 
+         SET current_bid = $2, 
+             bid_count = COALESCE(bid_count, 0) + 1,
+             updated_at = CURRENT_TIMESTAMP 
+         WHERE id = $1`,
         [bidData.lot_id, bidData.bid_amount]
       );
       
@@ -1055,6 +1059,72 @@ class DatabaseModels {
         timestamp: new Date().toISOString()
       };
     }
+  }
+
+  /**
+   * Increment view count for a lot
+   */
+  async incrementLotViewCount(lotId) {
+    const query = `
+      UPDATE lots 
+      SET views = COALESCE(views, 0) + 1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING views
+    `;
+    
+    const result = await dbManager.query(query, [lotId]);
+    return result.rows[0]?.views || 0;
+  }
+
+  /**
+   * Increment watcher count for a lot
+   */
+  async incrementLotWatcherCount(lotId) {
+    const query = `
+      UPDATE lots 
+      SET watchers = COALESCE(watchers, 0) + 1,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING watchers
+    `;
+    
+    const result = await dbManager.query(query, [lotId]);
+    return result.rows[0]?.watchers || 0;
+  }
+
+  /**
+   * Decrement watcher count for a lot
+   */
+  async decrementLotWatcherCount(lotId) {
+    const query = `
+      UPDATE lots 
+      SET watchers = GREATEST(COALESCE(watchers, 0) - 1, 0),
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING watchers
+    `;
+    
+    const result = await dbManager.query(query, [lotId]);
+    return result.rows[0]?.watchers || 0;
+  }
+
+  /**
+   * Update bid count for a lot (called when new bid is placed)
+   */
+  async updateLotBidCount(lotId) {
+    const query = `
+      UPDATE lots 
+      SET bid_count = (
+        SELECT COUNT(*) FROM bids WHERE lot_id = $1
+      ),
+      updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING bid_count
+    `;
+    
+    const result = await dbManager.query(query, [lotId]);
+    return result.rows[0]?.bid_count || 0;
   }
 
   /**
