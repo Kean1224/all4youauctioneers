@@ -344,6 +344,89 @@ class MigrationManager {
         down: `
           DROP TABLE IF EXISTS auction_deposits CASCADE;
         `
+      },
+      
+      {
+        version: 15,
+        name: 'create_auction_registrations_table',
+        up: `
+          CREATE TABLE IF NOT EXISTS auction_registrations (
+            id SERIAL PRIMARY KEY,
+            auction_id VARCHAR(255) NOT NULL,
+            user_email VARCHAR(255) NOT NULL,
+            registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            
+            -- Unique constraint to prevent duplicate registrations
+            UNIQUE(auction_id, user_email)
+          );
+          
+          -- Indexes for performance
+          CREATE INDEX IF NOT EXISTS idx_registrations_auction_id ON auction_registrations(auction_id);
+          CREATE INDEX IF NOT EXISTS idx_registrations_user_email ON auction_registrations(user_email);
+          CREATE INDEX IF NOT EXISTS idx_registrations_registered_at ON auction_registrations(registered_at);
+        `,
+        down: `
+          DROP TABLE IF EXISTS auction_registrations CASCADE;
+        `
+      },
+      
+      {
+        version: 16,
+        name: 'create_contact_messages_table',
+        up: `
+          CREATE TABLE IF NOT EXISTS contact_messages (
+            id SERIAL PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            email VARCHAR(255) NOT NULL,
+            message TEXT NOT NULL,
+            submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(50) DEFAULT 'unread', -- unread, read, archived
+            admin_notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Indexes for performance
+          CREATE INDEX IF NOT EXISTS idx_contact_email ON contact_messages(email);
+          CREATE INDEX IF NOT EXISTS idx_contact_status ON contact_messages(status);
+          CREATE INDEX IF NOT EXISTS idx_contact_submitted_at ON contact_messages(submitted_at);
+        `,
+        down: `
+          DROP TABLE IF EXISTS contact_messages CASCADE;
+        `
+      },
+      
+      {
+        version: 17,
+        name: 'create_refund_requests_table',
+        up: `
+          CREATE TABLE IF NOT EXISTS refund_requests (
+            id SERIAL PRIMARY KEY,
+            auction_id VARCHAR(255) NOT NULL,
+            user_email VARCHAR(255) NOT NULL,
+            status VARCHAR(50) DEFAULT 'pending', -- pending, approved, rejected, completed
+            requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            admin_notes TEXT,
+            reason TEXT,
+            refund_amount DECIMAL(10, 2),
+            processed_by VARCHAR(255),
+            
+            -- Unique constraint to prevent duplicate refund requests
+            UNIQUE(auction_id, user_email)
+          );
+          
+          -- Indexes for performance
+          CREATE INDEX IF NOT EXISTS idx_refunds_auction_id ON refund_requests(auction_id);
+          CREATE INDEX IF NOT EXISTS idx_refunds_user_email ON refund_requests(user_email);
+          CREATE INDEX IF NOT EXISTS idx_refunds_status ON refund_requests(status);
+          CREATE INDEX IF NOT EXISTS idx_refunds_requested_at ON refund_requests(requested_at);
+        `,
+        down: `
+          DROP TABLE IF EXISTS refund_requests CASCADE;
+        `
       }
     ];
   }

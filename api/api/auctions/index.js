@@ -269,38 +269,37 @@ router.post('/', verifyAdmin, upload.any(), async (req, res) => {
   }
 });
 
-// PUT update an auction (admin only)
-router.put('/:id', verifyAdmin, upload.any(), (req, res) => {
-  const { id } = req.params;
-  const auctions = readAuctions();
-  const index = auctions.findIndex(a => a.id === id);
+// PUT update an auction (admin only) - MIGRATED TO POSTGRESQL
+router.put('/:id', verifyAdmin, upload.any(), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const auction = await dbModels.getAuctionById(id);
 
-  if (index === -1) return res.status(404).json({ error: 'Auction not found' });
+    if (!auction) return res.status(404).json({ error: 'Auction not found' });
 
-  // Only allow updating deposit fields if provided
-  const update = { ...req.body };
-  if (typeof update.depositRequired !== 'undefined') {
-    update.depositRequired = !!update.depositRequired;
-    update.depositAmount = update.depositRequired ? Number(update.depositAmount) : 0;
-  }
-
-  // Handle image update
-  const auctionImageFile = req.files && req.files.find(f => f.fieldname === 'auctionImage');
-  if (auctionImageFile) {
-    // Delete old image if exists
-    if (auctions[index].auctionImage) {
-      const oldImagePath = path.join(__dirname, '../../', auctions[index].auctionImage);
-      if (fs.existsSync(oldImagePath)) {
-        fs.unlinkSync(oldImagePath);
-      }
+    // Only allow updating deposit fields if provided
+    const update = { ...req.body };
+    if (typeof update.depositRequired !== 'undefined') {
+      update.depositRequired = !!update.depositRequired;
+      update.depositAmount = update.depositRequired ? Number(update.depositAmount) : 0;
     }
-    update.auctionImage = `/uploads/auctions/${auctionImageFile.filename}`;
+
+    // Handle image update - store as base64 in database
+    const auctionImageFile = req.files && req.files.find(f => f.fieldname === 'auctionImage');
+    if (auctionImageFile) {
+      // Store new image as base64
+      const imageData = `data:${auctionImageFile.mimetype};base64,${auctionImageFile.buffer.toString('base64')}`;
+      update.image_urls = [imageData];
+    }
+
+    // Update auction in database
+    const updatedAuction = await dbModels.updateAuction(id, update);
+    
+    res.json(updatedAuction);
+  } catch (error) {
+    console.error('Error updating auction:', error);
+    res.status(500).json({ error: 'Failed to update auction' });
   }
-
-  auctions[index] = { ...auctions[index], ...update };
-  writeAuctions(auctions);
-
-  res.json(auctions[index]);
 });
 
 // DELETE auction (admin only) - MIGRATED TO POSTGRESQL
@@ -326,44 +325,60 @@ router.delete('/:id', verifyAdmin, async (req, res) => {
   }
 });
 
-// GET /:id/lots - Get all lots for a specific auction
-router.get('/:id/lots', (req, res) => {
-  const { id } = req.params;
-  const auctions = readAuctions();
-  const auction = auctions.find(a => a.id === id);
-  
-  if (!auction) return res.status(404).json({ error: 'Auction not found' });
-  
-  const lots = readLotsForAuction(auction);
-  res.json({ lots });
-});
-
-// GET /:id/is-registered?email=... - Check if user is registered for auction
-router.get('/:id/is-registered', (req, res) => {
-  const { id } = req.params;
-  const { email } = req.query;
-  if (!email) return res.status(400).json({ error: 'Email required' });
-  const auctions = readAuctions();
-  const auction = auctions.find(a => a.id === id);
-  if (!auction) return res.status(404).json({ error: 'Auction not found' });
-  const registered = Array.isArray(auction.registeredUsers) && auction.registeredUsers.includes(email);
-  res.json({ registered });
-});
-
-// POST /:id/register - Register a user for an auction
-router.post('/:id/register', (req, res) => {
-  const { id } = req.params;
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: 'Email required' });
-  const auctions = readAuctions();
-  const auction = auctions.find(a => a.id === id);
-  if (!auction) return res.status(404).json({ error: 'Auction not found' });
-  if (!auction.registeredUsers) auction.registeredUsers = [];
-  if (!auction.registeredUsers.includes(email)) {
-    auction.registeredUsers.push(email);
-    writeAuctions(auctions);
+// GET /:id/lots - Get all lots for a specific auction - MIGRATED TO POSTGRESQL
+router.get('/:id/lots', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const auction = await dbModels.getAuctionById(id);
+    
+    if (!auction) return res.status(404).json({ error: 'Auction not found' });
+    
+    const lots = await dbModels.getLotsByAuctionId(id);
+    res.json({ lots });
+  } catch (error) {
+    console.error('Error fetching auction lots:', error);
+    res.status(500).json({ error: 'Failed to fetch auction lots' });
   }
-  res.json({ success: true });
+});
+
+// GET /:id/is-registered?email=... - Check if user is registered for auction - MIGRATED TO POSTGRESQL
+router.get('/:id/is-registered', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: 'Email required' });
+    
+    const auction = await dbModels.getAuctionById(id);
+    if (!auction) return res.status(404).json({ error: 'Auction not found' });
+    
+    const registered = await dbModels.isUserRegisteredForAuction(id, email);
+    res.json({ registered });
+  } catch (error) {
+    console.error('Error checking auction registration:', error);
+    res.status(500).json({ error: 'Failed to check registration status' });
+  }
+});
+
+// POST /:id/register - Register a user for an auction - MIGRATED TO POSTGRESQL
+router.post('/:id/register', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email required' });
+    
+    const auction = await dbModels.getAuctionById(id);
+    if (!auction) return res.status(404).json({ error: 'Auction not found' });
+    
+    const isAlreadyRegistered = await dbModels.isUserRegisteredForAuction(id, email);
+    if (!isAlreadyRegistered) {
+      await dbModels.registerUserForAuction(id, email);
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error registering user for auction:', error);
+    res.status(500).json({ error: 'Failed to register for auction' });
+  }
 });
 
 // POST /:id/rerun - Duplicate auction and its lots with new start/end dates (admin only)

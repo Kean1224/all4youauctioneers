@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const dbModels = require('../../database/models');
 const router = express.Router();
 
 const CONTACT_INBOX_PATH = path.join(__dirname, '../../data/contact_inbox.json');
@@ -9,25 +10,45 @@ const CONTACT_INBOX_PATH = path.join(__dirname, '../../data/contact_inbox.json')
 // Use the centralized mailer for consistency
 const { sendMail } = require('../../utils/mailer');
 
-// POST /api/contact - receive contact form submission
-router.post('/', (req, res) => {
+// POST /api/contact - receive contact form submission - MIGRATED TO POSTGRESQL
+router.post('/', async (req, res) => {
   const { name, email, message } = req.body;
   if (!name || !email || !message) {
     return res.status(400).json({ error: 'Missing fields' });
   }
-  const entry = {
+  
+  const messageData = {
     name,
     email,
     message,
-    date: new Date().toISOString()
+    submitted_at: new Date().toISOString()
   };
-  // Save to inbox
-  let inbox = [];
-  if (fs.existsSync(CONTACT_INBOX_PATH)) {
-    inbox = JSON.parse(fs.readFileSync(CONTACT_INBOX_PATH, 'utf8'));
+  
+  try {
+    // Try to save to PostgreSQL first
+    const savedMessage = await dbModels.createContactMessage(messageData);
+    
+    // If PostgreSQL fails, fallback to JSON file
+    if (!savedMessage) {
+      let inbox = [];
+      if (fs.existsSync(CONTACT_INBOX_PATH)) {
+        inbox = JSON.parse(fs.readFileSync(CONTACT_INBOX_PATH, 'utf8'));
+      }
+      const entry = { ...messageData, date: messageData.submitted_at };
+      inbox.unshift(entry);
+      fs.writeFileSync(CONTACT_INBOX_PATH, JSON.stringify(inbox, null, 2));
+    }
+  } catch (error) {
+    console.error('Error saving contact message:', error);
+    // Fallback to JSON file on any error
+    let inbox = [];
+    if (fs.existsSync(CONTACT_INBOX_PATH)) {
+      inbox = JSON.parse(fs.readFileSync(CONTACT_INBOX_PATH, 'utf8'));
+    }
+    const entry = { ...messageData, date: messageData.submitted_at };
+    inbox.unshift(entry);
+    fs.writeFileSync(CONTACT_INBOX_PATH, JSON.stringify(inbox, null, 2));
   }
-  inbox.unshift(entry);
-  fs.writeFileSync(CONTACT_INBOX_PATH, JSON.stringify(inbox, null, 2));
 
   // Send email to admin using centralized mailer
   sendMail({
@@ -52,13 +73,40 @@ router.post('/', (req, res) => {
   });
 });
 
-// GET /api/contact/inbox - admin fetch inbox
-router.get('/inbox', (req, res) => {
-  let inbox = [];
-  if (fs.existsSync(CONTACT_INBOX_PATH)) {
-    inbox = JSON.parse(fs.readFileSync(CONTACT_INBOX_PATH, 'utf8'));
+// GET /api/contact/inbox - admin fetch inbox - MIGRATED TO POSTGRESQL
+router.get('/inbox', async (req, res) => {
+  try {
+    // Try PostgreSQL first
+    const messages = await dbModels.getAllContactMessages();
+    
+    if (messages.length > 0) {
+      // Transform database fields to match expected format
+      const transformedMessages = messages.map(msg => ({
+        id: msg.id,
+        name: msg.name,
+        email: msg.email,
+        message: msg.message,
+        date: msg.submitted_at,
+        status: msg.status || 'unread'
+      }));
+      return res.json(transformedMessages);
+    }
+    
+    // Fallback to JSON file if no database messages
+    let inbox = [];
+    if (fs.existsSync(CONTACT_INBOX_PATH)) {
+      inbox = JSON.parse(fs.readFileSync(CONTACT_INBOX_PATH, 'utf8'));
+    }
+    res.json(inbox);
+  } catch (error) {
+    console.error('Error fetching contact messages:', error);
+    // Fallback to JSON file on error
+    let inbox = [];
+    if (fs.existsSync(CONTACT_INBOX_PATH)) {
+      inbox = JSON.parse(fs.readFileSync(CONTACT_INBOX_PATH, 'utf8'));
+    }
+    res.json(inbox);
   }
-  res.json(inbox);
 });
 
 module.exports = router;

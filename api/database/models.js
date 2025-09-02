@@ -1240,6 +1240,183 @@ class DatabaseModels {
     return result.rows[0] || null;
   }
 
+  // ===================== AUCTION REGISTRATIONS MODEL =====================
+
+  /**
+   * Check if user is registered for auction
+   */
+  async isUserRegisteredForAuction(auctionId, userEmail) {
+    try {
+      const query = `
+        SELECT COUNT(*) as count FROM auction_registrations 
+        WHERE auction_id = $1 AND user_email = $2
+      `;
+      const result = await dbManager.query(query, [auctionId, userEmail]);
+      return parseInt(result.rows[0].count) > 0;
+    } catch (error) {
+      console.log('Auction registrations table not found, returning false');
+      return false; // Return false if table doesn't exist yet
+    }
+  }
+
+  /**
+   * Register user for auction
+   */
+  async registerUserForAuction(auctionId, userEmail) {
+    try {
+      const query = `
+        INSERT INTO auction_registrations (auction_id, user_email, registered_at)
+        VALUES ($1, $2, CURRENT_TIMESTAMP)
+        ON CONFLICT (auction_id, user_email) DO NOTHING
+        RETURNING *
+      `;
+      const result = await dbManager.query(query, [auctionId, userEmail]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error registering user for auction:', error);
+      throw error;
+    }
+  }
+
+  // ===================== CONTACT MESSAGES MODEL =====================
+
+  /**
+   * Create a new contact message
+   */
+  async createContactMessage(messageData) {
+    try {
+      const query = `
+        INSERT INTO contact_messages (name, email, message, submitted_at)
+        VALUES ($1, $2, $3, $4)
+        RETURNING *
+      `;
+      
+      const values = [
+        messageData.name,
+        messageData.email,
+        messageData.message,
+        messageData.submitted_at || new Date().toISOString()
+      ];
+      
+      const result = await dbManager.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating contact message:', error);
+      // Return null if table doesn't exist yet (fallback to JSON file)
+      return null;
+    }
+  }
+
+  /**
+   * Get all contact messages (for admin inbox)
+   */
+  async getAllContactMessages() {
+    try {
+      const query = `
+        SELECT * FROM contact_messages 
+        ORDER BY submitted_at DESC
+      `;
+      const result = await dbManager.query(query);
+      return result.rows;
+    } catch (error) {
+      console.log('Contact messages table not found, returning empty array');
+      return []; // Return empty array if table doesn't exist yet
+    }
+  }
+
+  // ===================== REFUND REQUESTS MODEL =====================
+
+  /**
+   * Create a new refund request
+   */
+  async createRefundRequest(requestData) {
+    try {
+      const query = `
+        INSERT INTO refund_requests (auction_id, user_email, status, requested_at, reason)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (auction_id, user_email) DO NOTHING
+        RETURNING *
+      `;
+      
+      const values = [
+        requestData.auction_id,
+        requestData.user_email,
+        requestData.status || 'pending',
+        requestData.requested_at || new Date().toISOString(),
+        requestData.reason || ''
+      ];
+      
+      const result = await dbManager.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating refund request:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all refund requests
+   */
+  async getAllRefundRequests() {
+    try {
+      const query = `
+        SELECT * FROM refund_requests 
+        ORDER BY requested_at DESC
+      `;
+      const result = await dbManager.query(query);
+      return result.rows;
+    } catch (error) {
+      console.log('Refund requests table not found, returning empty array');
+      return [];
+    }
+  }
+
+  /**
+   * Update refund request status
+   */
+  async updateRefundRequest(auctionId, userEmail, updateData) {
+    try {
+      const query = `
+        UPDATE refund_requests 
+        SET status = $3, updated_at = $4, admin_notes = $5, processed_by = $6
+        WHERE auction_id = $1 AND user_email = $2
+        RETURNING *
+      `;
+      
+      const values = [
+        auctionId,
+        userEmail,
+        updateData.status,
+        new Date().toISOString(),
+        updateData.admin_notes || '',
+        updateData.processed_by || null
+      ];
+      
+      const result = await dbManager.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error updating refund request:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Find refund request by auction and user
+   */
+  async getRefundRequest(auctionId, userEmail) {
+    try {
+      const query = `
+        SELECT * FROM refund_requests 
+        WHERE auction_id = $1 AND user_email = $2
+      `;
+      const result = await dbManager.query(query, [auctionId, userEmail]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.log('Refund requests table not found');
+      return null;
+    }
+  }
+
   /**
    * Get database statistics
    */
