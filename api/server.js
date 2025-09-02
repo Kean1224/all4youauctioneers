@@ -195,7 +195,7 @@ function validateEnvironment() {
 // Initialize data and storage on startup
 const DataInitializer = require('./utils/data-init');
 const storageManager = require('./utils/storage');
-const BackupManager = require('./utils/backup-manager');
+// const BackupManager = require('./utils/backup-manager'); // DISABLED: Using PostgreSQL only
 
 // Initialize PostgreSQL database
 const dbManager = require('./database/connection');
@@ -221,8 +221,8 @@ app.listen(PORT, async () => {
     storageManager.ensureUploadDirs();
     
     // Initialize automatic backup system
-    const backupManager = new BackupManager();
-    await backupManager.initialize();
+    // const backupManager = new BackupManager();  // DISABLED: Using PostgreSQL only
+    // await backupManager.initialize();           // PostgreSQL handles persistence
     
     // Validate environment security
     validateEnvironment();
