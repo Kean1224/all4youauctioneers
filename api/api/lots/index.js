@@ -3,6 +3,7 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const multer = require('multer');
+const cloudinaryService = require('../../services/cloudinaryService');
 
 // Enhanced WebSocket notifications for real-time bidding
 let wsNotify = null;
@@ -195,14 +196,23 @@ router.post('/:auctionId', verifyAdmin, upload.any(), async (req, res) => {
       return res.status(400).json({ error: 'Valid starting price is required' });
     }
     
-    // Handle multiple images - store in PostgreSQL
+    // Handle multiple images - upload to Cloudinary
     let imageUrls = [];
     if (req.files && req.files.length > 0) {
       console.log('📄 Files received for lot:', req.files.map(f => ({ fieldname: f.fieldname, filename: f.originalname })));
+      
       for (const file of req.files) {
         if (file.fieldname.includes('image') || file.fieldname === 'images') {
-          const imageUrl = `data:${file.mimetype};base64,${file.buffer.toString('base64')}`;
-          imageUrls.push(imageUrl);
+          console.log('🖼️ Uploading lot image to Cloudinary...');
+          
+          const uploadResult = await cloudinaryService.uploadLotImage(file.buffer, {
+            originalname: file.originalname,
+            mimetype: file.mimetype,
+            userEmail: `auction_${auctionId}`
+          });
+          
+          imageUrls.push(uploadResult.url);
+          console.log('✅ Lot image uploaded:', uploadResult.url);
         }
       }
       console.log('🖼️ Processed', imageUrls.length, 'images for lot');

@@ -4,6 +4,7 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 const dbModels = require('../../database/models');
+const cloudinaryService = require('../../services/cloudinaryService');
 const router = express.Router();
 
 const DATA_PATH = path.join(__dirname, '../../data/pending_items.json');
@@ -45,7 +46,16 @@ router.post('/', upload.single('image'), async (req, res) => {
       reserve_price: parseFloat(reserve) || 0,
       condition,
       seller_email: sellerEmail,
-      image_data: req.file ? `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}` : null,
+      image_data: req.file ? await (async () => {
+        console.log('📄 Uploading pending item image to Cloudinary...');
+        const uploadResult = await cloudinaryService.uploadLotImage(req.file.buffer, {
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          userEmail: sellerEmail
+        });
+        console.log('✅ Pending item image uploaded:', uploadResult.url);
+        return uploadResult.url;
+      })() : null,
       original_filename: req.file ? req.file.originalname : null,
       status: 'pending'
     };

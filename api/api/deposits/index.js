@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('../../middleware/auth');
 const verifyAdmin = require('../auth/verify-admin');
 const dbModels = require('../../database/models');
+const cloudinaryService = require('../../services/cloudinaryService');
 
 const router = express.Router();
 
@@ -105,7 +106,16 @@ router.post('/submit', authenticateToken, upload.single('depositProof'), async (
       payment_method: paymentMethod,
       reference_number: referenceNumber || '',
       notes: notes || '',
-      proof_file_data: `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
+      proof_file_data: await (async () => {
+        console.log('📄 Uploading deposit proof to Cloudinary...');
+        const uploadResult = await cloudinaryService.uploadDepositProof(req.file.buffer, {
+          originalname: req.file.originalname,
+          mimetype: req.file.mimetype,
+          userEmail: userEmail
+        });
+        console.log('✅ Deposit proof uploaded:', uploadResult.url);
+        return uploadResult.url;
+      })(),
       proof_original_name: req.file.originalname,
       status: 'pending'
     };

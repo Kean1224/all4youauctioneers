@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('../../middleware/auth');
 const verifyAdmin = require('../auth/verify-admin');
 const dbModels = require('../../database/models');
+const cloudinaryService = require('../../services/cloudinaryService');
 const router = express.Router();
 
 // Legacy JSON path for backup/migration only
@@ -60,39 +61,66 @@ router.post('/fica-reupload/:email', upload.fields([
       rejection_reason: null // Clear rejection reason
     };
 
-    // Store files in PostgreSQL and get URLs
+    // Upload files to Cloudinary and get URLs
     if (req.files.idDocument) {
       const file = req.files.idDocument[0];
+      console.log('📄 Uploading ID document to Cloudinary...');
+      
+      const uploadResult = await cloudinaryService.uploadFicaDocument(file.buffer, {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        userEmail: email
+      });
+      
       const ficaDoc = await dbModels.storeFicaDocument({
         user_email: email,
-        file_url: `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
+        file_url: uploadResult.url,
         original_filename: file.originalname,
-        file_size: file.size,
+        file_size: uploadResult.size,
         mime_type: file.mimetype
       });
       updateData.idDocument = ficaDoc.file_url;
+      console.log('✅ ID document uploaded:', uploadResult.url);
     }
     if (req.files.proofOfAddress) {
       const file = req.files.proofOfAddress[0];
+      console.log('📄 Uploading proof of address to Cloudinary...');
+      
+      const uploadResult = await cloudinaryService.uploadFicaDocument(file.buffer, {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        userEmail: email
+      });
+      
       const ficaDoc = await dbModels.storeFicaDocument({
         user_email: email,
-        file_url: `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
+        file_url: uploadResult.url,
         original_filename: file.originalname,
-        file_size: file.size,
+        file_size: uploadResult.size,
         mime_type: file.mimetype
       });
       updateData.proofOfAddress = ficaDoc.file_url;
+      console.log('✅ Proof of address uploaded:', uploadResult.url);
     }
     if (req.files.bankStatement) {
       const file = req.files.bankStatement[0];
+      console.log('📄 Uploading bank statement to Cloudinary...');
+      
+      const uploadResult = await cloudinaryService.uploadFicaDocument(file.buffer, {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+        userEmail: email
+      });
+      
       const ficaDoc = await dbModels.storeFicaDocument({
         user_email: email,
-        file_url: `data:${file.mimetype};base64,${file.buffer.toString('base64')}`,
+        file_url: uploadResult.url,
         original_filename: file.originalname,
-        file_size: file.size,
+        file_size: uploadResult.size,
         mime_type: file.mimetype
       });
       updateData.bankStatement = ficaDoc.file_url;
+      console.log('✅ Bank statement uploaded:', uploadResult.url);
     }
 
     // Update user in database
