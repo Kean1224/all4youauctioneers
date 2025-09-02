@@ -1,117 +1,161 @@
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
+const dbManager = require('../../database/connection');
 
-const PENDING_USERS_FILE = path.join(__dirname, '../../data/pending-registrations.json');
-const USERS_FILE = path.join(__dirname, '../../data/users.json');
-
-function savePendingUser(userData) {
-  let pendingUsers = [];
-  if (fs.existsSync(PENDING_USERS_FILE)) {
-    pendingUsers = JSON.parse(fs.readFileSync(PENDING_USERS_FILE, 'utf-8'));
+async function savePendingUser(userData) {
+  try {
+    // Remove any existing pending registration for this email
+    await dbManager.query(
+      'DELETE FROM pending_users WHERE email = $1',
+      [userData.email]
+    );
+    
+    // Generate verification token and expiry
+    const verificationToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + (24 * 60 * 60 * 1000)); // 24 hours
+    
+    // Insert new pending user
+    const result = await dbManager.query(`
+      INSERT INTO pending_users (
+        email, password_hash, name, username, cell, id_number,
+        address, city, postal_code, id_document, proof_of_address,
+        verification_token, expires_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+      RETURNING *
+    `, [
+      userData.email,
+      userData.password, // Already hashed
+      userData.name,
+      userData.username,
+      userData.cell || '',
+      userData.idNumber || '',
+      userData.address || '',
+      userData.city || '',
+      userData.postalCode || '',
+      userData.idDocument || null,
+      userData.proofOfAddress || null,
+      verificationToken,
+      expiresAt
+    ]);
+    
+    return verificationToken;
+  } catch (error) {
+    console.error('Error saving pending user:', error);
+    throw error;
   }
-  
-  // Remove any existing pending registration for this email
-  pendingUsers = pendingUsers.filter(u => u.email !== userData.email);
-  
-  // Add new pending user
-  const verificationToken = crypto.randomBytes(32).toString('hex');
-  const expiresAt = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
-  
-  const pendingUser = {
-    ...userData,
-    verificationToken,
-    expiresAt,
-    createdAt: new Date().toISOString()
-  };
-  
-  pendingUsers.push(pendingUser);
-  fs.writeFileSync(PENDING_USERS_FILE, JSON.stringify(pendingUsers, null, 2));
-  
-  return verificationToken;
 }
 
-function getPendingUserByToken(token) {
-  if (!fs.existsSync(PENDING_USERS_FILE)) return null;
-  const pendingUsers = JSON.parse(fs.readFileSync(PENDING_USERS_FILE, 'utf-8'));
-  const user = pendingUsers.find(u => u.verificationToken === token);
-  
-  if (!user) return null;
-  if (Date.now() > user.expiresAt) {
-    // Token expired, remove it
-    removePendingUser(token);
+async function getPendingUserByToken(token) {
+  try {
+    const result = await dbManager.query(
+      'SELECT * FROM pending_users WHERE verification_token = $1 AND expires_at > NOW()',
+      [token]
+    );
+    
+    if (result.rows.length === 0) {
+      // Token doesn't exist or has expired - clean up expired tokens
+      await cleanupExpiredPendingUsers();
+      return null;
+    }
+    
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error getting pending user by token:', error);
     return null;
   }
-  
-  return user;
 }
 
-function removePendingUser(token) {
-  if (!fs.existsSync(PENDING_USERS_FILE)) return false;
-  let pendingUsers = JSON.parse(fs.readFileSync(PENDING_USERS_FILE, 'utf-8'));
-  const initialLength = pendingUsers.length;
-  pendingUsers = pendingUsers.filter(u => u.verificationToken !== token);
-  
-  if (pendingUsers.length < initialLength) {
-    fs.writeFileSync(PENDING_USERS_FILE, JSON.stringify(pendingUsers, null, 2));
-    return true;
+async function removePendingUser(token) {
+  try {
+    const result = await dbManager.query(
+      'DELETE FROM pending_users WHERE verification_token = $1 RETURNING id',
+      [token]
+    );
+    
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('Error removing pending user:', error);
+    return false;
   }
-  return false;
 }
 
-function createVerifiedUser(pendingUser) {
-  // Read existing users
-  let users = [];
-  if (fs.existsSync(USERS_FILE)) {
-    users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
+async function createVerifiedUser(pendingUser) {
+  try {
+    // Check if user already exists (edge case protection)
+    const existingUser = await dbManager.query(
+      'SELECT id FROM users WHERE email = $1',
+      [pendingUser.email]
+    );
+    
+    if (existingUser.rows.length > 0) {
+      throw new Error('User already exists');
+    }
+    
+    // Create the actual user in the users table
+    const result = await dbManager.query(`
+      INSERT INTO users (
+        email, password_hash, name, phone, address, city, postal_code,
+        fica_approved, fica_file_url, email_verified, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+      RETURNING *
+    `, [
+      pendingUser.email,
+      pendingUser.password_hash, // From pending table
+      pendingUser.name,
+      pendingUser.cell,
+      pendingUser.address,
+      pendingUser.city,
+      pendingUser.postal_code,
+      false, // fica_approved
+      null,  // fica_file_url
+      true   // email_verified
+    ]);
+    
+    // Store FICA documents if they exist
+    if (pendingUser.id_document || pendingUser.proof_of_address) {
+      if (pendingUser.id_document) {
+        await dbManager.query(`
+          INSERT INTO fica_documents (user_email, file_url, original_filename, status)
+          VALUES ($1, $2, $3, $4)
+        `, [pendingUser.email, pendingUser.id_document, 'id_document.pdf', 'pending']);
+      }
+      
+      if (pendingUser.proof_of_address) {
+        await dbManager.query(`
+          INSERT INTO fica_documents (user_email, file_url, original_filename, status)
+          VALUES ($1, $2, $3, $4)
+        `, [pendingUser.email, pendingUser.proof_of_address, 'proof_of_address.pdf', 'pending']);
+      }
+    }
+    
+    // Remove from pending users
+    await removePendingUser(pendingUser.verification_token);
+    
+    return result.rows[0];
+  } catch (error) {
+    console.error('Error creating verified user:', error);
+    throw error;
   }
-  
-  // Check if user already exists (edge case protection)
-  if (users.find(u => u.email === pendingUser.email)) {
-    throw new Error('User already exists');
-  }
-  
-  // Create the actual user
-  const newUser = {
-    email: pendingUser.email,
-    password: pendingUser.password, // Already hashed
-    name: pendingUser.name,
-    username: pendingUser.username,
-    cell: pendingUser.cell || '',
-    ficaApproved: false,
-    suspended: false,
-    registeredAt: new Date().toISOString(),
-    emailVerified: true,
-    emailVerifiedAt: new Date().toISOString(),
-    watchlist: [],
-    idDocument: pendingUser.idDocument,
-    proofOfAddress: pendingUser.proofOfAddress,
-    idNumber: pendingUser.idNumber || '',
-    address: pendingUser.address || '',
-    city: pendingUser.city || '',
-    postalCode: pendingUser.postalCode || ''
-  };
-  
-  users.push(newUser);
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-  
-  return newUser;
 }
 
-function cleanupExpiredPendingUsers() {
-  if (!fs.existsSync(PENDING_USERS_FILE)) return;
-  let pendingUsers = JSON.parse(fs.readFileSync(PENDING_USERS_FILE, 'utf-8'));
-  const now = Date.now();
-  const validUsers = pendingUsers.filter(u => u.expiresAt > now);
-  
-  if (validUsers.length !== pendingUsers.length) {
-    fs.writeFileSync(PENDING_USERS_FILE, JSON.stringify(validUsers, null, 2));
-    console.log(`Cleaned up ${pendingUsers.length - validUsers.length} expired pending registrations`);
+async function cleanupExpiredPendingUsers() {
+  try {
+    const result = await dbManager.query(
+      'DELETE FROM pending_users WHERE expires_at <= NOW() RETURNING email'
+    );
+    
+    if (result.rows.length > 0) {
+      console.log(`🧹 Cleaned up ${result.rows.length} expired pending registrations`);
+    }
+    
+    return result.rows.length;
+  } catch (error) {
+    console.error('Error cleaning up expired pending users:', error);
+    return 0;
   }
 }
 
 // Clean up expired tokens on module load
-cleanupExpiredPendingUsers();
+setTimeout(cleanupExpiredPendingUsers, 5000); // Wait 5 seconds for DB to be ready
 
 // Set up periodic cleanup (every hour)
 setInterval(cleanupExpiredPendingUsers, 60 * 60 * 1000);

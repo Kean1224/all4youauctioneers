@@ -347,19 +347,112 @@ If you didn't request this, please ignore this email.
   }
 });
 
+// POST /api/auth/forgot-password - Request password reset (NEW - POSTGRESQL)
+router.post('/forgot-password', async (req, res) => {
+  const { email } = req.body;
+  
+  if (!email) {
+    return res.status(400).json({ error: 'Email address is required' });
+  }
+  
+  try {
+    const resetUtils = require('./reset-utils');
+    
+    // Check if user exists
+    const user = await resetUtils.getUserByEmail(email);
+    
+    if (!user) {
+      // Don't reveal that user doesn't exist - security best practice
+      return res.json({ message: 'If this email is registered, you will receive a password reset link.' });
+    }
+    
+    // Generate reset token
+    const token = resetUtils.generateToken();
+    const expiresAt = Date.now() + (60 * 60 * 1000); // 1 hour
+    
+    // Save token to database
+    await resetUtils.saveResetToken(email, token, expiresAt);
+    
+    // Send reset email
+    try {
+      const emailService = require('../../utils/enhanced-email-service');
+      await emailService.sendPasswordResetEmail(email, token);
+      
+      console.log(`🔑 Password reset requested for: ${email}`);
+      res.json({ message: 'If this email is registered, you will receive a password reset link.' });
+      
+    } catch (emailError) {
+      console.error('Failed to send password reset email:', emailError);
+      res.status(500).json({ error: 'Failed to send password reset email. Please try again later.' });
+    }
+    
+  } catch (error) {
+    console.error('Password reset request error:', error);
+    res.status(500).json({ error: 'Password reset request failed. Please try again.' });
+  }
+});
+
+// POST /api/auth/reset-password - Complete password reset (NEW - POSTGRESQL)
+router.post('/reset-password', async (req, res) => {
+  const { token, newPassword } = req.body;
+  
+  if (!token || !newPassword) {
+    return res.status(400).json({ error: 'Token and new password are required' });
+  }
+  
+  // Validate password strength
+  if (newPassword.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters long' });
+  }
+  
+  try {
+    const resetUtils = require('./reset-utils');
+    
+    // Verify token and get email
+    const email = await resetUtils.getEmailByToken(token);
+    
+    if (!email) {
+      return res.status(400).json({ error: 'Invalid or expired reset token' });
+    }
+    
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    
+    // Update user password
+    const success = await resetUtils.setUserPassword(email, hashedPassword);
+    
+    if (!success) {
+      return res.status(500).json({ error: 'Failed to update password' });
+    }
+    
+    // Mark token as used
+    await resetUtils.deleteToken(token);
+    
+    console.log(`🔑 Password successfully reset for: ${email}`);
+    
+    res.json({ message: 'Password reset successfully. You can now log in with your new password.' });
+    
+  } catch (error) {
+    console.error('Password reset completion error:', error);
+    res.status(500).json({ error: 'Password reset failed. Please try again.' });
+  }
+});
+
 // Test endpoint to verify deployment
 router.get('/test-deployment', (req, res) => {
   res.json({ 
     status: 'deployed', 
     timestamp: new Date().toISOString(),
-    message: 'Direct verify-admin implementation deployed',
-    version: '4.1',
+    message: 'Direct verify-admin implementation deployed with password reset',
+    version: '4.2',
     endpoints: {
       'GET /auth/session': 'available',
       'GET /auth/verify-admin': 'direct implementation', 
       'POST /auth/verify-admin': 'direct implementation',
       'POST /auth/verify-email': 'email verification',
-      'POST /auth/resend-verification': 'resend verification email'
+      'POST /auth/resend-verification': 'resend verification email',
+      'POST /auth/forgot-password': 'password reset request',
+      'POST /auth/reset-password': 'password reset completion'
     }
   });
 });

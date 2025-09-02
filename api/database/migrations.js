@@ -523,6 +523,55 @@ class MigrationManager {
           `CREATE INDEX IF NOT EXISTS idx_invoices_invoice_date ON invoices(invoice_date)`
         ],
         down: `DROP INDEX IF EXISTS idx_invoices_buyer_email, idx_invoices_auction_id, idx_invoices_payment_status, idx_invoices_invoice_date`
+      },
+      
+      {
+        version: 22,
+        name: 'create_password_reset_tokens_table',
+        up: `
+          CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id SERIAL PRIMARY KEY,
+            email VARCHAR(255) NOT NULL,
+            token VARCHAR(64) UNIQUE NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            used_at TIMESTAMP
+          );
+          
+          CREATE INDEX IF NOT EXISTS idx_reset_tokens_email ON password_reset_tokens(email);
+          CREATE INDEX IF NOT EXISTS idx_reset_tokens_token ON password_reset_tokens(token);
+          CREATE INDEX IF NOT EXISTS idx_reset_tokens_expires_at ON password_reset_tokens(expires_at);
+        `,
+        down: `DROP TABLE IF EXISTS password_reset_tokens CASCADE`
+      },
+      
+      {
+        version: 23,
+        name: 'create_pending_users_table',
+        up: `
+          CREATE TABLE IF NOT EXISTS pending_users (
+            id SERIAL PRIMARY KEY,
+            email VARCHAR(255) UNIQUE NOT NULL,
+            password_hash VARCHAR(255) NOT NULL,
+            name VARCHAR(255),
+            username VARCHAR(255),
+            cell VARCHAR(50),
+            id_number VARCHAR(20),
+            address TEXT,
+            city VARCHAR(100),
+            postal_code VARCHAR(20),
+            id_document TEXT,
+            proof_of_address TEXT,
+            verification_token VARCHAR(64) UNIQUE NOT NULL,
+            expires_at TIMESTAMP NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          CREATE INDEX IF NOT EXISTS idx_pending_users_email ON pending_users(email);
+          CREATE INDEX IF NOT EXISTS idx_pending_users_token ON pending_users(verification_token);
+          CREATE INDEX IF NOT EXISTS idx_pending_users_expires_at ON pending_users(expires_at);
+        `,
+        down: `DROP TABLE IF EXISTS pending_users CASCADE`
       }
     ];
   }

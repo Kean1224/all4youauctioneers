@@ -1,48 +1,78 @@
-const fs = require('fs');
-const path = require('path');
 const crypto = require('crypto');
+const dbManager = require('../../database/connection');
 
-const USERS_FILE = path.join(__dirname, '../../data/users.json');
-const TOKENS_FILE = path.join(__dirname, '../../data/reset-tokens.json');
-
-function getUserByEmail(email) {
-  if (!fs.existsSync(USERS_FILE)) return null;
-  const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
-  return users.find(u => u.email === email);
-}
-
-function setUserPassword(email, hashedPassword) {
-  if (!fs.existsSync(USERS_FILE)) return false;
-  const users = JSON.parse(fs.readFileSync(USERS_FILE, 'utf-8'));
-  const idx = users.findIndex(u => u.email === email);
-  if (idx === -1) return false;
-  users[idx].password = hashedPassword;
-  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
-  return true;
-}
-
-function saveResetToken(email, token, expiresAt) {
-  let tokens = [];
-  if (fs.existsSync(TOKENS_FILE)) {
-    tokens = JSON.parse(fs.readFileSync(TOKENS_FILE, 'utf-8'));
+async function getUserByEmail(email) {
+  try {
+    const result = await dbManager.query(
+      'SELECT * FROM users WHERE email = $1', 
+      [email]
+    );
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('Error getting user by email:', error);
+    return null;
   }
-  tokens = tokens.filter(t => t.email !== email); // Remove old tokens for this user
-  tokens.push({ email, token, expiresAt });
-  fs.writeFileSync(TOKENS_FILE, JSON.stringify(tokens, null, 2));
 }
 
-function getEmailByToken(token) {
-  if (!fs.existsSync(TOKENS_FILE)) return null;
-  const tokens = JSON.parse(fs.readFileSync(TOKENS_FILE, 'utf-8'));
-  const entry = tokens.find(t => t.token === token && Date.now() < t.expiresAt);
-  return entry ? entry.email : null;
+async function setUserPassword(email, hashedPassword) {
+  try {
+    const result = await dbManager.query(
+      'UPDATE users SET password_hash = $1, updated_at = CURRENT_TIMESTAMP WHERE email = $2 RETURNING id',
+      [hashedPassword, email]
+    );
+    return result.rows.length > 0;
+  } catch (error) {
+    console.error('Error updating user password:', error);
+    return false;
+  }
 }
 
-function deleteToken(token) {
-  if (!fs.existsSync(TOKENS_FILE)) return;
-  let tokens = JSON.parse(fs.readFileSync(TOKENS_FILE, 'utf-8'));
-  tokens = tokens.filter(t => t.token !== token);
-  fs.writeFileSync(TOKENS_FILE, JSON.stringify(tokens, null, 2));
+async function saveResetToken(email, token, expiresAt) {
+  try {
+    // Remove any existing tokens for this user
+    await dbManager.query(
+      'DELETE FROM password_reset_tokens WHERE email = $1',
+      [email]
+    );
+    
+    // Insert new token
+    await dbManager.query(
+      'INSERT INTO password_reset_tokens (email, token, expires_at) VALUES ($1, $2, $3)',
+      [email, token, new Date(expiresAt)]
+    );
+    
+    return true;
+  } catch (error) {
+    console.error('Error saving reset token:', error);
+    return false;
+  }
+}
+
+async function getEmailByToken(token) {
+  try {
+    const result = await dbManager.query(
+      'SELECT email FROM password_reset_tokens WHERE token = $1 AND expires_at > NOW() AND used_at IS NULL',
+      [token]
+    );
+    return result.rows[0]?.email || null;
+  } catch (error) {
+    console.error('Error getting email by token:', error);
+    return null;
+  }
+}
+
+async function deleteToken(token) {
+  try {
+    // Mark token as used instead of deleting for audit trail
+    await dbManager.query(
+      'UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP WHERE token = $1',
+      [token]
+    );
+    return true;
+  } catch (error) {
+    console.error('Error deleting/marking token as used:', error);
+    return false;
+  }
 }
 
 function generateToken() {
