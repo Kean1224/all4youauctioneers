@@ -1417,6 +1417,253 @@ class DatabaseModels {
     }
   }
 
+  // ===================== PENDING ITEMS MODEL =====================
+
+  /**
+   * Create a new pending item
+   */
+  async createPendingItem(itemData) {
+    try {
+      const query = `
+        INSERT INTO pending_items (
+          title, description, category, reserve_price, condition, 
+          seller_email, image_data, original_filename, status
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        RETURNING *
+      `;
+      
+      const values = [
+        itemData.title,
+        itemData.description || '',
+        itemData.category || '',
+        itemData.reserve_price || 0,
+        itemData.condition || 'Good',
+        itemData.seller_email,
+        itemData.image_data || null,
+        itemData.original_filename || null,
+        itemData.status || 'pending'
+      ];
+      
+      const result = await dbManager.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating pending item:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all pending items
+   */
+  async getAllPendingItems() {
+    try {
+      const query = 'SELECT * FROM pending_items ORDER BY created_at DESC';
+      const result = await dbManager.query(query);
+      return result.rows;
+    } catch (error) {
+      console.log('Pending items table not found, returning empty array');
+      return [];
+    }
+  }
+
+  /**
+   * Get pending items by seller email
+   */
+  async getPendingItemsBySeller(sellerEmail) {
+    try {
+      const query = `
+        SELECT * FROM pending_items 
+        WHERE seller_email = $1 
+        ORDER BY created_at DESC
+      `;
+      const result = await dbManager.query(query, [sellerEmail]);
+      return result.rows;
+    } catch (error) {
+      console.log('Pending items table not found, returning empty array');
+      return [];
+    }
+  }
+
+  /**
+   * Update pending item status
+   */
+  async updatePendingItem(itemId, updateData) {
+    try {
+      const query = `
+        UPDATE pending_items 
+        SET status = $2, counter_offer = $3, admin_message = $4, 
+            updated_at = CURRENT_TIMESTAMP, processed_by = $5
+        WHERE id = $1
+        RETURNING *
+      `;
+      
+      const values = [
+        itemId,
+        updateData.status,
+        updateData.counter_offer || null,
+        updateData.admin_message || '',
+        updateData.processed_by || null
+      ];
+      
+      const result = await dbManager.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error updating pending item:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get pending item by ID
+   */
+  async getPendingItemById(itemId) {
+    try {
+      const query = 'SELECT * FROM pending_items WHERE id = $1';
+      const result = await dbManager.query(query, [itemId]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.log('Pending items table not found');
+      return null;
+    }
+  }
+
+  // ===================== SELL ITEMS MODEL =====================
+
+  /**
+   * Create a new sell item
+   */
+  async createSellItem(itemData) {
+    try {
+      const query = `
+        INSERT INTO sell_items (
+          title, description, category, starting_price, reserve_price, 
+          condition, seller_email, image_data, original_filename, status
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING *
+      `;
+      
+      const values = [
+        itemData.title,
+        itemData.description || '',
+        itemData.category || '',
+        itemData.starting_price || 0,
+        itemData.reserve_price || 0,
+        itemData.condition || 'Good',
+        itemData.seller_email,
+        itemData.image_data || null,
+        itemData.original_filename || null,
+        itemData.status || 'active'
+      ];
+      
+      const result = await dbManager.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating sell item:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all active sell items
+   */
+  async getAllSellItems() {
+    try {
+      const query = 'SELECT * FROM sell_items ORDER BY created_at DESC';
+      const result = await dbManager.query(query);
+      return result.rows;
+    } catch (error) {
+      console.log('Sell items table not found, returning empty array');
+      return [];
+    }
+  }
+
+  // ===================== INVOICES MODEL =====================
+
+  /**
+   * Create a new invoice
+   */
+  async createInvoice(invoiceData) {
+    try {
+      const query = `
+        INSERT INTO invoices (
+          invoice_number, auction_id, lot_id, buyer_email, seller_email,
+          item_title, winning_bid, buyers_premium, vat_amount, total_amount,
+          payment_status, invoice_date, due_date, notes
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+        RETURNING *
+      `;
+      
+      const values = [
+        invoiceData.invoice_number,
+        invoiceData.auction_id,
+        invoiceData.lot_id,
+        invoiceData.buyer_email,
+        invoiceData.seller_email || null,
+        invoiceData.item_title,
+        invoiceData.winning_bid,
+        invoiceData.buyers_premium || 0,
+        invoiceData.vat_amount || 0,
+        invoiceData.total_amount,
+        invoiceData.payment_status || 'pending',
+        invoiceData.invoice_date || new Date().toISOString(),
+        invoiceData.due_date || null,
+        invoiceData.notes || ''
+      ];
+      
+      const result = await dbManager.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating invoice:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all invoices
+   */
+  async getAllInvoices() {
+    try {
+      const query = 'SELECT * FROM invoices ORDER BY invoice_date DESC';
+      const result = await dbManager.query(query);
+      return result.rows;
+    } catch (error) {
+      console.log('Invoices table not found, returning empty array');
+      return [];
+    }
+  }
+
+  /**
+   * Update invoice payment status
+   */
+  async updateInvoicePayment(invoiceId, paymentData) {
+    try {
+      const query = `
+        UPDATE invoices 
+        SET payment_status = $2, payment_method = $3, payment_date = $4, 
+            payment_reference = $5, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+        RETURNING *
+      `;
+      
+      const values = [
+        invoiceId,
+        paymentData.payment_status,
+        paymentData.payment_method || null,
+        paymentData.payment_date || null,
+        paymentData.payment_reference || null
+      ];
+      
+      const result = await dbManager.query(query, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error updating invoice payment:', error);
+      return null;
+    }
+  }
+
   /**
    * Get database statistics
    */

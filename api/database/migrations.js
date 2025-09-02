@@ -427,6 +427,114 @@ class MigrationManager {
         down: `
           DROP TABLE IF EXISTS refund_requests CASCADE;
         `
+      },
+      
+      {
+        version: 18,
+        name: 'create_pending_items_table',
+        up: `
+          CREATE TABLE IF NOT EXISTS pending_items (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(500) NOT NULL,
+            description TEXT,
+            category VARCHAR(100),
+            reserve_price DECIMAL(10, 2),
+            condition VARCHAR(50),
+            seller_email VARCHAR(255) NOT NULL,
+            image_data TEXT, -- Store base64 image data
+            original_filename VARCHAR(255),
+            status VARCHAR(50) DEFAULT 'pending', -- pending, approved, rejected, countered
+            counter_offer DECIMAL(10, 2),
+            admin_message TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            processed_by VARCHAR(255),
+            response_deadline TIMESTAMP
+          );
+          
+          -- Indexes for performance
+          CREATE INDEX IF NOT EXISTS idx_pending_items_seller_email ON pending_items(seller_email);
+          CREATE INDEX IF NOT EXISTS idx_pending_items_status ON pending_items(status);
+          CREATE INDEX IF NOT EXISTS idx_pending_items_created_at ON pending_items(created_at);
+          CREATE INDEX IF NOT EXISTS idx_pending_items_category ON pending_items(category);
+        `,
+        down: `
+          DROP TABLE IF EXISTS pending_items CASCADE;
+        `
+      },
+      
+      {
+        version: 19,
+        name: 'create_sell_items_table',
+        up: `
+          CREATE TABLE IF NOT EXISTS sell_items (
+            id SERIAL PRIMARY KEY,
+            title VARCHAR(500) NOT NULL,
+            description TEXT,
+            category VARCHAR(100),
+            starting_price DECIMAL(10, 2),
+            reserve_price DECIMAL(10, 2),
+            condition VARCHAR(50),
+            seller_email VARCHAR(255) NOT NULL,
+            image_data TEXT, -- Store base64 image data
+            original_filename VARCHAR(255),
+            status VARCHAR(50) DEFAULT 'active', -- active, sold, withdrawn, expired
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            expires_at TIMESTAMP,
+            views INTEGER DEFAULT 0,
+            inquiries INTEGER DEFAULT 0
+          );
+          
+          -- Indexes for performance
+          CREATE INDEX IF NOT EXISTS idx_sell_items_seller_email ON sell_items(seller_email);
+          CREATE INDEX IF NOT EXISTS idx_sell_items_status ON sell_items(status);
+          CREATE INDEX IF NOT EXISTS idx_sell_items_category ON sell_items(category);
+          CREATE INDEX IF NOT EXISTS idx_sell_items_created_at ON sell_items(created_at);
+        `,
+        down: `
+          DROP TABLE IF EXISTS sell_items CASCADE;
+        `
+      },
+      
+      {
+        version: 20,
+        name: 'create_invoices_table',
+        up: `
+          CREATE TABLE IF NOT EXISTS invoices (
+            id SERIAL PRIMARY KEY,
+            invoice_number VARCHAR(100) UNIQUE NOT NULL,
+            auction_id VARCHAR(255),
+            lot_id VARCHAR(255),
+            buyer_email VARCHAR(255) NOT NULL,
+            seller_email VARCHAR(255),
+            item_title VARCHAR(500),
+            winning_bid DECIMAL(10, 2) NOT NULL,
+            buyers_premium DECIMAL(10, 2) DEFAULT 0,
+            vat_amount DECIMAL(10, 2) DEFAULT 0,
+            total_amount DECIMAL(10, 2) NOT NULL,
+            payment_status VARCHAR(50) DEFAULT 'pending', -- pending, paid, overdue, cancelled
+            payment_method VARCHAR(100),
+            payment_date TIMESTAMP,
+            payment_reference VARCHAR(255),
+            invoice_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            due_date TIMESTAMP,
+            pdf_data TEXT, -- Store generated PDF as base64
+            notes TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
+          
+          -- Indexes for performance
+          CREATE INDEX IF NOT EXISTS idx_invoices_buyer_email ON invoices(buyer_email);
+          CREATE INDEX IF NOT EXISTS idx_invoices_auction_id ON invoices(auction_id);
+          CREATE INDEX IF NOT EXISTS idx_invoices_payment_status ON invoices(payment_status);
+          CREATE INDEX IF NOT EXISTS idx_invoices_invoice_date ON invoices(invoice_date);
+          CREATE INDEX IF NOT EXISTS idx_invoices_invoice_number ON invoices(invoice_number);
+        `,
+        down: `
+          DROP TABLE IF EXISTS invoices CASCADE;
+        `
       }
     ];
   }

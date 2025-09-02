@@ -43,7 +43,10 @@
       "Bash(mkdir:*)",
       "Bash(PORT=8082 npm start)",
       "Bash(PORT=5003 npm start)",
-      "Bash(PORT=9000 npm start)"
+      "Bash(PORT=9000 npm start)",
+      "Bash(PORT=5556 timeout 5 npm start)",
+      "Bash(PORT=5557 timeout 5 npm start)",
+      "Bash(PORT=5558 timeout 5 npm start)"
     ],
     "deny": []
   }

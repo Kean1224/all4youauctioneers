@@ -6,10 +6,11 @@ const multer = require('multer');
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('../../middleware/auth');
 const verifyAdmin = require('../auth/verify-admin');
+const dbModels = require('../../database/models');
 
 const router = express.Router();
 
-// File paths
+// Legacy file paths for fallback
 const SELL_ITEMS_FILE = path.join(__dirname, '../../data/sell_items.json');
 const SELL_UPLOADS_DIR = path.join(__dirname, '../../uploads/sell');
 
@@ -36,7 +37,7 @@ const upload = multer({
   }
 });
 
-// Helper functions
+// Helper functions - Legacy JSON operations (fallback)
 const readSellItems = () => {
   try {
     if (fs.existsSync(SELL_ITEMS_FILE)) {
