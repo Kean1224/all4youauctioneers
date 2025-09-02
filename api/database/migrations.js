@@ -497,40 +497,40 @@ class MigrationManager {
         `
       },
       
-      {
-        version: 20,
-        name: 'create_invoices_table',
-        up: [
-          `CREATE TABLE IF NOT EXISTS invoices (
-            id SERIAL PRIMARY KEY,
-            invoice_number VARCHAR(100) UNIQUE NOT NULL,
-            auction_id VARCHAR(255),
-            lot_id VARCHAR(255),
-            buyer_email VARCHAR(255) NOT NULL,
-            seller_email VARCHAR(255),
-            item_title VARCHAR(500),
-            winning_bid DECIMAL(10, 2) NOT NULL,
-            buyers_premium DECIMAL(10, 2) DEFAULT 0,
-            vat_amount DECIMAL(10, 2) DEFAULT 0,
-            total_amount DECIMAL(10, 2) NOT NULL,
-            payment_status VARCHAR(50) DEFAULT 'pending',
-            payment_method VARCHAR(100),
-            payment_date TIMESTAMP,
-            payment_reference VARCHAR(255),
-            invoice_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            due_date TIMESTAMP,
-            pdf_data TEXT,
-            notes TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )`,
-          `CREATE INDEX IF NOT EXISTS idx_invoices_buyer_email ON invoices(buyer_email)`,
-          `CREATE INDEX IF NOT EXISTS idx_invoices_auction_id ON invoices(auction_id)`,
-          `CREATE INDEX IF NOT EXISTS idx_invoices_payment_status ON invoices(payment_status)`,
-          `CREATE INDEX IF NOT EXISTS idx_invoices_invoice_date ON invoices(invoice_date)`
-        ],
-        down: `DROP TABLE IF EXISTS invoices CASCADE`
-      }
+      // {
+      //   version: 20,
+      //   name: 'create_invoices_table',
+      //   up: [
+      //     `CREATE TABLE IF NOT EXISTS invoices (
+      //       id SERIAL PRIMARY KEY,
+      //       invoice_number VARCHAR(100) UNIQUE NOT NULL,
+      //       auction_id VARCHAR(255),
+      //       lot_id VARCHAR(255),
+      //       buyer_email VARCHAR(255) NOT NULL,
+      //       seller_email VARCHAR(255),
+      //       item_title VARCHAR(500),
+      //       winning_bid DECIMAL(10, 2) NOT NULL,
+      //       buyers_premium DECIMAL(10, 2) DEFAULT 0,
+      //       vat_amount DECIMAL(10, 2) DEFAULT 0,
+      //       total_amount DECIMAL(10, 2) NOT NULL,
+      //       payment_status VARCHAR(50) DEFAULT 'pending',
+      //       payment_method VARCHAR(100),
+      //       payment_date TIMESTAMP,
+      //       payment_reference VARCHAR(255),
+      //       invoice_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      //       due_date TIMESTAMP,
+      //       pdf_data TEXT,
+      //       notes TEXT,
+      //       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      //       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      //     )`,
+      //     `CREATE INDEX IF NOT EXISTS idx_invoices_buyer_email ON invoices(buyer_email)`,
+      //     `CREATE INDEX IF NOT EXISTS idx_invoices_auction_id ON invoices(auction_id)`,
+      //     `CREATE INDEX IF NOT EXISTS idx_invoices_payment_status ON invoices(payment_status)`,
+      //     `CREATE INDEX IF NOT EXISTS idx_invoices_invoice_date ON invoices(invoice_date)`
+      //   ],
+      //   down: `DROP TABLE IF EXISTS invoices CASCADE`
+      // }
     ];
   }
 
