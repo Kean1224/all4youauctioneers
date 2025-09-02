@@ -102,14 +102,21 @@ router.get('/past', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('🔍 Fetching auction with ID:', id);
+    
     const auction = await dbModels.getAuctionById(id);
 
     if (!auction) {
       return res.status(404).json({ error: 'Auction not found' });
     }
 
+    console.log('✅ Found auction:', auction.title);
+
     // Get auction with lots data
     const auctionWithLots = await dbModels.getAuctionWithLots(id);
+    console.log('📦 getAuctionWithLots result:', auctionWithLots ? 'Found auction' : 'NULL');
+    console.log('📦 Lots data:', auctionWithLots?.lots ? `${auctionWithLots.lots.length} lots` : 'No lots');
+    
     const lots = auctionWithLots?.lots || [];
     
     // Transform auction to match frontend expectations
@@ -127,10 +134,12 @@ router.get('/:id', async (req, res) => {
       createdAt: auction.created_at
     };
 
+    console.log('🚀 Sending response with', lots.length, 'lots');
+    
     // TODO: Implement view count increment in database if needed
     res.json(transformedAuction);
   } catch (error) {
-    console.error('Error fetching auction:', error);
+    console.error('❌ Error fetching auction:', error);
     res.status(500).json({ error: 'Failed to fetch auction' });
   }
 });
