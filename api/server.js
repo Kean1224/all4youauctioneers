@@ -229,10 +229,17 @@ app.listen(PORT, async () => {
     await dbManager.initialize();
     await migrationManager.runMigrations();
     
-    // Initialize fallback data files (for migration period)
+    // Initialize and validate database system
     const dataInit = new DataInitializer();
     await dataInit.initializeDataFiles();
-    await dataInit.validateDataIntegrity();
+    
+    // Validate database tables are accessible
+    const validation = await dataInit.validateDatabaseTables();
+    if (validation.allValid) {
+      console.log('✅ All database tables validated successfully');
+    } else {
+      console.log('⚠️  Some database tables have validation issues (may be normal for new installs)');
+    }
     
     // Initialize storage directories
     storageManager.ensureUploadDirs();
