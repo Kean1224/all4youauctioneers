@@ -1762,6 +1762,77 @@ class DatabaseModels {
   }
 
   /**
+   * Get invoice by auction ID and buyer email
+   */
+  async getInvoiceByAuctionAndBuyer(auctionId, buyerEmail) {
+    try {
+      const query = `
+        SELECT * FROM invoices 
+        WHERE auction_id = $1 AND buyer_email = $2
+      `;
+      const result = await dbManager.query(query, [auctionId, buyerEmail]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('Error getting invoice by auction and buyer:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Update invoice (general update method)
+   */
+  async updateInvoice(invoiceId, updateData) {
+    try {
+      const setFields = [];
+      const values = [invoiceId];
+      let valueIndex = 2;
+
+      // Build dynamic update query
+      for (const [field, value] of Object.entries(updateData)) {
+        if (value !== undefined) {
+          setFields.push(`${field} = $${valueIndex}`);
+          values.push(value);
+          valueIndex++;
+        }
+      }
+
+      if (setFields.length === 0) {
+        throw new Error('No fields to update');
+      }
+
+      // Always update the updated_at timestamp
+      setFields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+      const query = `
+        UPDATE invoices 
+        SET ${setFields.join(', ')}
+        WHERE id = $1
+        RETURNING *
+      `;
+
+      const result = await dbManager.query(query, values);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('Error updating invoice:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Delete invoice
+   */
+  async deleteInvoice(invoiceId) {
+    try {
+      const query = 'DELETE FROM invoices WHERE id = $1 RETURNING *';
+      const result = await dbManager.query(query, [invoiceId]);
+      return result.rows[0] || null;
+    } catch (error) {
+      console.error('Error deleting invoice:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get database statistics
    */
   async getStats() {
