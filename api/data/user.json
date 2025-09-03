@@ -1,9 +1,0 @@
-[
-  {
-    "email": "admin@all4you.com",
-    "password": "admin123",
-    "name": "Admin User",
-    "suspended": false,
-    "ficaApproved": true
-  }
-]
