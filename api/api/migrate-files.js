@@ -2,12 +2,35 @@ const express = require('express');
 const router = express.Router();
 
 /**
- * Simple migration endpoint (temporary - remove after migration)
- * GET /api/migrate-files - Check status
- * POST /api/migrate-files - Run migration
+ * Secure migration endpoint with basic auth protection
+ * GET /api/migrate-files - Check status (requires auth)
+ * POST /api/migrate-files - Run migration (requires auth)
  */
 
-router.get('/', async (req, res) => {
+// Simple auth middleware for migration endpoint
+const migrationAuth = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  
+  // Check for admin secret in Authorization header
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ 
+      error: 'Authorization required',
+      hint: 'Use: Authorization: Bearer ADMIN_SECRET'
+    });
+  }
+  
+  const token = authHeader.substring(7); // Remove 'Bearer '
+  
+  if (token !== process.env.ADMIN_SECRET) {
+    return res.status(403).json({ 
+      error: 'Invalid authorization token' 
+    });
+  }
+  
+  next();
+};
+
+router.get('/', migrationAuth, async (req, res) => {
   try {
     const dbManager = require('../database/connection');
     await dbManager.initialize();
@@ -52,10 +75,26 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', migrationAuth, async (req, res) => {
   console.log('🚀 Starting Cloudinary migration...');
   
   try {
+    // Security check: Only allow if migration is actually needed
+    const dbManager = require('../database/connection');
+    await dbManager.initialize();
+    
+    const ficaCount = await dbManager.query('SELECT COUNT(*) as count FROM fica_documents WHERE file_url LIKE $1', ['data:%']);
+    const lotsCount = await dbManager.query('SELECT COUNT(*) as count FROM lots WHERE image_urls::text LIKE $1', ['%data:%']);
+    
+    if (ficaCount.rows[0].count === '0' && lotsCount.rows[0].count === '0') {
+      return res.json({
+        success: true,
+        message: 'Migration already completed - no base64 files found',
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    console.log(`📊 Found ${ficaCount.rows[0].count} FICA documents and ${lotsCount.rows[0].count} lots needing migration`);
     // Test Cloudinary connection first
     const cloudinaryService = require('../services/cloudinaryService');
     const isHealthy = await Promise.race([
