@@ -1,259 +1,285 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
 const router = express.Router();
-
-// Import database models - PostgreSQL only
+const verifyAdmin = require('../auth/verify-admin');
 const dbModels = require('../../database/models');
 
-// GET /api/payments/invoices - Get all invoices with payment status
-router.get('/invoices', (req, res) => {
-  try {
-    const invoices = readJsonFile(invoicesPath);
-    const users = readJsonFile(usersPath);
-    
-    // Enhance invoices with user details
-    const enhancedInvoices = invoices.map(invoice => {
-      const user = users.find(u => u.email === invoice.buyerEmail);
-      return {
-        ...invoice,
-        buyerName: user ? `${user.firstName} ${user.lastName}` : 'Unknown User',
-        paymentStatus: invoice.paymentStatus || 'pending',
-        paymentDate: invoice.paymentDate || null,
-        paymentMethod: invoice.paymentMethod || null,
-        paymentReference: invoice.paymentReference || null
-      };
-    });
+/**
+ * Payment Management System - Admin Only
+ * 
+ * This system handles payment verification for offline payments (EFT/Bank Transfer).
+ * No online payment processing - all payments handled offline.
+ */
 
+// GET /api/payments/invoices - Get all invoices with payment status (Admin Only)
+router.get('/invoices', verifyAdmin, async (req, res) => {
+  try {
+    console.log('📋 Admin fetching all invoices for payment management...');
+    
+    // Get all invoices from database
+    const invoices = await dbModels.getAllInvoices();
+    
+    if (!invoices || invoices.length === 0) {
+      return res.json([]);
+    }
+
+    // Enhance invoices with user details for admin view
+    const enhancedInvoices = [];
+    
+    for (const invoice of invoices) {
+      try {
+        // Get user details for each invoice
+        const user = await dbModels.getUserByEmail(invoice.buyer_email);
+        
+        const enhancedInvoice = {
+          id: invoice.id,
+          invoiceNumber: invoice.invoice_number,
+          buyerEmail: invoice.buyer_email,
+          buyerName: user ? `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Unknown User' : 'Unknown User',
+          auctionId: invoice.auction_id,
+          total: parseFloat(invoice.total_amount || 0),
+          status: invoice.status || 'pending',
+          paymentStatus: invoice.payment_status || 'unpaid',
+          paymentDate: invoice.payment_date,
+          paymentMethod: invoice.payment_method,
+          paymentReference: invoice.payment_reference,
+          adminNotes: invoice.admin_notes,
+          createdAt: invoice.created_at,
+          updatedAt: invoice.updated_at,
+          items: invoice.items || []
+        };
+        
+        enhancedInvoices.push(enhancedInvoice);
+        
+      } catch (userError) {
+        console.error(`Error fetching user for invoice ${invoice.id}:`, userError);
+        
+        // Add invoice without user details if user fetch fails
+        enhancedInvoices.push({
+          id: invoice.id,
+          invoiceNumber: invoice.invoice_number,
+          buyerEmail: invoice.buyer_email,
+          buyerName: 'Unknown User',
+          auctionId: invoice.auction_id,
+          total: parseFloat(invoice.total_amount || 0),
+          status: invoice.status || 'pending',
+          paymentStatus: invoice.payment_status || 'unpaid',
+          paymentDate: invoice.payment_date,
+          paymentMethod: invoice.payment_method,
+          paymentReference: invoice.payment_reference,
+          adminNotes: invoice.admin_notes,
+          createdAt: invoice.created_at,
+          updatedAt: invoice.updated_at,
+          items: invoice.items || []
+        });
+      }
+    }
+
+    console.log(`✅ Retrieved ${enhancedInvoices.length} invoices for payment management`);
     res.json(enhancedInvoices);
+    
   } catch (error) {
-    console.error('Error fetching invoices:', error);
-    res.status(500).json({ error: 'Failed to fetch invoices' });
-  }
-});
-
-// PUT /api/payments/invoices/:id/mark-paid - Mark invoice as paid
-router.put('/invoices/:id/mark-paid', (req, res) => {
-  try {
-    const { id } = req.params;
-    const { paymentMethod, paymentReference, notes } = req.body;
-    
-    const invoices = readJsonFile(invoicesPath);
-    const invoiceIndex = invoices.findIndex(invoice => invoice.id === id);
-    
-    if (invoiceIndex === -1) {
-      return res.status(404).json({ error: 'Invoice not found' });
-    }
-    
-    // Update invoice with payment details
-    invoices[invoiceIndex] = {
-      ...invoices[invoiceIndex],
-      paymentStatus: 'paid',
-      paymentDate: new Date().toISOString(),
-      paymentMethod: paymentMethod || 'manual',
-      paymentReference: paymentReference || '',
-      paymentNotes: notes || '',
-      markedPaidBy: 'admin', // Track who marked it as paid
-      markedPaidAt: new Date().toISOString()
-    };
-    
-    if (writeJsonFile(invoicesPath, invoices)) {
-      res.json({ 
-        message: 'Invoice marked as paid successfully',
-        invoice: invoices[invoiceIndex]
-      });
-    } else {
-      res.status(500).json({ error: 'Failed to update invoice' });
-    }
-  } catch (error) {
-    console.error('Error marking invoice as paid:', error);
-    res.status(500).json({ error: 'Failed to mark invoice as paid' });
-  }
-});
-
-// PUT /api/payments/invoices/:id/mark-unpaid - Mark invoice as unpaid
-router.put('/invoices/:id/mark-unpaid', (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const invoices = readJsonFile(invoicesPath);
-    const invoiceIndex = invoices.findIndex(invoice => invoice.id === id);
-    
-    if (invoiceIndex === -1) {
-      return res.status(404).json({ error: 'Invoice not found' });
-    }
-    
-    // Reset payment status
-    invoices[invoiceIndex] = {
-      ...invoices[invoiceIndex],
-      paymentStatus: 'pending',
-      paymentDate: null,
-      paymentMethod: null,
-      paymentReference: null,
-      paymentNotes: null,
-      markedUnpaidBy: 'admin',
-      markedUnpaidAt: new Date().toISOString()
-    };
-    
-    if (writeJsonFile(invoicesPath, invoices)) {
-      res.json({ 
-        message: 'Invoice marked as unpaid',
-        invoice: invoices[invoiceIndex]
-      });
-    } else {
-      res.status(500).json({ error: 'Failed to update invoice' });
-    }
-  } catch (error) {
-    console.error('Error marking invoice as unpaid:', error);
-    res.status(500).json({ error: 'Failed to mark invoice as unpaid' });
-  }
-});
-
-// GET /api/payments/deposits - Get all deposits with payment status
-router.get('/deposits', (req, res) => {
-  try {
-    const deposits = readJsonFile(depositsPath);
-    const users = readJsonFile(usersPath);
-    
-    // Enhance deposits with user details and payment status
-    const enhancedDeposits = deposits.map(deposit => {
-      const user = users.find(u => u.email === deposit.email);
-      return {
-        ...deposit,
-        userName: user ? `${user.firstName} ${user.lastName}` : 'Unknown User',
-        paymentStatus: deposit.paymentStatus || 'pending',
-        paymentDate: deposit.paymentDate || null,
-        paymentMethod: deposit.paymentMethod || null,
-        paymentReference: deposit.paymentReference || null,
-        depositAmount: deposit.depositAmount || 0
-      };
+    console.error('❌ Error fetching invoices for payment management:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch invoices',
+      details: error.message 
     });
-
-    res.json(enhancedDeposits);
-  } catch (error) {
-    console.error('Error fetching deposits:', error);
-    res.status(500).json({ error: 'Failed to fetch deposits' });
   }
 });
 
-// PUT /api/payments/deposits/:auctionId/:email/mark-paid - Mark deposit as paid
-router.put('/deposits/:auctionId/:email/mark-paid', (req, res) => {
+// PUT /api/payments/invoices/:id/mark-paid - Mark invoice as paid (Admin Only)
+router.put('/invoices/:id/mark-paid', verifyAdmin, async (req, res) => {
   try {
-    const { auctionId, email } = req.params;
-    const { paymentMethod, paymentReference, notes, depositAmount } = req.body;
+    const { id } = req.params;
+    const { paymentMethod, paymentReference, adminNotes } = req.body;
     
-    const deposits = readJsonFile(depositsPath);
-    const depositIndex = deposits.findIndex(d => 
-      d.auctionId === auctionId && d.email === decodeURIComponent(email)
-    );
+    console.log(`💰 Admin marking invoice ${id} as paid...`);
     
-    if (depositIndex === -1) {
-      return res.status(404).json({ error: 'Deposit not found' });
-    }
-    
-    // Update deposit with payment details
-    deposits[depositIndex] = {
-      ...deposits[depositIndex],
-      paymentStatus: 'paid',
-      paymentDate: new Date().toISOString(),
-      paymentMethod: paymentMethod || 'manual',
-      paymentReference: paymentReference || '',
-      paymentNotes: notes || '',
-      depositAmount: depositAmount || deposits[depositIndex].depositAmount || 0,
-      markedPaidBy: 'admin',
-      markedPaidAt: new Date().toISOString()
-    };
-    
-    if (writeJsonFile(depositsPath, deposits)) {
-      res.json({ 
-        message: 'Deposit marked as paid successfully',
-        deposit: deposits[depositIndex]
+    // Validate required fields
+    if (!paymentMethod) {
+      return res.status(400).json({ 
+        error: 'Payment method is required',
+        hint: 'Specify how payment was received (EFT, Cash, Cheque, etc.)'
       });
-    } else {
-      res.status(500).json({ error: 'Failed to update deposit' });
     }
-  } catch (error) {
-    console.error('Error marking deposit as paid:', error);
-    res.status(500).json({ error: 'Failed to mark deposit as paid' });
-  }
-});
 
-// PUT /api/payments/deposits/:auctionId/:email/mark-unpaid - Mark deposit as unpaid
-router.put('/deposits/:auctionId/:email/mark-unpaid', (req, res) => {
-  try {
-    const { auctionId, email } = req.params;
-    
-    const deposits = readJsonFile(depositsPath);
-    const depositIndex = deposits.findIndex(d => 
-      d.auctionId === auctionId && d.email === decodeURIComponent(email)
-    );
-    
-    if (depositIndex === -1) {
-      return res.status(404).json({ error: 'Deposit not found' });
-    }
-    
-    // Reset payment status
-    deposits[depositIndex] = {
-      ...deposits[depositIndex],
-      paymentStatus: 'pending',
-      paymentDate: null,
-      paymentMethod: null,
-      paymentReference: null,
-      paymentNotes: null,
-      markedUnpaidBy: 'admin',
-      markedUnpaidAt: new Date().toISOString()
+    // Update invoice payment status in database
+    const updateData = {
+      payment_status: 'paid',
+      payment_date: new Date().toISOString(),
+      payment_method: paymentMethod,
+      payment_reference: paymentReference || null,
+      admin_notes: adminNotes || null,
+      status: 'paid' // Update overall invoice status
     };
+
+    const updatedInvoice = await dbModels.updateInvoice(id, updateData);
     
-    if (writeJsonFile(depositsPath, deposits)) {
-      res.json({ 
-        message: 'Deposit marked as unpaid',
-        deposit: deposits[depositIndex]
+    if (!updatedInvoice) {
+      return res.status(404).json({ 
+        error: 'Invoice not found',
+        hint: 'Check if the invoice ID is correct'
       });
-    } else {
-      res.status(500).json({ error: 'Failed to update deposit' });
     }
-  } catch (error) {
-    console.error('Error marking deposit as unpaid:', error);
-    res.status(500).json({ error: 'Failed to mark deposit as unpaid' });
-  }
-});
 
-// GET /api/payments/summary - Get payment summary statistics
-router.get('/summary', (req, res) => {
-  try {
-    const invoices = readJsonFile(invoicesPath);
-    const deposits = readJsonFile(depositsPath);
-    
-    // Calculate invoice statistics
-    const invoiceStats = {
-      total: invoices.length,
-      paid: invoices.filter(i => i.paymentStatus === 'paid').length,
-      pending: invoices.filter(i => i.paymentStatus !== 'paid').length,
-      totalValue: invoices.reduce((sum, i) => sum + (i.totalAmount || 0), 0),
-      paidValue: invoices
-        .filter(i => i.paymentStatus === 'paid')
-        .reduce((sum, i) => sum + (i.totalAmount || 0), 0)
-    };
-    
-    // Calculate deposit statistics
-    const depositStats = {
-      total: deposits.length,
-      paid: deposits.filter(d => d.paymentStatus === 'paid').length,
-      pending: deposits.filter(d => d.paymentStatus !== 'paid').length,
-      totalValue: deposits.reduce((sum, d) => sum + (d.depositAmount || 0), 0),
-      paidValue: deposits
-        .filter(d => d.paymentStatus === 'paid')
-        .reduce((sum, d) => sum + (d.depositAmount || 0), 0)
-    };
+    console.log(`✅ Invoice ${id} marked as paid via ${paymentMethod}`);
     
     res.json({
-      invoices: invoiceStats,
-      deposits: depositStats,
-      lastUpdated: new Date().toISOString()
+      success: true,
+      message: 'Invoice marked as paid successfully',
+      invoice: {
+        id: updatedInvoice.id,
+        invoiceNumber: updatedInvoice.invoice_number,
+        paymentStatus: updatedInvoice.payment_status,
+        paymentDate: updatedInvoice.payment_date,
+        paymentMethod: updatedInvoice.payment_method,
+        paymentReference: updatedInvoice.payment_reference,
+        adminNotes: updatedInvoice.admin_notes
+      }
     });
+    
   } catch (error) {
-    console.error('Error generating payment summary:', error);
-    res.status(500).json({ error: 'Failed to generate payment summary' });
+    console.error('❌ Error marking invoice as paid:', error);
+    res.status(500).json({ 
+      error: 'Failed to mark invoice as paid',
+      details: error.message 
+    });
+  }
+});
+
+// PUT /api/payments/invoices/:id/mark-unpaid - Mark invoice as unpaid (Admin Only)
+router.put('/invoices/:id/mark-unpaid', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+    
+    console.log(`❌ Admin marking invoice ${id} as unpaid...`);
+
+    // Update invoice payment status in database
+    const updateData = {
+      payment_status: 'unpaid',
+      payment_date: null,
+      payment_method: null,
+      payment_reference: null,
+      admin_notes: reason || 'Payment reverted by admin',
+      status: 'pending' // Reset overall invoice status
+    };
+
+    const updatedInvoice = await dbModels.updateInvoice(id, updateData);
+    
+    if (!updatedInvoice) {
+      return res.status(404).json({ 
+        error: 'Invoice not found',
+        hint: 'Check if the invoice ID is correct'
+      });
+    }
+
+    console.log(`✅ Invoice ${id} marked as unpaid`);
+    
+    res.json({
+      success: true,
+      message: 'Invoice marked as unpaid successfully',
+      invoice: {
+        id: updatedInvoice.id,
+        invoiceNumber: updatedInvoice.invoice_number,
+        paymentStatus: updatedInvoice.payment_status,
+        adminNotes: updatedInvoice.admin_notes
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error marking invoice as unpaid:', error);
+    res.status(500).json({ 
+      error: 'Failed to mark invoice as unpaid',
+      details: error.message 
+    });
+  }
+});
+
+// GET /api/payments/invoices/:id - Get specific invoice details (Admin Only)
+router.get('/invoices/:id', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log(`📋 Admin fetching invoice ${id} details...`);
+    
+    const invoice = await dbModels.getInvoiceById(id);
+    
+    if (!invoice) {
+      return res.status(404).json({ 
+        error: 'Invoice not found',
+        hint: 'Check if the invoice ID is correct'
+      });
+    }
+
+    // Get buyer details
+    let buyerDetails = null;
+    try {
+      buyerDetails = await dbModels.getUserByEmail(invoice.buyer_email);
+    } catch (userError) {
+      console.error('Error fetching buyer details:', userError);
+    }
+
+    const detailedInvoice = {
+      id: invoice.id,
+      invoiceNumber: invoice.invoice_number,
+      buyerEmail: invoice.buyer_email,
+      buyerName: buyerDetails ? 
+        `${buyerDetails.first_name || ''} ${buyerDetails.last_name || ''}`.trim() || 'Unknown User' : 
+        'Unknown User',
+      buyerPhone: buyerDetails?.phone || 'N/A',
+      auctionId: invoice.auction_id,
+      total: parseFloat(invoice.total_amount || 0),
+      status: invoice.status || 'pending',
+      paymentStatus: invoice.payment_status || 'unpaid',
+      paymentDate: invoice.payment_date,
+      paymentMethod: invoice.payment_method,
+      paymentReference: invoice.payment_reference,
+      adminNotes: invoice.admin_notes,
+      createdAt: invoice.created_at,
+      updatedAt: invoice.updated_at,
+      items: invoice.items || []
+    };
+
+    console.log(`✅ Retrieved detailed invoice information for ${id}`);
+    res.json(detailedInvoice);
+    
+  } catch (error) {
+    console.error('❌ Error fetching invoice details:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch invoice details',
+      details: error.message 
+    });
+  }
+});
+
+// GET /api/payments/stats - Get payment statistics (Admin Only)
+router.get('/stats', verifyAdmin, async (req, res) => {
+  try {
+    console.log('📊 Admin fetching payment statistics...');
+    
+    const invoices = await dbModels.getAllInvoices();
+    
+    const stats = {
+      totalInvoices: invoices.length,
+      paidInvoices: invoices.filter(inv => inv.payment_status === 'paid').length,
+      unpaidInvoices: invoices.filter(inv => inv.payment_status !== 'paid').length,
+      totalRevenue: invoices
+        .filter(inv => inv.payment_status === 'paid')
+        .reduce((sum, inv) => sum + parseFloat(inv.total_amount || 0), 0),
+      pendingRevenue: invoices
+        .filter(inv => inv.payment_status !== 'paid')
+        .reduce((sum, inv) => sum + parseFloat(inv.total_amount || 0), 0)
+    };
+
+    console.log(`✅ Payment statistics: ${stats.paidInvoices}/${stats.totalInvoices} paid, R${stats.totalRevenue.toFixed(2)} received`);
+    res.json(stats);
+    
+  } catch (error) {
+    console.error('❌ Error fetching payment statistics:', error);
+    res.status(500).json({ 
+      error: 'Failed to fetch payment statistics',
+      details: error.message 
+    });
   }
 });
 
