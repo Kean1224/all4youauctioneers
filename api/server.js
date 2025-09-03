@@ -144,6 +144,7 @@ const refundsRouter = require('./api/refunds/index');
 const companyLogoRouter = require('./api/company/logo');
 const testPDFRouter = require('./api/invoices/test-pdf');
 const adminRolesRouter = require('./api/admin/roles');
+const adminMigrateCloudinaryRouter = require('./api/admin/migrate-cloudinary');
 
 // 🔗 Connect routes
 app.use('/api/deposits', depositsRouter);
@@ -166,6 +167,7 @@ app.use('/api/refunds', refundsRouter);
 app.use('/api/company/logo', companyLogoRouter);
 app.use('/api/invoices/test-pdf', testPDFRouter);
 app.use('/api/admin/roles', adminRolesRouter);
+app.use('/api/admin/migrate-cloudinary', adminMigrateCloudinaryRouter);
 
 // Example route
 app.get('/', (req, res) => {
