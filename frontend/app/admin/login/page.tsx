@@ -43,7 +43,7 @@ function LoginForm() {
         setLoginSuccess(true);
         // Small delay to ensure session is fully established
         setTimeout(() => {
-          window.location.href = '/admin/dashboard';
+          window.location.href = '/admin-dashboard.html';
         }, 500);
       } else {
         setError(result.error || 'Invalid credentials');

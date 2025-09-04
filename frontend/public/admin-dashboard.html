@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - All4You Auctions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        console.log('🚀 DIRECT HTML ADMIN DASHBOARD LOADED!');
+        
+        // Check authentication immediately
+        window.onload = function() {
+            const adminSession = localStorage.getItem('admin_session');
+            if (!adminSession) {
+                window.location.href = '/admin/login';
+                return;
+            }
+            
+            try {
+                const session = JSON.parse(adminSession);
+                const currentTime = Date.now();
+                const sessionAge = currentTime - session.loginTime;
+                const maxAge = 4 * 60 * 60 * 1000; // 4 hours
+                
+                if (sessionAge >= maxAge || session.role !== 'admin') {
+                    localStorage.removeItem('admin_session');
+                    localStorage.removeItem('admin_token');
+                    window.location.href = '/admin/login';
+                    return;
+                }
+                
+                console.log('✅ Admin authenticated via direct HTML dashboard');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+            } catch (e) {
+                localStorage.removeItem('admin_session');
+                localStorage.removeItem('admin_token');
+                window.location.href = '/admin/login';
+            }
+        };
+        
+        async function logout() {
+            localStorage.removeItem('admin_session');
+            localStorage.removeItem('admin_token');
+            try {
+                await fetch('https://api.all4youauctions.co.za/api/auth/logout', { 
+                    method: 'POST', 
+                    credentials: 'include' 
+                });
+            } catch (e) {
+                console.log('Logout API failed, but localStorage cleared');
+            }
+            window.location.href = '/admin/login';
+        }
+    </script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Loading Screen -->
+    <div id="loading" class="min-h-screen flex items-center justify-center">
+        <div class="text-center">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto"></div>
+            <p class="mt-4 text-gray-600">Verifying admin access...</p>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" style="display: none;" class="min-h-screen bg-gray-100 p-8">
+        <div class="max-w-6xl mx-auto">
+            <h1 class="text-4xl font-bold mb-8 text-yellow-600 text-center">
+                🚀 ADMIN DASHBOARD - LIVE & WORKING! 🚀
+            </h1>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <div class="bg-white rounded-lg shadow p-6 hover:shadow-xl transition cursor-pointer"
+                     onclick="window.open('/admin/users', '_blank')">
+                    <h2 class="text-xl font-semibold text-gray-800">👥 Manage Users</h2>
+                    <p class="text-gray-600 mt-2">View and manage user accounts</p>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6 hover:shadow-xl transition cursor-pointer"
+                     onclick="window.open('/admin/auctions', '_blank')">
+                    <h2 class="text-xl font-semibold text-gray-800">🏷️ Manage Auctions</h2>
+                    <p class="text-gray-600 mt-2">Create and manage auctions</p>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6 hover:shadow-xl transition cursor-pointer"
+                     onclick="window.open('/admin/lots', '_blank')">
+                    <h2 class="text-xl font-semibold text-gray-800">📦 Manage Lots</h2>
+                    <p class="text-gray-600 mt-2">Add and edit auction items</p>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6 hover:shadow-xl transition cursor-pointer"
+                     onclick="window.open('/admin/invoices', '_blank')">
+                    <h2 class="text-xl font-semibold text-gray-800">📄 Invoices</h2>
+                    <p class="text-gray-600 mt-2">Generate and manage invoices</p>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6 hover:shadow-xl transition cursor-pointer"
+                     onclick="window.open('/admin/offers', '_blank')">
+                    <h2 class="text-xl font-semibold text-gray-800">💵 Item Offers</h2>
+                    <p class="text-gray-600 mt-2">Review direct offers</p>
+                </div>
+                
+                <div class="bg-red-500 text-white rounded-lg shadow p-6 hover:bg-red-600 transition cursor-pointer"
+                     onclick="logout()">
+                    <h2 class="text-xl font-semibold">🚪 Logout</h2>
+                    <p class="mt-2">Sign out of admin panel</p>
+                </div>
+                
+            </div>
+            
+            <div class="mt-8 bg-green-50 border border-green-200 rounded p-4">
+                <div class="flex items-center">
+                    <span class="text-green-600 text-2xl mr-2">🔒</span>
+                    <div>
+                        <p class="font-semibold text-green-800">Status: DIRECT HTML - WORKING!</p>
+                        <p class="text-green-600 text-sm">Bypassed Next.js routing issues - Admin dashboard functional</p>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</body>
+</html>
