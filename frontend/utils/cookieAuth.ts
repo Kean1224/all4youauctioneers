@@ -15,7 +15,7 @@ export interface AuthResponse {
 // Login with credentials - server sets httpOnly cookie only
 export async function loginWithCookies(email: string, password: string, isAdmin = false): Promise<AuthResponse> {
   try {
-    const endpoint = isAdmin ? '/api/auth/admin-login' : '/api/auth/login';
+    const endpoint = isAdmin ? 'https://api.all4youauctions.co.za/api/auth/admin-login' : 'https://api.all4youauctions.co.za/api/auth/login';
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -78,7 +78,7 @@ export async function logoutWithCookies(): Promise<AuthResponse> {
       clearLegacyTokens(); // Clear any old tokens too
     }
     
-    const response = await fetch('/api/auth/logout', {
+    const response = await fetch('https://api.all4youauctions.co.za/api/auth/logout', {
       method: 'POST',
       credentials: 'include',
     });
@@ -152,7 +152,7 @@ export async function checkAuthStatus(): Promise<AuthResponse> {
     }
     
     // Fallback to cookie-based authentication for regular users
-    const response = await fetch('/api/auth/verify', {
+    const response = await fetch('https://api.all4youauctions.co.za/api/auth/verify', {
       method: 'GET',
       credentials: 'include',
     });

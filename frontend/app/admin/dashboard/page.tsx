@@ -38,7 +38,7 @@ export default function AdminDashboardPage() {
       // Fallback to API check if no valid localStorage session
       console.log('🔍 Dashboard: Checking API session...');
       try {
-        const res = await fetch('/api/session', { credentials: 'include' });
+        const res = await fetch('https://api.all4youauctions.co.za/api/session', { credentials: 'include' });
         console.log('🔍 Dashboard: API response status:', res.status);
         
         if (res.ok) {
