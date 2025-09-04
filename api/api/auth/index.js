@@ -176,31 +176,41 @@ const verifyAdminEndpoint = (req, res) => {
 router.post('/verify-admin', verifyAdminEndpoint);
 router.get('/verify-admin', verifyAdminEndpoint);
 
-// Session endpoint for admin dashboard
+// Session endpoint for admin dashboard - FIXED to use cookies
 router.get('/session', (req, res) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  // Try multiple token sources: cookies (httpOnly) OR Authorization header
+  let token = req.cookies.admin_jwt || req.cookies.jwt; // httpOnly cookie
+  
+  // Fallback to Authorization header if no cookie
+  if (!token) {
+    const authHeader = req.headers['authorization'];
+    token = authHeader && authHeader.split(' ')[1];
+  }
   
   if (!token) {
+    console.log('❌ No token found in cookies or header for /api/session');
     return res.status(401).json({ error: 'No token provided', authenticated: false });
   }
 
   const jwt = require('jsonwebtoken');
   const JWT_SECRET = process.env.JWT_SECRET;
 
-if (!JWT_SECRET) {
-  console.error('🚨 CRITICAL: JWT_SECRET environment variable not set!');
-  console.error('Generate a strong secret with: openssl rand -base64 64');
-  throw new Error('JWT_SECRET environment variable is required');
-}
+  if (!JWT_SECRET) {
+    console.error('🚨 CRITICAL: JWT_SECRET environment variable not set!');
+    console.error('Generate a strong secret with: openssl rand -base64 64');
+    throw new Error('JWT_SECRET environment variable is required');
+  }
   
   try {
     const user = jwt.verify(token, JWT_SECRET);
     
     // Check if token is still valid and not expired
     if (!user || user.role !== 'admin') {
+      console.log('❌ Session check failed: Invalid user or not admin role');
       return res.status(401).json({ error: 'Invalid session', authenticated: false });
     }
+    
+    console.log('✅ Admin session verified successfully for:', user.email);
     
     // Return session info
     res.json({
@@ -212,6 +222,7 @@ if (!JWT_SECRET) {
       expiresAt: user.exp
     });
   } catch (error) {
+    console.log('❌ Session verification failed:', error.message);
     res.status(401).json({ error: 'Invalid session', authenticated: false });
   }
 });

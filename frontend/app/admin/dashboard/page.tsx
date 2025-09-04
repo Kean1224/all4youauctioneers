@@ -78,11 +78,7 @@ export default function AdminDashboardPage() {
             <p className="text-gray-600 mt-2">Generate and manage invoices</p>
           </div>
           
-          <div className="bg-white rounded-lg shadow p-6 hover:shadow-xl transition cursor-pointer"
-               onClick={() => window.open('/admin/payments', '_blank')}>
-            <h2 className="text-xl font-semibold text-gray-800">💰 Payment Management</h2>
-            <p className="text-gray-600 mt-2">Track payments and refunds</p>
-          </div>
+          {/* Payment Management removed - Payment functionality disabled */}
           
           <div className="bg-white rounded-lg shadow p-6 hover:shadow-xl transition cursor-pointer"
                onClick={() => window.open('/admin/offers', '_blank')}>

@@ -71,7 +71,8 @@
       "Bash(timeout:*)",
       "Bash(npm run lint)",
       "Bash(npm update:*)",
-      "Read(/C:\\Users\\keanm\\OneDrive\\Desktop\\all4you\\frontend\\app\\admin\\dashboard/**)"
+      "Read(/C:\\Users\\keanm\\OneDrive\\Desktop\\all4you\\frontend\\app\\admin\\dashboard/**)",
+      "Bash(PORT=9018 timeout 15 npm start)"
     ],
     "deny": []
   }

@@ -101,8 +101,18 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Handle common static file requests to reduce 404 errors
-app.get('/favicon.ico', (req, res) => res.status(204).end());
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Handle favicon specifically to avoid 404 errors
+app.get('/favicon.ico', (req, res) => {
+  const faviconPath = path.join(__dirname, 'public', 'favicon.ico');
+  if (fs.existsSync(faviconPath)) {
+    res.sendFile(faviconPath);
+  } else {
+    res.status(204).end();
+  }
+});
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain');
   res.send('User-agent: *\nDisallow: /api/\nDisallow: /admin/');
@@ -151,7 +161,7 @@ const contactRouter = require('./api/contact');
 const testEmailRouter = require('./api/test-email');
 const testEmailConnectionRouter = require('./api/test-email-connection');
 const invoiceRouter = require('./api/invoices/index');
-const paymentsRouter = require('./api/payments/index');
+// const paymentsRouter = require('./api/payments/index'); // REMOVED - Payment functionality disabled
 const lotsRouter = require('./api/lots/index');
 const sellItemRouter = require('./api/sell-item/index');
 const usersRouter = require('./api/users/index');
@@ -175,7 +185,7 @@ app.use('/api/contact', contactRouter);
 app.use('/api/test-email', testEmailRouter);
 app.use('/api', testEmailConnectionRouter);
 app.use('/api/invoices', invoiceRouter);
-app.use('/api/payments', paymentsRouter);
+// app.use('/api/payments', paymentsRouter); // REMOVED - Payment functionality disabled
 app.use('/api/lots', lotsRouter);
 app.use('/api/sell-item', sellItemRouter);
 app.use('/api/users', usersRouter);
@@ -187,6 +197,62 @@ app.use('/api/invoices/test-pdf', testPDFRouter);
 app.use('/api/admin/roles', adminRolesRouter);
 app.use('/api/admin/migrate-cloudinary', adminMigrateCloudinaryRouter);
 app.use('/api/migrate-files', migrateFilesRouter);
+
+// EMERGENCY: Direct admin login endpoint to bypass deployment issues
+app.post('/api/auth/admin-login', async (req, res) => {
+  console.log('🚨 EMERGENCY admin login endpoint called');
+  const { email, password } = req.body;
+  
+  if (!email || !password) {
+    return res.status(400).json({ error: 'Email and password are required' });
+  }
+  
+  try {
+    const dbModels = require('./database/models');
+    const bcrypt = require('bcryptjs');
+    const jwt = require('jsonwebtoken');
+    const JWT_SECRET = process.env.JWT_SECRET;
+    
+    // Get admin user from database
+    const user = await dbModels.getUserByEmailAndRole(email, 'admin');
+    
+    if (!user) {
+      console.log('❌ Admin user not found:', email);
+      return res.status(401).json({ error: 'Invalid admin credentials' });
+    }
+    
+    const isValid = await bcrypt.compare(password, user.password_hash);
+    
+    if (!isValid) {
+      console.log('❌ Invalid admin password for:', email);
+      return res.status(401).json({ error: 'Invalid admin credentials' });
+    }
+    
+    const issuedAt = Math.floor(Date.now() / 1000);
+    const token = jwt.sign({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      iat: issuedAt
+    }, JWT_SECRET, { expiresIn: '4h' });
+    
+    console.log('✅ EMERGENCY admin login successful:', email);
+    
+    res.json({
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      token: token,
+      expiresAt: issuedAt + (4 * 60 * 60),
+      message: 'Admin login successful'
+    });
+    
+  } catch (error) {
+    console.error('🚨 EMERGENCY admin login error:', error);
+    res.status(500).json({ error: 'Admin login failed' });
+  }
+});
 
 // HOTFIX: Add /session endpoint for production dashboard compatibility
 app.get('/session', (req, res) => {
