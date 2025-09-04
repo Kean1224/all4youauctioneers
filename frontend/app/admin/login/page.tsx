@@ -11,6 +11,7 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   useEffect(() => {
     // Check for session expiry error
@@ -56,15 +57,17 @@ function LoginForm() {
         console.log('✅ Admin login successful, redirecting to dashboard...');
         console.log('🚀 About to show alert and redirect...');
         
+        // Show success state and manual redirect button
+        setLoginSuccess(true);
+        setError('✅ Login successful! Click below to go to dashboard.');
+        
         try {
-          alert('✅ Login successful! Redirecting to dashboard...');
-          console.log('🚀 Alert shown, now redirecting...');
-          window.location.href = '/admin/dashboard';
-          console.log('🚀 Redirect command executed');
+          console.log('🚀 About to redirect automatically...');
+          setTimeout(() => {
+            window.location.href = '/admin/dashboard';
+          }, 1000);
         } catch (error) {
           console.error('❌ Error during redirect:', error);
-          // Force redirect even if error
-          window.location.replace('/admin/dashboard');
         }
       } else {
         console.error('Login failed:', result.error);
@@ -106,12 +109,27 @@ function LoginForm() {
               <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
-          <button
-            type="submit"
-            className="w-full bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600 transition-colors"
-          >
-            Sign In
-          </button>
+          {!loginSuccess ? (
+            <button
+              type="submit"
+              className="w-full bg-yellow-500 text-white py-2 rounded hover:bg-yellow-600 transition-colors"
+            >
+              Sign In
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={() => window.location.href = '/admin/dashboard'}
+                className="w-full bg-green-500 text-white py-3 rounded hover:bg-green-600 transition-colors font-bold"
+              >
+                🚀 Go to Admin Dashboard
+              </button>
+              <p className="text-sm text-gray-600 text-center">
+                Auto-redirect in progress... or click the button above
+              </p>
+            </div>
+          )}
         </form>
         
         {/* Security Notice */}
