@@ -9,9 +9,9 @@ async function createAdminUser() {
     // Initialize database connection
     await dbManager.initialize();
     
-    // Admin credentials
-    const adminEmail = 'admin@all4you.com';
-    const adminPassword = 'Admin123!'; // You can change this
+    // Admin credentials from environment variables
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@all4youauctions.co.za';
+    const adminPassword = process.env.ADMIN_PASSWORD || 'SecureAdminPass2025!';
     const adminName = 'System Administrator';
     
     // Hash the password

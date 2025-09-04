@@ -29,8 +29,9 @@ export async function loginWithCookies(email: string, password: string, isAdmin 
     const data = await response.json();
     
     if (response.ok) {
-      // HYBRID SOLUTION: Store in localStorage as backup for cross-subdomain issues
-      if (typeof window !== 'undefined' && isAdmin) {
+      // DIRECT TOKEN APPROACH: Store token directly for admin
+      if (typeof window !== 'undefined' && isAdmin && data.token) {
+        localStorage.setItem('admin_token', data.token);
         localStorage.setItem('admin_session', JSON.stringify({
           email: data.email,
           name: data.name,
@@ -68,6 +69,7 @@ export async function logoutWithCookies(): Promise<AuthResponse> {
   try {
     // Clear localStorage immediately
     if (typeof window !== 'undefined') {
+      localStorage.removeItem('admin_token');
       localStorage.removeItem('admin_session');
       clearLegacyTokens(); // Clear any old tokens too
     }
@@ -97,10 +99,69 @@ export async function logoutWithCookies(): Promise<AuthResponse> {
   }
 }
 
-// Check authentication status - hybrid approach (cookies + localStorage backup)
+// Check authentication status - direct token approach
 export async function checkAuthStatus(): Promise<AuthResponse> {
   try {
-    // First, try cookie-based authentication
+    // Check for admin token first (direct approach)
+    if (typeof window !== 'undefined') {
+      const adminToken = localStorage.getItem('admin_token');
+      const adminSession = localStorage.getItem('admin_session');
+      
+      if (adminToken && adminSession) {
+        try {
+          const session = JSON.parse(adminSession);
+          const currentTime = Date.now();
+          const sessionAge = currentTime - session.loginTime;
+          const maxAge = 4 * 60 * 60 * 1000; // 4 hours
+          
+          // Check if session is still valid
+          if (sessionAge < maxAge && session.role === 'admin') {
+            console.log('Using direct token authentication for admin');
+            
+            // Verify token with API using Authorization header
+            const response = await fetch('/api/auth/verify', {
+              method: 'GET',
+              headers: {
+                'Authorization': `Bearer ${adminToken}`,
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (response.ok) {
+              const data = await response.json();
+              return {
+                success: true,
+                user: {
+                  email: data.user.email,
+                  name: data.user.name,
+                  role: data.user.role
+                }
+              };
+            }
+            
+            // Token verification failed, use session data if valid
+            return {
+              success: true,
+              user: {
+                email: session.email,
+                name: session.name,
+                role: session.role
+              }
+            };
+          } else {
+            // Session expired, clear it
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('admin_session');
+          }
+        } catch (e) {
+          // Invalid session data, clear it
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('admin_session');
+        }
+      }
+    }
+    
+    // Fallback to cookie-based authentication for regular users
     const response = await fetch('/api/auth/verify', {
       method: 'GET',
       credentials: 'include',
@@ -119,72 +180,11 @@ export async function checkAuthStatus(): Promise<AuthResponse> {
       };
     }
     
-    // FALLBACK: If cookie auth fails, check localStorage for admin sessions
-    if (typeof window !== 'undefined') {
-      const adminSession = localStorage.getItem('admin_session');
-      if (adminSession) {
-        try {
-          const session = JSON.parse(adminSession);
-          const currentTime = Date.now();
-          const sessionAge = currentTime - session.loginTime;
-          const maxAge = 4 * 60 * 60 * 1000; // 4 hours
-          
-          // Check if session is still valid
-          if (sessionAge < maxAge && session.role === 'admin' && session.expiresAt) {
-            console.log('Using localStorage backup authentication for admin');
-            return {
-              success: true,
-              user: {
-                email: session.email,
-                name: session.name,
-                role: session.role
-              }
-            };
-          } else {
-            // Session expired, clear it
-            localStorage.removeItem('admin_session');
-          }
-        } catch (e) {
-          // Invalid session data, clear it
-          localStorage.removeItem('admin_session');
-        }
-      }
-    }
-    
     return {
       success: false,
       error: data.error || 'Not authenticated'
     };
   } catch (error) {
-    // If network fails completely, try localStorage backup
-    if (typeof window !== 'undefined') {
-      const adminSession = localStorage.getItem('admin_session');
-      if (adminSession) {
-        try {
-          const session = JSON.parse(adminSession);
-          const currentTime = Date.now();
-          const sessionAge = currentTime - session.loginTime;
-          const maxAge = 4 * 60 * 60 * 1000; // 4 hours
-          
-          if (sessionAge < maxAge && session.role === 'admin') {
-            console.log('Using localStorage backup due to network error');
-            return {
-              success: true,
-              user: {
-                email: session.email,
-                name: session.name,
-                role: session.role
-              }
-            };
-          } else {
-            localStorage.removeItem('admin_session');
-          }
-        } catch (e) {
-          localStorage.removeItem('admin_session');
-        }
-      }
-    }
-    
     return {
       success: false,
       error: 'Network error during auth check'

@@ -216,10 +216,19 @@ if (!JWT_SECRET) {
   }
 });
 
-// GET /api/auth/verify - Verify authentication with cookies
+// GET /api/auth/verify - Verify authentication with cookies OR Authorization header
 router.get('/verify', (req, res) => {
   try {
-    const token = req.cookies.admin_jwt || req.cookies.jwt;
+    // Try Authorization header first (for direct token auth)
+    let token = null;
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    } else {
+      // Fallback to cookies
+      token = req.cookies.admin_jwt || req.cookies.jwt;
+    }
+    
     const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
     
     // Debug logging

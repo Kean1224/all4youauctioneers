@@ -76,6 +76,7 @@ module.exports = async (req, res) => {
         email: admin.email,
         name: admin.name,
         role: admin.role,
+        token: token, // DIRECT TOKEN APPROACH - return token in response
         expiresAt: issuedAt + (4 * 60 * 60), // 4 hours from now
         message: 'Admin login successful'
       });

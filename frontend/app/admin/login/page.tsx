@@ -58,13 +58,13 @@ function LoginForm() {
         // Show success message briefly before redirect
         setError(''); // Clear any previous errors
         
-        // Use a single, reliable redirect method with proper timing
+        // IMMEDIATE redirect with direct token approach
         if (typeof window !== 'undefined') {
-          // Slightly longer delay to ensure localStorage is set and cookies processed
+          // Much shorter delay since we're storing token directly
           setTimeout(() => {
-            console.log('Redirecting to admin dashboard...');
+            console.log('Redirecting to admin dashboard with token...');
             window.location.href = '/admin/dashboard';
-          }, 750); // Increased to 750ms for better reliability
+          }, 200); // Reduced delay since no cookie sync needed
         } else {
           // Fallback for SSR environments
           router.push('/admin/dashboard');
