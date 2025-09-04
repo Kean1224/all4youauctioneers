@@ -1,28 +1,60 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { checkAuthStatus, logoutWithCookies } from '../../../utils/cookieAuth';
 import AdminSidebar from '../../../components/AdminSidebar';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('admin_jwt');
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
-    // Optionally: verify token client-side (not secure, but better UX)
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.role !== 'admin' || !payload.email || !payload.exp || Date.now() / 1000 > payload.exp) {
-        router.push('/admin/login');
+    const verifyAuth = async () => {
+      try {
+        const authResult = await checkAuthStatus();
+        if (authResult.success && authResult.user?.role === 'admin') {
+          setIsAuthenticated(true);
+        } else {
+          console.log('Auth check failed, redirecting to login:', authResult);
+          // Use window.location for reliable redirect
+          if (typeof window !== 'undefined') {
+            window.location.href = '/admin/login?error=session_expired';
+          } else {
+            router.push('/admin/login?error=session_expired');
+          }
+        }
+      } catch (error) {
+        console.error('Auth verification failed:', error);
+        // Use window.location for reliable redirect
+        if (typeof window !== 'undefined') {
+          window.location.href = '/admin/login?error=auth_error';
+        } else {
+          router.push('/admin/login?error=auth_error');
+        }
+      } finally {
+        setIsLoading(false);
       }
-    } catch {
-      router.push('/admin/login');
-    }
+    };
+
+    verifyAuth();
   }, [router]);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Verifying admin access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-screen">
@@ -40,13 +72,14 @@ export default function AdminDashboardPage() {
             <Card title="Invoices" href="/admin/invoices" />
             <Card title="💰 Payment Management" href="/admin/payments" />
             <Card title="Item Offers" href="/admin/offers" />
-            <Card title="Logout" onClick={() => {
-              // Properly clear admin JWT on logout
-              localStorage.removeItem('admin_jwt');
-              localStorage.removeItem('userEmail');
-              localStorage.removeItem('userRole');
-              localStorage.removeItem('admin_login_time');
-              router.push('/admin/login');
+            <Card title="Logout" onClick={async () => {
+              try {
+                await logoutWithCookies();
+                router.push('/admin/login');
+              } catch (error) {
+                console.error('Logout failed:', error);
+                router.push('/admin/login');
+              }
             }} />
           </div>
         </div>

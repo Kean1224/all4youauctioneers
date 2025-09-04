@@ -53,17 +53,17 @@ function LoginForm() {
       
       if (result.success) {
         console.log('Admin login successful, redirecting to dashboard...');
-        // Force immediate redirect - ignore any MetaMask or other async errors
-        try {
-          router.push('/admin/dashboard');
-        } catch (redirectError) {
-          console.warn('Router redirect failed, using window.location:', redirectError);
-        }
         
-        // Immediate window.location redirect as primary method
+        // Use a single, reliable redirect method with proper timing
         if (typeof window !== 'undefined') {
-          // Force immediate redirect without setTimeout
-          window.location.replace('/admin/dashboard');
+          // Use window.location.href for reliable redirect
+          // Small delay to ensure login response is fully processed
+          setTimeout(() => {
+            window.location.href = '/admin/dashboard';
+          }, 100);
+        } else {
+          // Fallback for SSR environments
+          router.push('/admin/dashboard');
         }
       } else {
         console.error('Login failed:', result.error);
