@@ -68,7 +68,9 @@
       "Bash(PORT=9015 timeout 20 npm start)",
       "Bash(PORT=9016 timeout 10 npm start)",
       "Bash(PORT=9017 timeout 15 npm start)",
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(npm run lint)",
+      "Bash(npm update:*)"
     ],
     "deny": []
   }

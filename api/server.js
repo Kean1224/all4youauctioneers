@@ -6,7 +6,7 @@ const bodyParser = require('body-parser');
 const fs = require('fs');
 const path = require('path');
 const cookieParser = require('cookie-parser');
-const csurf = require('csurf');
+const crypto = require('crypto');
 
 // 🛡️ Import security middleware
 const {
@@ -37,12 +37,29 @@ app.use(cors);
 app.use(bodyParser.json());
 app.use(cookieParser());
 
-// CSRF protection (use cookies)
-app.use(csurf({ cookie: { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production' } }));
+// Modern CSRF protection using crypto
+const generateCSRFToken = () => {
+  return crypto.randomBytes(32).toString('hex');
+};
+
+// Store CSRF tokens in memory (in production, use Redis or database)
+const csrfTokens = new Map();
 
 // Expose CSRF token to frontend
 app.get('/api/csrf-token', (req, res) => {
-  res.json({ csrfToken: req.csrfToken() });
+  const token = generateCSRFToken();
+  const sessionId = req.sessionID || crypto.randomBytes(16).toString('hex');
+  csrfTokens.set(sessionId, token);
+  
+  // Set session ID cookie
+  res.cookie('sessionId', sessionId, { 
+    httpOnly: true, 
+    sameSite: 'strict', 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  });
+  
+  res.json({ csrfToken: token });
 });
 
 // 🛡️ Apply rate limiting to different routes
