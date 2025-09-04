@@ -10,38 +10,58 @@ export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Suppress browser extension errors
-    const originalError = window.console.error;
-    window.console.error = (...args) => {
-      const message = args[0]?.toString() || '';
-      if (message.includes('MetaMask') || message.includes('feature_collector') || message.includes('inpage')) {
-        return; // Suppress extension errors
-      }
-      originalError.apply(console, args);
-    };
-
+    console.log('🔍 Dashboard: Starting authentication check...');
+    
     const verifyAuth = async () => {
+      // First check localStorage for immediate auth (faster)
+      const adminSession = localStorage.getItem('admin_session');
+      if (adminSession) {
+        try {
+          const session = JSON.parse(adminSession);
+          const currentTime = Date.now();
+          const sessionAge = currentTime - session.loginTime;
+          const maxAge = 4 * 60 * 60 * 1000; // 4 hours
+          
+          if (sessionAge < maxAge && session.role === 'admin') {
+            console.log('✅ Dashboard: Using valid localStorage session');
+            setIsAuthenticated(true);
+            setIsLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.log('❌ Dashboard: Invalid localStorage session, clearing...');
+          localStorage.removeItem('admin_session');
+          localStorage.removeItem('admin_token');
+        }
+      }
+      
+      // Fallback to API check if no valid localStorage session
+      console.log('🔍 Dashboard: Checking API session...');
       try {
         const res = await fetch('/api/session', { credentials: 'include' });
+        console.log('🔍 Dashboard: API response status:', res.status);
+        
         if (res.ok) {
           const data = await res.json();
+          console.log('🔍 Dashboard: API response data:', data);
+          
           if (data && data.user && data.user.role === 'admin') {
+            console.log('✅ Dashboard: API session valid');
             setIsAuthenticated(true);
             setIsLoading(false);
             return;
           }
         }
       } catch (e) {
-        console.error('Dashboard session check failed:', e);
+        console.error('❌ Dashboard: API session check failed:', e);
       }
+      
+      console.log('❌ Dashboard: No valid session found, redirecting to login');
       setIsLoading(false);
       window.location.href = '/admin/login';
     };
+    
     verifyAuth();
-
-    return () => {
-      window.console.error = originalError; // Restore on cleanup
-    };
   }, [router]);
 
   if (isLoading) {
