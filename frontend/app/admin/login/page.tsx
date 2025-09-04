@@ -57,17 +57,18 @@ function LoginForm() {
         console.log('✅ Admin login successful, redirecting to dashboard...');
         console.log('🚀 About to show alert and redirect...');
         
-        // Show success state and manual redirect button
-        setLoginSuccess(true);
-        setError('✅ Login successful! Click below to go to dashboard.');
-        
         try {
           console.log('🚀 About to redirect automatically...');
-          setTimeout(() => {
-            window.location.href = '/admin/dashboard';
-          }, 1000);
+          console.log('🚀 Setting success state...');
+          
+          // IMMEDIATE redirect - don't wait for React state
+          window.location.href = '/admin/dashboard';
+          
+          console.log('🚀 Redirect command executed');
         } catch (error) {
           console.error('❌ Error during redirect:', error);
+          // Try alternative redirect
+          window.location.replace('/admin/dashboard');
         }
       } else {
         console.error('Login failed:', result.error);
