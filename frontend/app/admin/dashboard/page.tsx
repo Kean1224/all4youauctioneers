@@ -13,33 +13,36 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     const verifyAuth = async () => {
       console.log('🔍 Dashboard: Starting auth verification...');
-      try {
-        const authResult = await checkAuthStatus();
-        console.log('🔍 Dashboard: Auth result:', authResult);
+      
+      // SIMPLE localStorage check - no complex API calls
+      if (typeof window !== 'undefined') {
+        const adminToken = localStorage.getItem('admin_token');
+        const adminSession = localStorage.getItem('admin_session');
         
-        if (authResult.success && authResult.user?.role === 'admin') {
-          console.log('✅ Dashboard: Authentication successful for admin');
-          setIsAuthenticated(true);
-        } else {
-          console.log('❌ Dashboard: Auth check failed, redirecting to login:', authResult);
-          // Use window.location for reliable redirect
-          if (typeof window !== 'undefined') {
-            window.location.href = '/admin/login?error=session_expired';
-          } else {
-            router.push('/admin/login?error=session_expired');
+        console.log('🔍 Dashboard: Token exists:', !!adminToken);
+        console.log('🔍 Dashboard: Session exists:', !!adminSession);
+        
+        if (adminToken && adminSession) {
+          try {
+            const session = JSON.parse(adminSession);
+            const sessionAge = Date.now() - session.loginTime;
+            const maxAge = 4 * 60 * 60 * 1000; // 4 hours
+            
+            if (sessionAge < maxAge && session.role === 'admin') {
+              console.log('✅ Dashboard: Valid admin session found');
+              setIsAuthenticated(true);
+              setIsLoading(false);
+              return;
+            }
+          } catch (e) {
+            console.error('Error parsing session:', e);
           }
         }
-      } catch (error) {
-        console.error('💥 Dashboard: Auth verification failed:', error);
-        // Use window.location for reliable redirect
-        if (typeof window !== 'undefined') {
-          window.location.href = '/admin/login?error=auth_error';
-        } else {
-          router.push('/admin/login?error=auth_error');
-        }
-      } finally {
-        setIsLoading(false);
       }
+      
+      // No valid session - redirect to login
+      console.log('❌ Dashboard: No valid admin session, redirecting...');
+      window.location.href = '/admin/login?error=session_expired';
     };
 
     verifyAuth();

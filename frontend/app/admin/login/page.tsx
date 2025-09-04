@@ -54,44 +54,10 @@ function LoginForm() {
       
       if (result.success) {
         console.log('✅ Admin login successful, redirecting to dashboard...');
-        console.log('🔍 Using direct token authentication');
+        alert('✅ Login successful! Redirecting to dashboard...');
         
-        // DIAGNOSTIC: Check if localStorage is working
-        if (typeof window !== 'undefined') {
-          const token = localStorage.getItem('admin_token');
-          const session = localStorage.getItem('admin_session');
-          console.log('🔍 DIAGNOSTIC: Token stored?', !!token);
-          console.log('🔍 DIAGNOSTIC: Session stored?', !!session);
-          console.log('🔍 DIAGNOSTIC: Window location:', window.location.href);
-          
-          // Show success message
-          setError('✅ Login successful - Redirecting...');
-          
-          // MULTIPLE redirect attempts for maximum compatibility
-          console.log('🚀 Attempting redirect...');
-          
-          // Method 1: window.location.href
-          setTimeout(() => {
-            console.log('🚀 Method 1: window.location.href');
-            window.location.href = '/admin/dashboard';
-          }, 100);
-          
-          // Method 2: window.location.replace (fallback)
-          setTimeout(() => {
-            console.log('🚀 Method 2: window.location.replace');
-            window.location.replace('/admin/dashboard');
-          }, 200);
-          
-          // Method 3: Next.js router (final fallback)
-          setTimeout(() => {
-            console.log('🚀 Method 3: Next.js router.push');
-            router.push('/admin/dashboard');
-          }, 300);
-          
-        } else {
-          // SSR fallback
-          router.push('/admin/dashboard');
-        }
+        // IMMEDIATE redirect without any complex logic
+        window.location.href = '/admin/dashboard';
       } else {
         console.error('Login failed:', result.error);
         setError(result.error || 'Invalid credentials');
