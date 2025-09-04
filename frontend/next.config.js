@@ -4,13 +4,18 @@ const nextConfig = {
   output: 'standalone', // For static hosting deployment
   
   env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://api.all4youauctions.co.za',
-    NEXT_PUBLIC_REALTIME_URL: process.env.NEXT_PUBLIC_REALTIME_URL || 'wss://all4youauctioneers-1.onrender.com',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 
+      (process.env.NODE_ENV === 'development' ? 'http://localhost:5000' : 'https://api.all4youauctions.co.za'),
+    NEXT_PUBLIC_REALTIME_URL: process.env.NEXT_PUBLIC_REALTIME_URL || 
+      (process.env.NODE_ENV === 'development' ? 'ws://localhost:9000' : 'wss://all4youauctioneers-1.onrender.com'),
   },
   
   async rewrites() {
-    // Proxy API calls to the API server in both development and production (force rebuild)
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.all4youauctions.co.za';
+    // Auto-detect environment: localhost for dev, production for deployed
+    const isDev = process.env.NODE_ENV === 'development';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 
+      (isDev ? 'http://localhost:5000' : 'https://api.all4youauctions.co.za');
+    
     return [
       {
         source: '/api/:path*',
