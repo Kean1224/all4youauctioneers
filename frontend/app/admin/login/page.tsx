@@ -53,15 +53,18 @@ function LoginForm() {
       
       if (result.success) {
         console.log('Admin login successful, redirecting to dashboard...');
-        console.log('Using improved redirect method for reliable admin access');
+        console.log('Using hybrid authentication (cookie + localStorage backup)');
+        
+        // Show success message briefly before redirect
+        setError(''); // Clear any previous errors
         
         // Use a single, reliable redirect method with proper timing
         if (typeof window !== 'undefined') {
-          // Use window.location.href for reliable redirect
-          // Longer delay to ensure cookie is properly set by browser
+          // Slightly longer delay to ensure localStorage is set and cookies processed
           setTimeout(() => {
+            console.log('Redirecting to admin dashboard...');
             window.location.href = '/admin/dashboard';
-          }, 500);
+          }, 750); // Increased to 750ms for better reliability
         } else {
           // Fallback for SSR environments
           router.push('/admin/dashboard');

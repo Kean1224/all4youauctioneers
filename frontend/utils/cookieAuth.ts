@@ -12,7 +12,7 @@ export interface AuthResponse {
   error?: string;
 }
 
-// Login with credentials - server sets httpOnly cookie
+// Login with credentials - server sets httpOnly cookie + localStorage backup
 export async function loginWithCookies(email: string, password: string, isAdmin = false): Promise<AuthResponse> {
   try {
     const endpoint = isAdmin ? '/api/auth/admin-login' : '/api/auth/login';
@@ -29,6 +29,17 @@ export async function loginWithCookies(email: string, password: string, isAdmin 
     const data = await response.json();
     
     if (response.ok) {
+      // HYBRID SOLUTION: Store in localStorage as backup for cross-subdomain issues
+      if (typeof window !== 'undefined' && isAdmin) {
+        localStorage.setItem('admin_session', JSON.stringify({
+          email: data.email,
+          name: data.name,
+          role: data.role,
+          loginTime: Date.now(),
+          expiresAt: data.expiresAt
+        }));
+      }
+      
       return {
         success: true,
         user: {
@@ -52,9 +63,15 @@ export async function loginWithCookies(email: string, password: string, isAdmin 
   }
 }
 
-// Logout - server clears httpOnly cookie
+// Logout - server clears httpOnly cookie + clear localStorage
 export async function logoutWithCookies(): Promise<AuthResponse> {
   try {
+    // Clear localStorage immediately
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('admin_session');
+      clearLegacyTokens(); // Clear any old tokens too
+    }
+    
     const response = await fetch('/api/auth/logout', {
       method: 'POST',
       credentials: 'include',
@@ -72,16 +89,18 @@ export async function logoutWithCookies(): Promise<AuthResponse> {
       };
     }
   } catch (error) {
+    // Even if network fails, we cleared localStorage
     return {
-      success: false,
-      error: 'Network error during logout'
+      success: true,
+      message: 'Logged out locally'
     };
   }
 }
 
-// Check authentication status - server validates httpOnly cookie
+// Check authentication status - hybrid approach (cookies + localStorage backup)
 export async function checkAuthStatus(): Promise<AuthResponse> {
   try {
+    // First, try cookie-based authentication
     const response = await fetch('/api/auth/verify', {
       method: 'GET',
       credentials: 'include',
@@ -98,13 +117,74 @@ export async function checkAuthStatus(): Promise<AuthResponse> {
           role: data.user.role
         }
       };
-    } else {
-      return {
-        success: false,
-        error: data.error || 'Not authenticated'
-      };
     }
+    
+    // FALLBACK: If cookie auth fails, check localStorage for admin sessions
+    if (typeof window !== 'undefined') {
+      const adminSession = localStorage.getItem('admin_session');
+      if (adminSession) {
+        try {
+          const session = JSON.parse(adminSession);
+          const currentTime = Date.now();
+          const sessionAge = currentTime - session.loginTime;
+          const maxAge = 4 * 60 * 60 * 1000; // 4 hours
+          
+          // Check if session is still valid
+          if (sessionAge < maxAge && session.role === 'admin' && session.expiresAt) {
+            console.log('Using localStorage backup authentication for admin');
+            return {
+              success: true,
+              user: {
+                email: session.email,
+                name: session.name,
+                role: session.role
+              }
+            };
+          } else {
+            // Session expired, clear it
+            localStorage.removeItem('admin_session');
+          }
+        } catch (e) {
+          // Invalid session data, clear it
+          localStorage.removeItem('admin_session');
+        }
+      }
+    }
+    
+    return {
+      success: false,
+      error: data.error || 'Not authenticated'
+    };
   } catch (error) {
+    // If network fails completely, try localStorage backup
+    if (typeof window !== 'undefined') {
+      const adminSession = localStorage.getItem('admin_session');
+      if (adminSession) {
+        try {
+          const session = JSON.parse(adminSession);
+          const currentTime = Date.now();
+          const sessionAge = currentTime - session.loginTime;
+          const maxAge = 4 * 60 * 60 * 1000; // 4 hours
+          
+          if (sessionAge < maxAge && session.role === 'admin') {
+            console.log('Using localStorage backup due to network error');
+            return {
+              success: true,
+              user: {
+                email: session.email,
+                name: session.name,
+                role: session.role
+              }
+            };
+          } else {
+            localStorage.removeItem('admin_session');
+          }
+        } catch (e) {
+          localStorage.removeItem('admin_session');
+        }
+      }
+    }
+    
     return {
       success: false,
       error: 'Network error during auth check'
