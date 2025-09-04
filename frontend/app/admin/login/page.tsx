@@ -39,7 +39,14 @@ function LoginForm() {
       
       if (result.success) {
         console.log('Admin login successful, redirecting to dashboard...');
-        setTimeout(() => router.push('/admin/dashboard'), 100);
+        // Use immediate redirect with fallback
+        router.push('/admin/dashboard');
+        // Also use window.location as fallback
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.location.href = '/admin/dashboard';
+          }
+        }, 1000);
       } else {
         console.error('Login failed:', result.error);
         setError(result.error || 'Invalid credentials');
