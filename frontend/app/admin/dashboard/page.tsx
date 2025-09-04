@@ -23,19 +23,30 @@ export default function AdminDashboardPage() {
           return;
         }
         
+        console.log('🔍 Making request to /api/auth/session with token...');
         const res = await fetch('/api/auth/session', {
           headers: {
             'Authorization': `Bearer ${adminToken}`
           }
         });
         
+        console.log('🔍 Response status:', res.status);
+        console.log('🔍 Response headers:', Object.fromEntries(res.headers.entries()));
+        
         if (res.ok) {
           const data = await res.json();
+          console.log('✅ Session response data:', data);
           if (data && data.user && data.user.role === 'admin') {
+            console.log('✅ Valid admin session, loading dashboard...');
             setIsAuthenticated(true);
             setIsLoading(false);
             return;
+          } else {
+            console.log('❌ Invalid session data:', data);
           }
+        } else {
+          const errorText = await res.text();
+          console.log('❌ Session check failed:', res.status, errorText);
         }
       } catch (e) {
         console.error('Dashboard session check failed:', e);
