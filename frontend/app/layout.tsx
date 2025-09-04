@@ -65,6 +65,50 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className="font-inter bg-white text-secondary-800 antialiased">
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              // Global error suppression for browser extensions
+              (function() {
+                const originalError = console.error;
+                const originalWarn = console.warn;
+                
+                console.error = function(...args) {
+                  const message = args[0]?.toString() || '';
+                  if (message.includes('MetaMask') || 
+                      message.includes('feature_collector') || 
+                      message.includes('inpage') ||
+                      message.includes('deprecated parameters') ||
+                      message.includes('extension') ||
+                      message.includes('wasm_feature')) {
+                    return; // Suppress extension errors
+                  }
+                  return originalError.apply(console, args);
+                };
+                
+                console.warn = function(...args) {
+                  const message = args[0]?.toString() || '';
+                  if (message.includes('deprecated parameters') || 
+                      message.includes('initialization function')) {
+                    return; // Suppress extension warnings
+                  }
+                  return originalWarn.apply(console, args);
+                };
+                
+                // Suppress unhandled promise rejections from extensions
+                window.addEventListener('unhandledrejection', function(event) {
+                  const message = event.reason?.toString() || event.reason?.message || '';
+                  if (message.includes('MetaMask') || 
+                      message.includes('extension') ||
+                      message.includes('inpage')) {
+                    event.preventDefault();
+                    return false;
+                  }
+                });
+              })();
+            `,
+          }}
+        />
         <NotificationProvider>
           <OfflineIndicator />
           {children}

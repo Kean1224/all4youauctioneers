@@ -40,7 +40,11 @@ function LoginForm() {
     try {
       const result = await loginWithCookies(email, password, true);
       if (result.success) {
-        window.location.href = '/admin/dashboard';
+        setLoginSuccess(true);
+        // Small delay to ensure session is fully established
+        setTimeout(() => {
+          window.location.href = '/admin/dashboard';
+        }, 500);
       } else {
         setError(result.error || 'Invalid credentials');
       }
