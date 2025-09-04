@@ -6,6 +6,7 @@ import { checkAuthStatus, logoutWithCookies } from '../../../utils/cookieAuth';
 import AdminSidebar from '../../../components/AdminSidebar';
 
 export default function AdminDashboardPage() {
+  console.log('🚀 AdminDashboardPage component loaded');
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
