@@ -54,10 +54,18 @@ function LoginForm() {
       
       if (result.success) {
         console.log('✅ Admin login successful, redirecting to dashboard...');
-        alert('✅ Login successful! Redirecting to dashboard...');
+        console.log('🚀 About to show alert and redirect...');
         
-        // IMMEDIATE redirect without any complex logic
-        window.location.href = '/admin/dashboard';
+        try {
+          alert('✅ Login successful! Redirecting to dashboard...');
+          console.log('🚀 Alert shown, now redirecting...');
+          window.location.href = '/admin/dashboard';
+          console.log('🚀 Redirect command executed');
+        } catch (error) {
+          console.error('❌ Error during redirect:', error);
+          // Force redirect even if error
+          window.location.replace('/admin/dashboard');
+        }
       } else {
         console.error('Login failed:', result.error);
         setError(result.error || 'Invalid credentials');
