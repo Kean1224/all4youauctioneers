@@ -53,6 +53,7 @@ function LoginForm() {
       
       if (result.success) {
         console.log('Admin login successful, redirecting to dashboard...');
+        console.log('Using improved redirect method for reliable admin access');
         
         // Use a single, reliable redirect method with proper timing
         if (typeof window !== 'undefined') {
