@@ -11,7 +11,41 @@ if (!SECRET) {
   throw new Error('JWT_SECRET environment variable is required');
 }
 
+// Emergency password update endpoint
+async function updateAdminPassword(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+  
+  try {
+    const dbManager = require('../../database/connection');
+    const correctPasswordHash = '$2b$12$vh2P2zU09274LMdsK5E7/.g.51J/9fMiroMS8YfMsMpWYkJsdU94y';
+    
+    console.log('🚨 EMERGENCY: Updating admin password hash...');
+    
+    const result = await dbManager.query(
+      'UPDATE users SET password_hash = $1, updated_at = NOW() WHERE email = $2 AND role = $3 RETURNING id, email',
+      [correctPasswordHash, 'admin@all4youauctions.co.za', 'admin']
+    );
+    
+    if (result.rows.length > 0) {
+      console.log('✅ Admin password hash updated successfully');
+      return res.json({ success: true, message: 'Password hash updated' });
+    } else {
+      console.log('❌ No admin user found to update');
+      return res.status(404).json({ error: 'Admin user not found' });
+    }
+  } catch (error) {
+    console.error('❌ Error updating admin password:', error);
+    return res.status(500).json({ error: 'Update failed' });
+  }
+}
+
 module.exports = async (req, res) => {
+  // Check if this is the emergency password update
+  if (req.url === '/update-password' || req.body.action === 'update-password') {
+    return updateAdminPassword(req, res);
+  }
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
