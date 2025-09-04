@@ -47,24 +47,23 @@ function LoginForm() {
     }
 
     try {
-      console.log('Attempting admin login with cookie-based auth');
+      console.log('Attempting admin login with direct token auth');
       
       const result = await loginWithCookies(email, password, true);
+      console.log('Login result:', result);
       
       if (result.success) {
         console.log('Admin login successful, redirecting to dashboard...');
-        console.log('Using hybrid authentication (cookie + localStorage backup)');
+        console.log('Using direct token authentication');
         
         // Show success message briefly before redirect
         setError(''); // Clear any previous errors
         
-        // IMMEDIATE redirect with direct token approach
+        // FORCE IMMEDIATE redirect - NO delays
         if (typeof window !== 'undefined') {
-          // Much shorter delay since we're storing token directly
-          setTimeout(() => {
-            console.log('Redirecting to admin dashboard with token...');
-            window.location.href = '/admin/dashboard';
-          }, 200); // Reduced delay since no cookie sync needed
+          console.log('IMMEDIATE redirect to admin dashboard with token...');
+          // Use location.replace to prevent back button issues
+          window.location.replace('/admin/dashboard');
         } else {
           // Fallback for SSR environments
           router.push('/admin/dashboard');

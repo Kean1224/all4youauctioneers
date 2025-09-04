@@ -107,6 +107,13 @@ export async function checkAuthStatus(): Promise<AuthResponse> {
       const adminToken = localStorage.getItem('admin_token');
       const adminSession = localStorage.getItem('admin_session');
       
+      console.log('🔍 Auth Check: Token exists:', !!adminToken);
+      console.log('🔍 Auth Check: Session exists:', !!adminSession);
+      console.log('🔍 Auth Check: localStorage contents:', {
+        adminToken: adminToken ? adminToken.substring(0, 20) + '...' : null,
+        adminSession: adminSession ? 'exists' : null
+      });
+      
       if (adminToken && adminSession) {
         try {
           const session = JSON.parse(adminSession);

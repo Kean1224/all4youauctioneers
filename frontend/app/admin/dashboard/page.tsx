@@ -12,12 +12,16 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const verifyAuth = async () => {
+      console.log('🔍 Dashboard: Starting auth verification...');
       try {
         const authResult = await checkAuthStatus();
+        console.log('🔍 Dashboard: Auth result:', authResult);
+        
         if (authResult.success && authResult.user?.role === 'admin') {
+          console.log('✅ Dashboard: Authentication successful for admin');
           setIsAuthenticated(true);
         } else {
-          console.log('Auth check failed, redirecting to login:', authResult);
+          console.log('❌ Dashboard: Auth check failed, redirecting to login:', authResult);
           // Use window.location for reliable redirect
           if (typeof window !== 'undefined') {
             window.location.href = '/admin/login?error=session_expired';
@@ -26,7 +30,7 @@ export default function AdminDashboardPage() {
           }
         }
       } catch (error) {
-        console.error('Auth verification failed:', error);
+        console.error('💥 Dashboard: Auth verification failed:', error);
         // Use window.location for reliable redirect
         if (typeof window !== 'undefined') {
           window.location.href = '/admin/login?error=auth_error';
