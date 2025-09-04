@@ -11,7 +11,8 @@ export function useAdminAuth() {
 
   useEffect(() => {
     const validateAdminAuth = async () => {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('admin_jwt') : null;
+      const token = typeof window !== 'undefined' ? 
+        (localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')) : null;
       
       if (!token) {
         setIsAuthenticated(false);
@@ -24,6 +25,8 @@ export function useAdminAuth() {
         const payload = JSON.parse(atob(token.split('.')[1]));
         if (!payload.role || payload.role !== 'admin' || !payload.email || !payload.exp || Date.now() / 1000 >= payload.exp) {
           localStorage.removeItem('admin_jwt');
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('admin_session');
           localStorage.removeItem('userEmail');
           localStorage.removeItem('userRole');
           localStorage.removeItem('admin_login_time');
@@ -46,6 +49,8 @@ export function useAdminAuth() {
         } else {
           // Backend rejected token, clear all admin data
           localStorage.removeItem('admin_jwt');
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('admin_session');
           localStorage.removeItem('userEmail');
           localStorage.removeItem('userRole');
           localStorage.removeItem('admin_login_time');
@@ -54,6 +59,8 @@ export function useAdminAuth() {
       } catch (error) {
         console.error('Admin auth validation failed:', error);
         localStorage.removeItem('admin_jwt');
+        localStorage.removeItem('admin_token');
+        localStorage.removeItem('admin_session');
         localStorage.removeItem('userEmail');
         localStorage.removeItem('userRole');
         localStorage.removeItem('admin_login_time');
@@ -69,6 +76,8 @@ export function useAdminAuth() {
   const logout = () => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('admin_jwt');
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_session');
       localStorage.removeItem('userEmail');
       localStorage.removeItem('userRole');
       localStorage.removeItem('admin_login_time');
