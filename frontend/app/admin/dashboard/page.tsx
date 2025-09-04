@@ -14,7 +14,21 @@ export default function AdminDashboardPage() {
     const verifyAuth = async () => {
       console.log('🔍 Dashboard: Starting backend session verification...');
       try {
-        const res = await fetch('/api/session', { credentials: 'include' });
+        // Get admin token from localStorage
+        const adminToken = localStorage.getItem('admin_token');
+        if (!adminToken) {
+          console.log('❌ No admin token found');
+          setIsLoading(false);
+          window.location.href = '/admin/login?error=session_expired';
+          return;
+        }
+        
+        const res = await fetch('/api/auth/session', {
+          headers: {
+            'Authorization': `Bearer ${adminToken}`
+          }
+        });
+        
         if (res.ok) {
           const data = await res.json();
           if (data && data.user && data.user.role === 'admin') {
