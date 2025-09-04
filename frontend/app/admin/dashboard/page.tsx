@@ -4,76 +4,41 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function AdminDashboardPage() {
-  console.log('🚀🚀🚀 DASHBOARD PAGE COMPONENT LOADED - IF YOU SEE THIS, THE PAGE EXISTS!!! 🚀🚀🚀');
-  
-  // TEMPORARY TEST - Return immediately to see if page loads
-  return (
-    <div className="min-h-screen bg-red-500 flex items-center justify-center">
-      <div className="text-white text-4xl font-bold">
-        🚀 DASHBOARD LOADED SUCCESSFULLY! 🚀
-        <br />
-        <div className="text-lg mt-4">If you see this red screen, the dashboard page is working!</div>
-      </div>
-    </div>
-  );
-  
+  console.log('🚀🚀🚀 DASHBOARD PAGE COMPONENT LOADED!!! 🚀🚀🚀');
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     console.log('🔍 Dashboard: Starting authentication check...');
-    console.log('🔍 Dashboard: Current URL:', window.location.href);
     
     const verifyAuth = async () => {
-      // First check localStorage for immediate auth (faster)
+      // Check localStorage for admin session
       const adminSession = localStorage.getItem('admin_session');
-      const adminToken = localStorage.getItem('admin_token');
-      
-      console.log('🔍 Dashboard: localStorage check...');
-      console.log('🔍 Dashboard: adminSession exists:', !!adminSession);
-      console.log('🔍 Dashboard: adminToken exists:', !!adminToken);
       
       if (adminSession) {
         try {
           const session = JSON.parse(adminSession);
-          console.log('🔍 Dashboard: Parsed session:', session);
-          
           const currentTime = Date.now();
           const sessionAge = currentTime - session.loginTime;
           const maxAge = 4 * 60 * 60 * 1000; // 4 hours
           
-          console.log('🔍 Dashboard: Session age:', Math.floor(sessionAge / 1000 / 60), 'minutes');
-          console.log('🔍 Dashboard: Session role:', session.role);
-          console.log('🔍 Dashboard: Session valid?', sessionAge < maxAge && session.role === 'admin');
-          
           if (sessionAge < maxAge && session.role === 'admin') {
-            console.log('✅ Dashboard: Using valid localStorage session - AUTHENTICATION SUCCESS');
+            console.log('✅ Dashboard: Valid session found!');
             setIsAuthenticated(true);
             setIsLoading(false);
             return;
-          } else {
-            console.log('❌ Dashboard: Session expired or invalid role');
           }
         } catch (e) {
-          console.log('❌ Dashboard: Invalid localStorage session, clearing...', e);
+          console.log('❌ Dashboard: Invalid session, clearing...');
           localStorage.removeItem('admin_session');
           localStorage.removeItem('admin_token');
         }
-      } else {
-        console.log('❌ Dashboard: No localStorage session found');
       }
       
-      console.log('❌ Dashboard: localStorage auth failed, redirecting to login');
-      console.log('❌ Dashboard: Redirect happening in 2 seconds...');
-      
-      // Add delay to see logs
-      setTimeout(() => {
-        console.log('❌ Dashboard: REDIRECTING NOW');
-        window.location.href = '/admin/login';
-      }, 2000);
-      
+      console.log('❌ Dashboard: No valid session, redirecting...');
       setIsLoading(false);
+      window.location.href = '/admin/login';
     };
     
     verifyAuth();
@@ -91,7 +56,13 @@ export default function AdminDashboardPage() {
   }
 
   if (!isAuthenticated) {
-    return null;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -137,7 +108,12 @@ export default function AdminDashboardPage() {
           
           <div className="bg-red-500 text-white rounded-lg shadow p-6 hover:bg-red-600 transition cursor-pointer"
                onClick={async () => {
-                 await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+                 localStorage.removeItem('admin_session');
+                 localStorage.removeItem('admin_token');
+                 await fetch('https://api.all4youauctions.co.za/api/auth/logout', { 
+                   method: 'POST', 
+                   credentials: 'include' 
+                 });
                  window.location.href = '/admin/login';
                }}>
             <h2 className="text-xl font-semibold">🚪 Logout</h2>
