@@ -9,7 +9,7 @@ const nextConfig = {
   },
   
   async rewrites() {
-    // Proxy API calls to the API server in both development and production
+    // Proxy API calls to the API server in both development and production (force rebuild)
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.all4youauctions.co.za';
     return [
       {
