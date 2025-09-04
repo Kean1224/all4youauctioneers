@@ -12,51 +12,24 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     const verifyAuth = async () => {
-      console.log('🔍 Dashboard: Starting auth verification...');
-      
-      // FIXED: Check localStorage ONLY - no cookie/API calls
-      if (typeof window !== 'undefined') {
-        const adminToken = localStorage.getItem('admin_token');
-        const adminSession = localStorage.getItem('admin_session');
-        
-        console.log('🔍 Dashboard: Token exists:', !!adminToken);
-        console.log('🔍 Dashboard: Session exists:', !!adminSession);
-        
-        if (adminToken && adminSession) {
-          try {
-            const session = JSON.parse(adminSession);
-            const sessionAge = Date.now() - session.loginTime;
-            const maxAge = 4 * 60 * 60 * 1000; // 4 hours
-            
-            console.log('🔍 Dashboard: Session age:', Math.floor(sessionAge / 60000) + ' minutes');
-            console.log('🔍 Dashboard: Session role:', session.role);
-            
-            if (sessionAge < maxAge && session.role === 'admin') {
-              console.log('✅ Dashboard: Valid admin session found - AUTHENTICATED');
-              setIsAuthenticated(true);
-              setIsLoading(false);
-              return;
-            } else {
-              console.log('❌ Dashboard: Session expired or invalid role');
-              localStorage.removeItem('admin_token');
-              localStorage.removeItem('admin_session');
-            }
-          } catch (e) {
-            console.error('❌ Dashboard: Error parsing session:', e);
-            localStorage.removeItem('admin_token');
-            localStorage.removeItem('admin_session');
+      console.log('🔍 Dashboard: Starting backend session verification...');
+      try {
+        const res = await fetch('/api/session', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.user && data.user.role === 'admin') {
+            setIsAuthenticated(true);
+            setIsLoading(false);
+            return;
           }
-        } else {
-          console.log('❌ Dashboard: No token or session found');
         }
+      } catch (e) {
+        console.error('Dashboard session check failed:', e);
       }
-      
       // No valid session - redirect to login
-      console.log('❌ Dashboard: Redirecting to login...');
       setIsLoading(false);
       window.location.href = '/admin/login?error=session_expired';
     };
-
     verifyAuth();
   }, [router]);
 
