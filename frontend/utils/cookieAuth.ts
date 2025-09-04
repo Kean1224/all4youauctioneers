@@ -12,47 +12,20 @@ export interface AuthResponse {
   error?: string;
 }
 
-// Login with credentials - server sets httpOnly cookie + localStorage backup
+// Login with credentials - server sets httpOnly cookie only
 export async function loginWithCookies(email: string, password: string, isAdmin = false): Promise<AuthResponse> {
   try {
     const endpoint = isAdmin ? '/api/auth/admin-login' : '/api/auth/login';
-    
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include', // Important: include cookies
+      credentials: 'include',
       body: JSON.stringify({ email, password }),
     });
-
     const data = await response.json();
-    
     if (response.ok) {
-      console.log('🔍 Login API Response:', data);
-      console.log('🔍 Token in response:', !!data.token);
-      console.log('🔍 Is admin login:', isAdmin);
-      
-      // DIRECT TOKEN APPROACH: Store token directly for admin
-      if (typeof window !== 'undefined' && isAdmin && data.token) {
-        console.log('🔍 Storing admin token and session...');
-        localStorage.setItem('admin_token', data.token);
-        localStorage.setItem('admin_session', JSON.stringify({
-          email: data.email,
-          name: data.name,
-          role: data.role,
-          loginTime: Date.now(),
-          expiresAt: data.expiresAt
-        }));
-        console.log('✅ Token and session stored successfully');
-      } else if (isAdmin) {
-        console.error('❌ Failed to store admin token:', {
-          hasWindow: typeof window !== 'undefined',
-          isAdmin,
-          hasToken: !!data.token
-        });
-      }
-      
       return {
         success: true,
         user: {

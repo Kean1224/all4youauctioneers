@@ -33,41 +33,18 @@ function LoginForm() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    
     if (!email || !password) {
       setError('Please enter both email and password');
       return;
     }
-
     try {
-      console.log('Attempting admin login with direct token auth');
-      
       const result = await loginWithCookies(email, password, true);
-      console.log('Login result:', result);
-      
       if (result.success) {
-        console.log('✅ Admin login successful, redirecting to dashboard...');
-        console.log('🚀 About to show alert and redirect...');
-        
-        try {
-          console.log('🚀 About to redirect automatically...');
-          console.log('🚀 Setting success state...');
-          
-          // IMMEDIATE redirect - don't wait for React state
-          window.location.href = '/admin/dashboard';
-          
-          console.log('🚀 Redirect command executed');
-        } catch (error) {
-          console.error('❌ Error during redirect:', error);
-          // Try alternative redirect
-          window.location.replace('/admin/dashboard');
-        }
+        window.location.href = '/admin/dashboard';
       } else {
-        console.error('Login failed:', result.error);
         setError(result.error || 'Invalid credentials');
       }
     } catch (err) {
-      console.error('Login error:', err);
       setError('Network error. Please check your connection.');
     }
   };
