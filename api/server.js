@@ -227,7 +227,7 @@ app.get('/session', (req, res) => {
 
 // Example route
 app.get('/', (req, res) => {
-  res.send('All4You API Gateway is running...');
+  res.send('All4You API Gateway is running... [AUTH FIXED]');
 });
 
 // Security validation - warn about default secrets
