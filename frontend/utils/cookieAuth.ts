@@ -29,8 +29,13 @@ export async function loginWithCookies(email: string, password: string, isAdmin 
     const data = await response.json();
     
     if (response.ok) {
+      console.log('🔍 Login API Response:', data);
+      console.log('🔍 Token in response:', !!data.token);
+      console.log('🔍 Is admin login:', isAdmin);
+      
       // DIRECT TOKEN APPROACH: Store token directly for admin
       if (typeof window !== 'undefined' && isAdmin && data.token) {
+        console.log('🔍 Storing admin token and session...');
         localStorage.setItem('admin_token', data.token);
         localStorage.setItem('admin_session', JSON.stringify({
           email: data.email,
@@ -39,6 +44,13 @@ export async function loginWithCookies(email: string, password: string, isAdmin 
           loginTime: Date.now(),
           expiresAt: data.expiresAt
         }));
+        console.log('✅ Token and session stored successfully');
+      } else if (isAdmin) {
+        console.error('❌ Failed to store admin token:', {
+          hasWindow: typeof window !== 'undefined',
+          isAdmin,
+          hasToken: !!data.token
+        });
       }
       
       return {

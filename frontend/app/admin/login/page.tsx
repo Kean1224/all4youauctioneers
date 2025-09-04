@@ -53,19 +53,43 @@ function LoginForm() {
       console.log('Login result:', result);
       
       if (result.success) {
-        console.log('Admin login successful, redirecting to dashboard...');
-        console.log('Using direct token authentication');
+        console.log('✅ Admin login successful, redirecting to dashboard...');
+        console.log('🔍 Using direct token authentication');
         
-        // Show success message briefly before redirect
-        setError(''); // Clear any previous errors
-        
-        // FORCE IMMEDIATE redirect - NO delays
+        // DIAGNOSTIC: Check if localStorage is working
         if (typeof window !== 'undefined') {
-          console.log('IMMEDIATE redirect to admin dashboard with token...');
-          // Use location.replace to prevent back button issues
-          window.location.replace('/admin/dashboard');
+          const token = localStorage.getItem('admin_token');
+          const session = localStorage.getItem('admin_session');
+          console.log('🔍 DIAGNOSTIC: Token stored?', !!token);
+          console.log('🔍 DIAGNOSTIC: Session stored?', !!session);
+          console.log('🔍 DIAGNOSTIC: Window location:', window.location.href);
+          
+          // Show success message
+          setError('✅ Login successful - Redirecting...');
+          
+          // MULTIPLE redirect attempts for maximum compatibility
+          console.log('🚀 Attempting redirect...');
+          
+          // Method 1: window.location.href
+          setTimeout(() => {
+            console.log('🚀 Method 1: window.location.href');
+            window.location.href = '/admin/dashboard';
+          }, 100);
+          
+          // Method 2: window.location.replace (fallback)
+          setTimeout(() => {
+            console.log('🚀 Method 2: window.location.replace');
+            window.location.replace('/admin/dashboard');
+          }, 200);
+          
+          // Method 3: Next.js router (final fallback)
+          setTimeout(() => {
+            console.log('🚀 Method 3: Next.js router.push');
+            router.push('/admin/dashboard');
+          }, 300);
+          
         } else {
-          // Fallback for SSR environments
+          // SSR fallback
           router.push('/admin/dashboard');
         }
       } else {
