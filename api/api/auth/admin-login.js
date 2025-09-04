@@ -23,24 +23,52 @@ module.exports = async (req, res) => {
   }
   
   try {
+    console.log(`🔐 ADMIN LOGIN ATTEMPT: ${email}`);
+    console.log(`📧 Email received: ${email}`);
+    console.log(`🔑 Password received: ${password}`);
+    
     // Find admin user in database
+    console.log(`🗄️ Searching for admin user in database...`);
     const result = await dbManager.query(
       'SELECT id, email, password_hash, name, role FROM users WHERE email = $1 AND role = $2',
       [email, 'admin']
     );
+    
+    console.log(`📋 Database query result: ${result.rows.length} rows found`);
     
     let isValid = false;
     let admin = null;
     
     if (result.rows.length > 0) {
       admin = result.rows[0];
+      console.log(`👤 Found admin user:`, {
+        id: admin.id,
+        email: admin.email,
+        name: admin.name,
+        role: admin.role,
+        hasPasswordHash: !!admin.password_hash
+      });
       
       try {
         // Compare password using bcrypt
+        console.log(`🔐 Comparing password...`);
         isValid = await bcrypt.compare(password, admin.password_hash);
+        console.log(`🔍 Password comparison result: ${isValid}`);
       } catch (error) {
-        console.error('Error comparing admin password:', error);
+        console.error('❌ Error comparing admin password:', error);
         isValid = false;
+      }
+    } else {
+      console.log(`❌ No admin user found with email: ${email}`);
+      
+      // Let's also check if user exists with different role
+      const userCheck = await dbManager.query(
+        'SELECT id, email, role FROM users WHERE email = $1',
+        [email]
+      );
+      console.log(`🔍 User check (any role): ${userCheck.rows.length} rows found`);
+      if (userCheck.rows.length > 0) {
+        console.log(`👤 Found user with different role:`, userCheck.rows[0]);
       }
     }
     
