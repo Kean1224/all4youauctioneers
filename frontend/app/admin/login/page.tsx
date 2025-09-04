@@ -21,6 +21,20 @@ function LoginForm() {
 
     // Clear any existing legacy localStorage tokens
     clearLegacyTokens();
+    
+    // Suppress MetaMask and other wallet connection errors
+    const originalError = window.console.error;
+    window.console.error = (...args) => {
+      const message = args[0]?.toString() || '';
+      if (message.includes('MetaMask') || message.includes('wallet') || message.includes('inpage')) {
+        return; // Suppress wallet-related errors
+      }
+      originalError.apply(console, args);
+    };
+    
+    return () => {
+      window.console.error = originalError; // Restore original on cleanup
+    };
   }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -39,14 +53,19 @@ function LoginForm() {
       
       if (result.success) {
         console.log('Admin login successful, redirecting to dashboard...');
-        // Use immediate redirect with fallback
-        router.push('/admin/dashboard');
-        // Also use window.location as fallback
-        setTimeout(() => {
-          if (typeof window !== 'undefined') {
+        // Force immediate redirect - ignore any MetaMask or other async errors
+        try {
+          router.push('/admin/dashboard');
+        } catch (redirectError) {
+          console.warn('Router redirect failed, using window.location:', redirectError);
+        }
+        
+        // Immediate window.location redirect as primary method
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
             window.location.href = '/admin/dashboard';
-          }
-        }, 1000);
+          }, 500);
+        }
       } else {
         console.error('Login failed:', result.error);
         setError(result.error || 'Invalid credentials');
