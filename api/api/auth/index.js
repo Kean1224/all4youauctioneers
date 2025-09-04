@@ -77,11 +77,13 @@ router.post('/login', async (req, res) => {
       userAgent: req.headers['user-agent']
     });
 
-    // Set JWT as httpOnly, secure cookie
+    // Set JWT as httpOnly, secure cookie with proper domain
     res.cookie('jwt', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax', // Changed from 'strict' to 'lax' for cross-subdomain
+      domain: process.env.NODE_ENV === 'production' ? '.all4youauctions.co.za' : undefined, // Allow cross-subdomain
+      path: '/', // Ensure cookie is available for all paths
       maxAge: 24 * 60 * 60 * 1000 // 24 hours
     });
     // Return success response (no token in body)
@@ -98,7 +100,9 @@ router.post('/logout', (req, res) => {
   res.clearCookie('jwt', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: 'lax', // Match the cookie settings
+    domain: process.env.NODE_ENV === 'production' ? '.all4youauctions.co.za' : undefined,
+    path: '/',
   });
   res.json({ message: 'Logged out' });
 });
@@ -209,6 +213,65 @@ if (!JWT_SECRET) {
     });
   } catch (error) {
     res.status(401).json({ error: 'Invalid session', authenticated: false });
+  }
+});
+
+// GET /api/auth/verify - Verify authentication with cookies
+router.get('/verify', (req, res) => {
+  try {
+    const token = req.cookies.admin_jwt || req.cookies.jwt;
+    const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
+    
+    // Debug logging
+    console.log(`[DEBUG] ${new Date().toISOString()}: AUTH_VERIFY_REQUEST`, {
+      hasToken: !!token,
+      cookies: Object.keys(req.cookies || {}),
+      ip: clientIP,
+      userAgent: req.headers['user-agent']?.substring(0, 100) + '...'
+    });
+    
+    if (!token) {
+      console.log(`[DEBUG] ${new Date().toISOString()}: AUTH_VERIFY_FAILED - No token found`);
+      return res.status(401).json({ 
+        error: 'Not authenticated', 
+        authenticated: false 
+      });
+    }
+
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    if (!decoded) {
+      console.log(`[DEBUG] ${new Date().toISOString()}: AUTH_VERIFY_FAILED - Invalid token`);
+      return res.status(401).json({ 
+        error: 'Invalid token', 
+        authenticated: false 
+      });
+    }
+
+    console.log(`[DEBUG] ${new Date().toISOString()}: AUTH_VERIFY_SUCCESS`, {
+      email: decoded.email,
+      role: decoded.role,
+      ip: clientIP
+    });
+
+    res.json({
+      authenticated: true,
+      user: {
+        email: decoded.email,
+        name: decoded.name,
+        role: decoded.role
+      },
+      expiresAt: decoded.exp
+    });
+  } catch (error) {
+    console.log(`[DEBUG] ${new Date().toISOString()}: AUTH_VERIFY_ERROR`, {
+      error: error.message,
+      stack: error.stack
+    });
+    res.status(401).json({ 
+      error: 'Token verification failed', 
+      authenticated: false 
+    });
   }
 });
 

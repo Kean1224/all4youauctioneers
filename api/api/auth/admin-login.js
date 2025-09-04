@@ -63,11 +63,13 @@ module.exports = async (req, res) => {
       iat: issuedAt
     }, SECRET, { expiresIn: '4h' });
     
-      // Set JWT as httpOnly, secure cookie
+      // Set JWT as httpOnly, secure cookie with proper domain
       res.cookie('jwt', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: 'lax', // Changed from 'strict' to 'lax' for cross-subdomain
+        domain: process.env.NODE_ENV === 'production' ? '.all4youauctions.co.za' : undefined, // Allow cross-subdomain
+        path: '/', // Ensure cookie is available for all paths
         maxAge: 4 * 60 * 60 * 1000 // 4 hours
       });
       return res.json({ 

@@ -58,10 +58,10 @@ function LoginForm() {
         // Use a single, reliable redirect method with proper timing
         if (typeof window !== 'undefined') {
           // Use window.location.href for reliable redirect
-          // Small delay to ensure login response is fully processed
+          // Longer delay to ensure cookie is properly set by browser
           setTimeout(() => {
             window.location.href = '/admin/dashboard';
-          }, 100);
+          }, 500);
         } else {
           // Fallback for SSR environments
           router.push('/admin/dashboard');
