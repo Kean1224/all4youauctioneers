@@ -188,6 +188,43 @@ app.use('/api/admin/roles', adminRolesRouter);
 app.use('/api/admin/migrate-cloudinary', adminMigrateCloudinaryRouter);
 app.use('/api/migrate-files', migrateFilesRouter);
 
+// HOTFIX: Add /session endpoint for production dashboard compatibility
+app.get('/session', (req, res) => {
+  console.log('🔍 Legacy /session endpoint called - redirecting to /api/auth/session');
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+  
+  if (!token) {
+    console.log('❌ No token provided to /session endpoint');
+    return res.status(401).json({ error: 'No token provided', authenticated: false });
+  }
+
+  const jwt = require('jsonwebtoken');
+  const JWT_SECRET = process.env.JWT_SECRET;
+  
+  try {
+    const user = jwt.verify(token, JWT_SECRET);
+    
+    if (!user || user.role !== 'admin') {
+      console.log('❌ Invalid token or not admin role');
+      return res.status(401).json({ error: 'Invalid session', authenticated: false });
+    }
+    
+    console.log('✅ Legacy /session endpoint authenticated admin user');
+    res.json({
+      authenticated: true,
+      user: {
+        email: user.email,
+        role: user.role
+      },
+      expiresAt: user.exp
+    });
+  } catch (error) {
+    console.log('❌ Token verification failed:', error.message);
+    res.status(401).json({ error: 'Invalid session', authenticated: false });
+  }
+});
+
 // Example route
 app.get('/', (req, res) => {
   res.send('All4You API Gateway is running...');
