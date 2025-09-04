@@ -62,9 +62,8 @@ function LoginForm() {
         
         // Immediate window.location redirect as primary method
         if (typeof window !== 'undefined') {
-          setTimeout(() => {
-            window.location.href = '/admin/dashboard';
-          }, 500);
+          // Force immediate redirect without setTimeout
+          window.location.replace('/admin/dashboard');
         }
       } else {
         console.error('Login failed:', result.error);
