@@ -11,54 +11,57 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     console.log('🔍 Dashboard: Starting authentication check...');
+    console.log('🔍 Dashboard: Current URL:', window.location.href);
     
     const verifyAuth = async () => {
       // First check localStorage for immediate auth (faster)
       const adminSession = localStorage.getItem('admin_session');
+      const adminToken = localStorage.getItem('admin_token');
+      
+      console.log('🔍 Dashboard: localStorage check...');
+      console.log('🔍 Dashboard: adminSession exists:', !!adminSession);
+      console.log('🔍 Dashboard: adminToken exists:', !!adminToken);
+      
       if (adminSession) {
         try {
           const session = JSON.parse(adminSession);
+          console.log('🔍 Dashboard: Parsed session:', session);
+          
           const currentTime = Date.now();
           const sessionAge = currentTime - session.loginTime;
           const maxAge = 4 * 60 * 60 * 1000; // 4 hours
           
+          console.log('🔍 Dashboard: Session age:', Math.floor(sessionAge / 1000 / 60), 'minutes');
+          console.log('🔍 Dashboard: Session role:', session.role);
+          console.log('🔍 Dashboard: Session valid?', sessionAge < maxAge && session.role === 'admin');
+          
           if (sessionAge < maxAge && session.role === 'admin') {
-            console.log('✅ Dashboard: Using valid localStorage session');
+            console.log('✅ Dashboard: Using valid localStorage session - AUTHENTICATION SUCCESS');
             setIsAuthenticated(true);
             setIsLoading(false);
             return;
+          } else {
+            console.log('❌ Dashboard: Session expired or invalid role');
           }
         } catch (e) {
-          console.log('❌ Dashboard: Invalid localStorage session, clearing...');
+          console.log('❌ Dashboard: Invalid localStorage session, clearing...', e);
           localStorage.removeItem('admin_session');
           localStorage.removeItem('admin_token');
         }
+      } else {
+        console.log('❌ Dashboard: No localStorage session found');
       }
       
-      // Fallback to API check if no valid localStorage session
-      console.log('🔍 Dashboard: Checking API session...');
-      try {
-        const res = await fetch('https://api.all4youauctions.co.za/api/session', { credentials: 'include' });
-        console.log('🔍 Dashboard: API response status:', res.status);
-        
-        if (res.ok) {
-          const data = await res.json();
-          console.log('🔍 Dashboard: API response data:', data);
-          
-          if (data && data.user && data.user.role === 'admin') {
-            console.log('✅ Dashboard: API session valid');
-            setIsAuthenticated(true);
-            setIsLoading(false);
-            return;
-          }
-        }
-      } catch (e) {
-        console.error('❌ Dashboard: API session check failed:', e);
-      }
+      console.log('❌ Dashboard: localStorage auth failed, redirecting to login');
+      console.log('❌ Dashboard: Redirect happening in 2 seconds...');
       
-      console.log('❌ Dashboard: No valid session found, redirecting to login');
+      // Add delay to see logs
+      setTimeout(() => {
+        console.log('❌ Dashboard: REDIRECTING NOW');
+        window.location.href = '/admin/login';
+      }, 2000);
+      
       setIsLoading(false);
-      window.location.href = '/admin/login';
     };
     
     verifyAuth();
