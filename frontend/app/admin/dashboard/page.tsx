@@ -10,6 +10,16 @@ export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
+    // Suppress browser extension errors
+    const originalError = window.console.error;
+    window.console.error = (...args) => {
+      const message = args[0]?.toString() || '';
+      if (message.includes('MetaMask') || message.includes('feature_collector') || message.includes('inpage')) {
+        return; // Suppress extension errors
+      }
+      originalError.apply(console, args);
+    };
+
     const verifyAuth = async () => {
       try {
         const res = await fetch('/api/session', { credentials: 'include' });
@@ -28,6 +38,10 @@ export default function AdminDashboardPage() {
       window.location.href = '/admin/login';
     };
     verifyAuth();
+
+    return () => {
+      window.console.error = originalError; // Restore on cleanup
+    };
   }, [router]);
 
   if (isLoading) {

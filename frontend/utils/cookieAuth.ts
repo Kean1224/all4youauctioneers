@@ -26,6 +26,23 @@ export async function loginWithCookies(email: string, password: string, isAdmin 
     });
     const data = await response.json();
     if (response.ok) {
+      console.log('✅ Login successful:', data);
+      
+      // For admin login, store session info for immediate access
+      if (isAdmin && data.role === 'admin' && typeof window !== 'undefined') {
+        const sessionData = {
+          email: data.email,
+          name: data.name,
+          role: data.role,
+          loginTime: Date.now()
+        };
+        localStorage.setItem('admin_session', JSON.stringify(sessionData));
+        if (data.token) {
+          localStorage.setItem('admin_token', data.token);
+        }
+        console.log('✅ Admin session stored locally');
+      }
+      
       return {
         success: true,
         user: {
@@ -36,12 +53,14 @@ export async function loginWithCookies(email: string, password: string, isAdmin 
         message: data.message
       };
     } else {
+      console.log('❌ Login failed:', data);
       return {
         success: false,
         error: data.error || 'Login failed'
       };
     }
   } catch (error) {
+    console.log('❌ Login network error:', error);
     return {
       success: false,
       error: 'Network error during login'
