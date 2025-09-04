@@ -10,29 +10,24 @@ export default function AdminDashboardPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    console.log('🔍 Checking localStorage for admin session...');
-    
-    // Simple localStorage check - production ready
-    const adminToken = localStorage.getItem('admin_token');
-    const adminSession = localStorage.getItem('admin_session');
-    
-    if (adminToken && adminSession) {
+    const verifyAuth = async () => {
       try {
-        const session = JSON.parse(adminSession);
-        if (session.role === 'admin') {
-          console.log('✅ Valid admin session found - dashboard authorized');
-          setIsAuthenticated(true);
-          setIsLoading(false);
-          return;
+        const res = await fetch('/api/session', { credentials: 'include' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.user && data.user.role === 'admin') {
+            setIsAuthenticated(true);
+            setIsLoading(false);
+            return;
+          }
         }
       } catch (e) {
-        console.log('❌ Invalid session data');
+        console.error('Dashboard session check failed:', e);
       }
-    }
-    
-    console.log('❌ No valid admin session - redirecting to login');
-    setIsLoading(false);
-    window.location.href = '/admin/login';
+      setIsLoading(false);
+      window.location.href = '/admin/login';
+    };
+    verifyAuth();
   }, [router]);
 
   if (isLoading) {
@@ -96,8 +91,8 @@ export default function AdminDashboardPage() {
           </div>
           
           <div className="bg-red-500 text-white rounded-lg shadow p-6 hover:bg-red-600 transition cursor-pointer"
-               onClick={() => {
-                 localStorage.clear();
+               onClick={async () => {
+                 await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
                  window.location.href = '/admin/login';
                }}>
             <h2 className="text-xl font-semibold">🚪 Logout</h2>
