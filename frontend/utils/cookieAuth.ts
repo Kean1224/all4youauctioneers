@@ -123,30 +123,9 @@ export async function checkAuthStatus(): Promise<AuthResponse> {
           
           // Check if session is still valid
           if (sessionAge < maxAge && session.role === 'admin') {
-            console.log('Using direct token authentication for admin');
+            console.log('✅ Using LOCAL token authentication for admin - NO API CALL NEEDED');
             
-            // Verify token with API using Authorization header
-            const response = await fetch('/api/auth/verify', {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${adminToken}`,
-                'Content-Type': 'application/json'
-              }
-            });
-
-            if (response.ok) {
-              const data = await response.json();
-              return {
-                success: true,
-                user: {
-                  email: data.user.email,
-                  name: data.user.name,
-                  role: data.user.role
-                }
-              };
-            }
-            
-            // Token verification failed, use session data if valid
+            // BYPASS API completely - use local session data for immediate auth
             return {
               success: true,
               user: {
