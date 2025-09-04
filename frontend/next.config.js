@@ -9,17 +9,14 @@ const nextConfig = {
   },
   
   async rewrites() {
-    // Only proxy in development - let production handle direct API calls
-    if (process.env.NODE_ENV === 'development') {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.all4youauctions.co.za';
-      return [
-        {
-          source: '/api/:path*',
-          destination: `${apiUrl}/api/:path*`,
-        },
-      ];
-    }
-    return [];
+    // Proxy API calls to the API server in both development and production
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.all4youauctions.co.za';
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${apiUrl}/api/:path*`,
+      },
+    ];
   },
   
   async headers() {
