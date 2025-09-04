@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, useEffect, Suspense } from 'react';
-import { loginWithCookies, clearLegacyTokens } from '../../../utils/cookieAuth';
+import { loginWithCookies } from '../../../utils/cookieAuth';
 
 // Separate component for handling search params to avoid SSR issues
 function LoginForm() {
@@ -16,14 +16,6 @@ function LoginForm() {
   useEffect(() => {
     // Check for session expiry error
     const errorParam = searchParams.get('error');
-    if (errorParam === 'session_expired') {
-      setError('Your session has expired. Please login again.');
-    }
-
-    // Clear any existing legacy localStorage tokens
-    clearLegacyTokens();
-    
-    // Suppress MetaMask and other wallet connection errors
     const originalError = window.console.error;
     window.console.error = (...args) => {
       const message = args[0]?.toString() || '';
