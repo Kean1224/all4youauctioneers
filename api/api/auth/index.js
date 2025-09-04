@@ -119,11 +119,21 @@ router.post('/admin-login', adminLogin);
 
 // Admin verification endpoint (direct implementation)
 const verifyAdminEndpoint = (req, res) => {
-  const token = req.cookies && req.cookies.jwt;
+  // Check for token in cookies OR Authorization header
+  let token = req.cookies && req.cookies.jwt;
+  
+  // If no cookie, check Authorization header
+  if (!token) {
+    const authHeader = req.headers['authorization'];
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+  }
+  
   const clientIP = req.headers['x-forwarded-for'] || req.connection.remoteAddress || req.ip;
   if (!token) {
-    console.log(`[SECURITY] ${new Date().toISOString()}: ADMIN_ACCESS_DENIED`, { reason: 'No token cookie', ip: clientIP });
-    return res.status(401).json({ error: 'No token cookie' });
+    console.log(`[SECURITY] ${new Date().toISOString()}: ADMIN_ACCESS_DENIED`, { reason: 'No token found', ip: clientIP });
+    return res.status(401).json({ error: 'No token provided' });
   }
   const jwt = require('jsonwebtoken');
   jwt.verify(token, JWT_SECRET, (err, user) => {

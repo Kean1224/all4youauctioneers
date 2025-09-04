@@ -828,9 +828,12 @@ class MigrationManager {
     try {
       const bcrypt = require('bcryptjs');
       
-      // Get admin credentials from environment
+      // Get admin credentials from environment  
       const adminEmail = process.env.ADMIN_EMAIL || 'admin@all4youauctions.co.za';
-      const adminPassword = process.env.ADMIN_PASSWORD || 'AdminPassword123!';
+      const adminPassword = process.env.ADMIN_PASSWORD || 'Tristan@89';
+      
+      console.log(`🔐 Using admin password from env: ${adminPassword ? 'SET' : 'NOT SET'}`);
+      console.log(`📧 Admin email: ${adminEmail}`);
       
       // Check if admin user already exists
       const existingAdmin = await client.query(
@@ -839,11 +842,16 @@ class MigrationManager {
       );
       
       if (existingAdmin.rows.length > 0) {
-        console.log(`👤 Admin user already exists, updating role...`);
+        console.log(`👤 Admin user already exists, updating password and role...`);
+        
+        // Hash the admin password
+        const hashedPassword = await bcrypt.hash(adminPassword, 12);
+        
         await client.query(
-          'UPDATE users SET role = $1 WHERE email = $2',
-          ['admin', adminEmail]
+          'UPDATE users SET role = $1, password_hash = $2, updated_at = NOW() WHERE email = $3',
+          ['admin', hashedPassword, adminEmail]
         );
+        console.log(`✅ Admin password updated to environment variable value`);
       } else {
         console.log(`👤 Creating initial admin user: ${adminEmail}`);
         
