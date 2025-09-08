@@ -25,7 +25,6 @@ import {
   ShoppingBagIcon
 } from '@heroicons/react/24/outline';
 import { getApiUrl } from '../../lib/api';
-import { getToken } from '../../utils/auth';
 
 type DashboardStats = {
   totalUsers: number;
@@ -105,11 +104,6 @@ export default function ModernAdminDashboard() {
     try {
       setLoading(true);
       
-      const token = localStorage.getItem('admin_jwt');
-      const headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      };
       
       let users: any[] = [];
       let auctions: any[] = [];
@@ -117,7 +111,12 @@ export default function ModernAdminDashboard() {
 
       // Fetch real data from API endpoints
       try {
-        const usersRes = await fetch(`${getApiUrl()}/api/users`, { headers });
+        const usersRes = await fetch(`${getApiUrl()}/api/users`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
         if (usersRes.ok) {
           const usersData = await usersRes.json();
           users = Array.isArray(usersData) ? usersData : [];
@@ -127,7 +126,12 @@ export default function ModernAdminDashboard() {
       }
 
       try {
-        const auctionsRes = await fetch(`${getApiUrl()}/api/auctions`, { headers });
+        const auctionsRes = await fetch(`${getApiUrl()}/api/auctions`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
         if (auctionsRes.ok) {
           const auctionsData = await auctionsRes.json();
           auctions = Array.isArray(auctionsData) ? auctionsData : [];
@@ -137,7 +141,12 @@ export default function ModernAdminDashboard() {
       }
 
       try {
-        const offersRes = await fetch(`${getApiUrl()}/api/sell-item/admin/all`, { headers });
+        const offersRes = await fetch(`${getApiUrl()}/api/sell-item/admin/all`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
         if (offersRes.ok) {
           const offersData = await offersRes.json();
           offers = Array.isArray(offersData) ? offersData : [];

@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import { getApiUrl } from "../../../lib/api";
 import AdminSidebar from "../../../components/AdminSidebar";
-import { getToken } from "../../../utils/auth";
 
 export default function AdminAuctionDepositsPage() {
   const [auctions, setAuctions] = useState<any[]>([]);
@@ -10,43 +9,43 @@ export default function AdminAuctionDepositsPage() {
   const [deposits, setDeposits] = useState<any[]>([]);
 
   useEffect(() => {
-    const token = getToken();
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
-    };
-    
-    fetch(`${getApiUrl()}/api/auctions`, { headers })
+    fetch(`${getApiUrl()}/api/auctions`, {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
       .then((res) => res.json())
       .then(setAuctions);
   }, []);
 
   useEffect(() => {
     if (!selectedAuction) return;
-    const token = getToken();
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
-    };
-    
-    fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`, { headers })
+    fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`, {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
       .then((res) => res.json())
       .then(setDeposits);
   }, [selectedAuction]);
 
   const handleApprove = async (email: string) => {
-    const token = getToken();
-    const headers = {
-      "Content-Type": "application/json",
-      ...(token && { "Authorization": `Bearer ${token}` })
-    };
-    
     await fetch(`${getApiUrl()}/api/deposits/${selectedAuction}/${email}`, {
       method: "PUT",
-      headers,
+      credentials: 'include',
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({ status: "approved" }),
     });
-    fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`, { headers })
+    fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`, {
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    })
       .then((res) => res.json())
       .then(setDeposits);
   };

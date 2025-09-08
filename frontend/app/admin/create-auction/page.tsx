@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from 'react';
 import { getApiUrl } from '../../../lib/api';
 import AdminSidebar from '../../../components/AdminSidebar';
-import { getToken } from '../../../utils/auth';
 
 interface PendingItem {
   id: string;
@@ -36,20 +35,15 @@ export default function CreateAuctionPage() {
   const [lotSettings, setLotSettings] = useState<{[key: string]: { startBid: number, lotEndTime: string, images: File[], bidIncrement: number }}>({});
   const [isCreating, setIsCreating] = useState(false);
 
-  // Helper to get admin auth headers
-  const getAdminHeaders = () => {
-    const token = getToken();
-    return {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
-    };
-  };
 
   // Fetch pending items that can be assigned to auctions
   const fetchPendingItems = async () => {
     try {
       const response = await fetch(`${getApiUrl()}/api/pending-items`, {
-        headers: getAdminHeaders()
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
       });
       
       if (response.ok) {
@@ -144,15 +138,9 @@ export default function CreateAuctionPage() {
         formData.append('auctionImage', auctionImage);
       }
 
-      const token = getToken();
-      console.log('Creating auction with token:', token ? 'present' : 'missing');
-      console.log('Token value:', token?.substring(0, 50) + '...');
-      
       const auctionResponse = await fetch(`${getApiUrl()}/api/auctions`, {
         method: 'POST',
-        headers: {
-          ...(token && { 'Authorization': `Bearer ${token}` })
-        },
+        credentials: 'include',
         body: formData,
       });
       
@@ -196,9 +184,7 @@ export default function CreateAuctionPage() {
 
           const lotResponse = await fetch(`${getApiUrl()}/api/lots/${auctionId}`, {
             method: 'POST',
-            headers: {
-              ...(token && { 'Authorization': `Bearer ${token}` })
-            },
+            credentials: 'include',
             body: lotFormData, // Send as FormData instead of JSON
           });
 
