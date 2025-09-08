@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   UsersIcon,
@@ -12,8 +13,6 @@ import {
   ClipboardDocumentListIcon,
   Cog6ToothIcon
 } from '@heroicons/react/24/outline';
-import AdminAuthWrapper from '../../../components/AdminAuthWrapper';
-import ModernAdminLayout from '../../../components/ModernAdminLayout';
 
 const fadeInUp = {
   hidden: { opacity: 0, y: 60 },
@@ -26,6 +25,71 @@ const stagger = {
 
 export default function AdminDashboardPage() {
   console.log('🚀 MODERN ADMIN DASHBOARD LOADING');
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    console.log('🔍 Dashboard: Starting backend session check...');
+    
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('https://api.all4youauctions.co.za/api/auth/session', {
+          method: 'GET',
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log('✅ Backend session check successful:', data);
+          
+          if (data.role === 'admin') {
+            setIsAuthenticated(true);
+            setIsLoading(false);
+            return;
+          } else {
+            console.log('❌ User is not admin');
+          }
+        } else {
+          console.log('❌ Backend session check failed:', response.status);
+        }
+      } catch (error) {
+        console.log('❌ Backend session check error:', error);
+      }
+      
+      console.log('❌ Auth failed, redirecting to login...');
+      setIsLoading(false);
+      router.push('/admin/login');
+    };
+
+    checkAuth();
+  }, [router]);
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show redirect message
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-gray-600">Redirecting to login...</p>
+        </div>
+      </div>
+    );
+  }
 
   const dashboardCards = [
     {
@@ -78,9 +142,41 @@ export default function AdminDashboardPage() {
     }
   ];
 
+  // Logout function
+  const handleLogout = async () => {
+    try {
+      await fetch('https://api.all4youauctions.co.za/api/auth/logout', { 
+        method: 'POST', 
+        credentials: 'include' 
+      });
+      console.log('✅ Logout successful');
+    } catch (e) {
+      console.log('❌ Logout API call failed:', e);
+    }
+    
+    // Clean up any residual localStorage items as fallback
+    localStorage.removeItem('admin_session');
+    localStorage.removeItem('admin_token');
+    localStorage.removeItem('admin_jwt');
+    
+    router.push('/admin/login');
+  };
+
   return (
-    <AdminAuthWrapper>
-      <ModernAdminLayout>
+    <div className="min-h-screen bg-gray-100">
+      <div className="bg-white shadow">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+          <button
+            onClick={handleLogout}
+            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-colors"
+          >
+            Logout
+          </button>
+        </div>
+      </div>
+      
+      <div className="max-w-6xl mx-auto p-6">
         <div className="space-y-6">
           {/* Header */}
           <motion.div
@@ -191,7 +287,7 @@ export default function AdminDashboardPage() {
             </div>
           </motion.div>
         </div>
-      </ModernAdminLayout>
-    </AdminAuthWrapper>
+      </div>
+    </div>
   );
 }
