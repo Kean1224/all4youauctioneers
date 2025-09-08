@@ -43,7 +43,52 @@ const generateCSRFToken = () => {
 };
 
 // Store CSRF tokens in memory (in production, use Redis or database)
-const csrfTokens = new Map();
+// SECURITY FIX: Bounded CSRF token storage to prevent memory leaks
+class BoundedCSRFStore {
+  constructor(maxSize = 10000) {
+    this.tokens = new Map();
+    this.maxSize = maxSize;
+  }
+  
+  set(key, value) {
+    // Remove oldest entries when limit reached
+    if (this.tokens.size >= this.maxSize) {
+      const firstKey = this.tokens.keys().next().value;
+      this.tokens.delete(firstKey);
+    }
+    this.tokens.set(key, {
+      token: value,
+      created: Date.now()
+    });
+  }
+  
+  has(key) {
+    const entry = this.tokens.get(key);
+    if (!entry) return false;
+    
+    // Expire tokens after 1 hour
+    if (Date.now() - entry.created > 3600000) {
+      this.tokens.delete(key);
+      return false;
+    }
+    return true;
+  }
+  
+  delete(key) {
+    this.tokens.delete(key);
+  }
+  
+  cleanup() {
+    const now = Date.now();
+    for (const [key, entry] of this.tokens.entries()) {
+      if (now - entry.created > 3600000) {
+        this.tokens.delete(key);
+      }
+    }
+  }
+}
+
+const csrfTokens = new BoundedCSRFStore();
 
 // Expose CSRF token to frontend
 app.get('/api/csrf-token', (req, res) => {

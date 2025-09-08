@@ -320,6 +320,35 @@ class DatabaseModels {
   }
 
   /**
+   * Get auctions with lot counts and total views in a single optimized query
+   * Eliminates N+1 query problem for auction listings
+   */
+  async getAuctionsWithLotCounts(status = null) {
+    let whereClause = '';
+    const params = [];
+    
+    if (status) {
+      whereClause = 'WHERE a.status = $1';
+      params.push(status);
+    }
+    
+    const query = `
+      SELECT 
+        a.*,
+        COALESCE(COUNT(l.id), 0) as total_lots,
+        COALESCE(SUM(l.views), 0) as total_views
+      FROM auctions a
+      LEFT JOIN lots l ON a.id = l.auction_id
+      ${whereClause}
+      GROUP BY a.id
+      ORDER BY a.created_at DESC
+    `;
+    
+    const result = await dbManager.query(query, params);
+    return result.rows;
+  }
+
+  /**
    * Get auction by ID
    */
   async getAuctionById(auctionId) {

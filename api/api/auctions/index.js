@@ -44,18 +44,12 @@ function isAuctionCompleted(auction) {
 // GET all active auctions (excludes completed ones)
 router.get('/', async (req, res) => {
   try {
-    const auctions = await dbModels.getAllAuctions();
+    // PERFORMANCE FIX: Use optimized query to get auctions with lot counts (eliminates N+1 query problem)
+    const auctions = await dbModels.getAuctionsWithLotCounts();
     const activeAuctions = auctions.filter(auction => !isAuctionCompleted(auction));
     
-    // Get lot counts for each auction
-    const transformedAuctions = await Promise.all(activeAuctions.map(async (auction) => {
-      // Get lot count for this auction
-      const lots = await dbModels.getLotsByAuctionId(auction.id);
-      const lotCount = lots ? lots.length : 0;
-      
-      // Calculate total views across all lots in this auction
-      const totalViews = lots ? lots.reduce((sum, lot) => sum + (parseInt(lot.views) || 0), 0) : 0;
-      
+    // Transform auctions with pre-calculated counts - much faster than individual queries
+    const transformedAuctions = activeAuctions.map(auction => {
       return {
         ...auction,
         // Add frontend-expected field names
@@ -63,12 +57,12 @@ router.get('/', async (req, res) => {
         endDate: auction.end_time,
         auctionImage: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
         image: auction.image_urls && auction.image_urls.length > 0 ? auction.image_urls[0] : null,
-        // Add lot count and view count
-        totalLots: lotCount,
+        // Use pre-calculated counts from optimized query
+        totalLots: parseInt(auction.total_lots) || 0,
         lots: [], // Don't include full lot data in list view for performance
-        viewCount: totalViews
+        viewCount: parseInt(auction.total_views) || 0
       };
-    }));
+    });
     
     console.log(`📋 Returning ${transformedAuctions.length} auctions with lot counts`);
     res.json(transformedAuctions);
