@@ -46,12 +46,12 @@ export default function AdminDashboardPage() {
           const data = await response.json();
           console.log('✅ Backend session check successful:', data);
           
-          if (data.role === 'admin') {
+          if (data.user && data.user.role === 'admin') {
             setIsAuthenticated(true);
             setIsLoading(false);
             return;
           } else {
-            console.log('❌ User is not admin');
+            console.log('❌ User is not admin, role:', data.user?.role);
           }
         } else {
           console.log('❌ Backend session check failed:', response.status);
