@@ -3,26 +3,13 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import ModernAdminLayout from "../../../components/ModernAdminLayout";
 import AdminSidebar from "../../../components/AdminSidebar";
-import { getToken } from '../../../utils/auth';
+import { getApiUrl } from '../../../lib/api';
 
 export default function AdminAuctionsPage() {
   const router = useRouter();
   useEffect(() => {
-    const token = localStorage.getItem('admin_jwt');
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      if (payload.role !== 'admin' || !payload.email || !payload.exp || Date.now() / 1000 > payload.exp) {
-        router.push('/admin/login');
-        return;
-      }
-    } catch {
-      router.push('/admin/login');
-      return;
-    }
+    // Authentication now handled by httpOnly cookies - just fetch data
+    fetchAuctions();
   }, [router]);
   const [auctions, setAuctions] = useState<any[]>([]);
   const [form, setForm] = useState({
@@ -71,15 +58,10 @@ export default function AdminAuctionsPage() {
       formData.append("depositRequired", String(form.depositRequired));
       formData.append("depositAmount", String(form.depositAmount));
       if (selectedImage) formData.append("image", selectedImage);
-      const { getApiUrl } = await import('../../../lib/api');
-      const token = getToken();
-      const headers = {
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      };
       
       const res = await fetch(`${getApiUrl()}/api/auctions`, {
         method: "POST",
-        headers,
+        credentials: 'include',
         body: formData,
       });
       if (res.ok) {
@@ -102,14 +84,14 @@ export default function AdminAuctionsPage() {
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this auction?")) return;
-    const { getApiUrl } = await import('../../../lib/api');
-    const token = getToken();
-    const headers = {
-      'Content-Type': 'application/json',
-      ...(token && { 'Authorization': `Bearer ${token}` })
-    };
     
-    await fetch(`${getApiUrl()}/api/auctions/${id}`, { method: "DELETE", headers });
+    await fetch(`${getApiUrl()}/api/auctions/${id}`, {
+      method: "DELETE",
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
     fetchAuctions();
   };
 
