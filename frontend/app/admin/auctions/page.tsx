@@ -30,14 +30,12 @@ export default function AdminAuctionsPage() {
 
   const fetchAuctions = async () => {
     try {
-      const { getApiUrl } = await import('../../../lib/api');
-      const token = getToken();
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` })
-      };
-      
-      const res = await fetch(`${getApiUrl()}/api/auctions`, { headers });
+      const res = await fetch(`${getApiUrl()}/api/auctions`, {
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
       const data = await res.json();
       setAuctions(data);
     } catch (e) {
