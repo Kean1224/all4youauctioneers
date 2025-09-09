@@ -241,6 +241,7 @@ app.use('/api/company/logo', companyLogoRouter);
 app.use('/api/invoices/test-pdf', testPDFRouter);
 app.use('/api/admin/roles', adminRolesRouter);
 app.use('/api/admin/migrate-cloudinary', adminMigrateCloudinaryRouter);
+app.use('/api/admin/optimize-database', require('./api/admin/optimize-database'));
 app.use('/api/migrate-files', migrateFilesRouter);
 
 // EMERGENCY: Direct admin login endpoint to bypass deployment issues
