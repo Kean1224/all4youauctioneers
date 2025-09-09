@@ -23,7 +23,7 @@ import { useRouter } from 'next/navigation';
 function AdminInvoicesPage() {
   const router = useRouter();
   useEffect(() => {
-    const token = localStorage.getItem('admin_jwt');
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt');
     if (!token) {
       router.push('/admin/login');
       return;

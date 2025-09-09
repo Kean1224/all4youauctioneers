@@ -19,7 +19,7 @@ export default function AdminRefundsPage() {
   const [actionStatus, setActionStatus] = useState<string>("");
 
   useEffect(() => {
-    const adminToken = localStorage.getItem('admin_jwt');
+    const adminToken = localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt');
     fetch(`${getApiUrl()}/api/refunds/`, {
       credentials: 'include',
       headers: {
@@ -40,7 +40,7 @@ export default function AdminRefundsPage() {
   const handleUpdate = async (auctionId: string, email: string, status: string) => {
     setActionStatus("");
     try {
-      const adminToken = localStorage.getItem('admin_jwt');
+      const adminToken = localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt');
       const res = await fetch(`${getApiUrl()}/api/refunds/${auctionId}/${encodeURIComponent(email)}`, {
         method: 'PUT',
         headers: { 

@@ -28,7 +28,7 @@ export default function PendingUsersPage() {
 
   const fetchPendingUsers = async () => {
     try {
-      const token = localStorage.getItem('admin_jwt');
+      const token = localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt');
       const response = await fetch(`${getApiUrl()}/api/users/pending`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -56,7 +56,7 @@ export default function PendingUsersPage() {
     setSuccess('');
 
     try {
-      const token = localStorage.getItem('admin_jwt');
+      const token = localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt');
       const response = await fetch(`${getApiUrl()}/api/users/${encodeURIComponent(email)}/verify-email`, {
         method: 'POST',
         headers: {

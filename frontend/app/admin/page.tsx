@@ -58,7 +58,7 @@ export default function ModernAdminDashboard() {
   const router = useRouter();
   // Secure: Only show admin dashboard if valid admin_jwt is present
   useEffect(() => {
-    const token = localStorage.getItem('admin_jwt');
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt');
     if (!token) {
       router.push('/admin/login');
       return;
@@ -89,7 +89,7 @@ export default function ModernAdminDashboard() {
   // Only fetch dashboard data after authentication check passes
   // (The authentication check useEffect above will redirect if not authenticated)
   useEffect(() => {
-    const token = localStorage.getItem('admin_jwt');
+    const token = localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt');
     try {
       const payload = JSON.parse(atob(token.split('.')[1]));
       if (payload.role === 'admin' && payload.email && payload.exp && Date.now() / 1000 < payload.exp) {

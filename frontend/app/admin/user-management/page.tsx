@@ -43,7 +43,7 @@ function UserManagementContent() {
     try {
       const response = await fetch(`${getApiUrl()}/api/users`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}`,
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`,
         },
       })
 
@@ -71,7 +71,7 @@ function UserManagementContent() {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}`,
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`,
         },
         body: JSON.stringify({ 
           status,
@@ -106,7 +106,7 @@ function UserManagementContent() {
       const response = await fetch(`${getApiUrl()}/api/users/${userId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}`,
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`,
         },
       })
 
@@ -151,7 +151,7 @@ function UserManagementContent() {
     try {
       const response = await fetch(`${getApiUrl()}/api/users/${userId}/documents/${documentType}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}`,
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`,
         },
       })
 

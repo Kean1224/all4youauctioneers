@@ -31,7 +31,7 @@ export default function AdminOffersPage() {
       const { getApiUrl } = await import('../../../lib/api');
       const response = await fetch(`${getApiUrl()}/api/sell-item/admin/all`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}`
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
         }
       });
       
@@ -56,7 +56,7 @@ export default function AdminOffersPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('admin_jwt')}`
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
         },
         body: JSON.stringify({ offerId, status: newStatus })
       });
