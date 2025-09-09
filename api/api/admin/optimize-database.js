@@ -3,9 +3,17 @@ const express = require('express');
 const router = express.Router();
 const { runOptimization } = require('../../database/run-optimization');
 
-// POST /api/admin/optimize-database
+// GET or POST /api/admin/optimize-database
 // Run critical database optimizations for production scaling
+router.get('/', async (req, res) => {
+  await runOptimizationHandler(req, res);
+});
+
 router.post('/', async (req, res) => {
+  await runOptimizationHandler(req, res);
+});
+
+async function runOptimizationHandler(req, res) {
   try {
     console.log('🚀 Admin requested database optimization...');
     
@@ -32,6 +40,6 @@ router.post('/', async (req, res) => {
       message: error.message
     });
   }
-});
+}
 
 module.exports = router;
