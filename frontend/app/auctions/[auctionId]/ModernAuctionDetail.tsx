@@ -1,7 +1,9 @@
 "use client";
 
-// Top-level LotCard component to fix React hook violation
-function LotCard({
+import React, { useMemo } from 'react';
+
+// PERFORMANCE FIX: Memoized LotCard component to prevent unnecessary re-renders with 1000+ lots
+const LotCard = React.memo(function LotCard({
   lot,
   auctionId,
   index,
@@ -36,8 +38,11 @@ function LotCard({
   const nextBidAmount = currentBid + (lot.bidIncrement || 100);
   const reserveMet = lot.reservePrice ? currentBid >= lot.reservePrice : true;
   
-  // Check if current user is the highest bidder
-  const userEmail = typeof window !== 'undefined' ? (localStorage.getItem('userEmail') || localStorage.getItem('user_email')) : null;
+  // PERFORMANCE FIX: Memoize userEmail to prevent localStorage access on every render
+  const userEmail = useMemo(() => {
+    return typeof window !== 'undefined' ? 
+      (localStorage.getItem('userEmail') || localStorage.getItem('user_email')) : null;
+  }, []); // Empty dependency array - only run once
   const lastBid = lot.bidHistory?.[lot.bidHistory.length - 1];
   const isUserHighestBidder = lastBid && lastBid.bidderEmail === userEmail;
   
@@ -261,7 +266,7 @@ function LotCard({
       </div>
     </motion.div>
   );
-}
+}); // End React.memo - PERFORMANCE FIX for 1000+ lots
 
 
 import React, { useState, useEffect, useRef } from 'react';
