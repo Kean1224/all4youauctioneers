@@ -25,6 +25,7 @@ try {
 const { v4: uuidv4 } = require('uuid');
 const { authenticateToken } = require('../../middleware/auth');
 const dbModels = require('../../database/models');
+const redisCache = require('../../utils/redis-cache');
 
 // Email notifications (with error handling)
 let sendMail = null;

@@ -385,6 +385,9 @@ const dbManager = require('./database/connection');
 const migrationManager = require('./database/migrations');
 const dbModels = require('./database/models');
 
+// Initialize Redis caching system
+const redisCache = require('./utils/redis-cache');
+
 // Start the API server with proper initialization
 app.listen(PORT, async () => {
   console.log(`🚀 API Gateway starting on port ${PORT}...`);
@@ -394,6 +397,10 @@ app.listen(PORT, async () => {
     console.log('🗄️  Initializing PostgreSQL database system...');
     await dbManager.initialize();
     await migrationManager.runMigrations();
+    
+    // Initialize Redis caching for 1000+ concurrent users
+    console.log('🔥 Initializing Redis caching system...');
+    await redisCache.initialize();
     
     // Initialize and validate database system
     const dataInit = new DataInitializer();

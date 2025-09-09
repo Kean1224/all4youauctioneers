@@ -6,6 +6,7 @@ const multer = require('multer');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const dbModels = require('../../database/models');
+const redisCache = require('../../utils/redis-cache');
 
 // Configure multer for memory storage (images will be stored in PostgreSQL)
 const storage = multer.memoryStorage();
@@ -41,9 +42,20 @@ function isAuctionCompleted(auction) {
   return auction.lots.every(lot => lot.status === 'ended');
 }
 
-// GET all active auctions (excludes completed ones)
+// GET all active auctions (excludes completed ones) - WITH REDIS CACHING
 router.get('/', async (req, res) => {
   try {
+    const cacheKey = 'auctions:active';
+    
+    // Try to get from Redis cache first
+    const cachedAuctions = await redisCache.get(cacheKey);
+    if (cachedAuctions) {
+      console.log(`🔥 Cache HIT: Returning ${cachedAuctions.length} cached auctions`);
+      return res.json(cachedAuctions);
+    }
+    
+    console.log('🔍 Cache MISS: Fetching auctions from database');
+    
     // PERFORMANCE FIX: Use optimized query to get auctions with lot counts (eliminates N+1 query problem)
     const auctions = await dbModels.getAuctionsWithLotCounts();
     const activeAuctions = auctions.filter(auction => !isAuctionCompleted(auction));
@@ -64,7 +76,10 @@ router.get('/', async (req, res) => {
       };
     });
     
-    console.log(`📋 Returning ${transformedAuctions.length} auctions with lot counts`);
+    // Cache for 60 seconds - frequent updates needed for live bidding
+    await redisCache.set(cacheKey, transformedAuctions, 60);
+    
+    console.log(`📋 Cached and returning ${transformedAuctions.length} auctions with lot counts`);
     res.json(transformedAuctions);
   } catch (error) {
     console.error('Error fetching auctions:', error);
@@ -95,11 +110,20 @@ router.get('/past', async (req, res) => {
   }
 });
 
-// GET single auction by ID
+// GET single auction by ID - WITH REDIS CACHING
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    console.log('🔍 Fetching auction with ID:', id);
+    const cacheKey = `auction:${id}:details`;
+    
+    // Try to get from Redis cache first
+    const cachedAuction = await redisCache.get(cacheKey);
+    if (cachedAuction) {
+      console.log(`🔥 Cache HIT: Returning cached auction ${id} with ${cachedAuction.lots?.length || 0} lots`);
+      return res.json(cachedAuction);
+    }
+    
+    console.log('🔍 Cache MISS: Fetching auction with ID:', id);
     
     const auction = await dbModels.getAuctionById(id);
 
@@ -157,7 +181,10 @@ router.get('/:id', async (req, res) => {
       createdAt: auction.created_at
     };
 
-    console.log('🚀 Sending response with', transformedLots.length, 'lots');
+    // Cache for 30 seconds - balance between performance and data freshness
+    await redisCache.set(cacheKey, transformedAuction, 30);
+
+    console.log('🚀 Cached and sending response with', transformedLots.length, 'lots');
     
     // TODO: Implement view count increment in database if needed
     res.json(transformedAuction);
@@ -229,6 +256,10 @@ router.post('/', verifyAdmin, upload.any(), async (req, res) => {
   const createdAuction = await dbModels.createAuction(newAuctionData);
   console.log('💾 Auction created in database successfully');
 
+  // Clear cache when auction is created
+  await redisCache.clearPattern('auctions:');
+  console.log('🔄 Cache cleared after auction creation');
+
   console.log('✅ Auction created successfully:', createdAuction.id, createdAuction.title);
   res.status(201).json({
     id: createdAuction.id,
@@ -278,6 +309,11 @@ router.put('/:id', verifyAdmin, upload.any(), async (req, res) => {
     // Update auction in database
     const updatedAuction = await dbModels.updateAuction(id, update);
     
+    // Clear relevant cache entries when auction is updated
+    await redisCache.del(`auction:${id}:details`);
+    await redisCache.clearPattern('auctions:');
+    console.log('🔄 Cache cleared after auction update');
+    
     res.json(updatedAuction);
   } catch (error) {
     console.error('Error updating auction:', error);
@@ -292,6 +328,11 @@ router.delete('/:id', verifyAdmin, async (req, res) => {
     
     // Delete auction from database (CASCADE deletes lots, bids, etc.)
     const deletedAuction = await dbModels.deleteAuction(id);
+    
+    // Clear relevant cache entries when auction is deleted
+    await redisCache.del(`auction:${id}:details`);
+    await redisCache.clearPattern('auctions:');
+    console.log('🔄 Cache cleared after auction deletion');
     
     res.json({ 
       message: 'Auction deleted successfully', 
