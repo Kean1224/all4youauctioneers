@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 
 // PERFORMANCE FIX: Memoized LotCard component to prevent unnecessary re-renders with 1000+ lots
 const LotCard = React.memo(function LotCard({
@@ -267,9 +267,6 @@ const LotCard = React.memo(function LotCard({
     </motion.div>
   );
 }); // End React.memo - PERFORMANCE FIX for 1000+ lots
-
-
-import React, { useState, useEffect, useRef } from 'react';
 // Helper: Scroll to notifications for accessibility
 function scrollToNotifications() {
   const el = document.getElementById('auction-notifications');
