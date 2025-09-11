@@ -16,9 +16,9 @@ export default function AssignSellerPage() {
   useEffect(() => {
     fetch(`${getApiUrl()}/api/auctions`, {
       headers: {
+        'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
-      },
-      headers: { 'Content-Type': 'application/json' }
+      }
     })
       .then(res => res.json())
       .then(setAuctions);
@@ -36,9 +36,9 @@ export default function AssignSellerPage() {
     if (selectedAuctionId) {
       fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}`, {
         headers: {
-        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
-      },
-        headers: { 'Content-Type': 'application/json' }
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+        }
       })
         .then(res => res.json())
         .then(setLots);
@@ -54,9 +54,9 @@ export default function AssignSellerPage() {
     const res = await fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}/${selectedLotId}/assign-seller`, {
       method: 'PUT',
       headers: {
+        'Content-Type': 'application/json',
         'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
       },
-      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sellerEmail: selectedSeller })
     });
     if (res.ok) {

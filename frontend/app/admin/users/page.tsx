@@ -13,10 +13,8 @@ function BackendStatus() {
       signal: controller.signal,
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
-      },
-      headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
       },
     })
       .then(response => {
@@ -80,10 +78,8 @@ export default function AdminUsersPage() {
   const fetchUsers = async () => {
     const res = await fetch(`${getApiUrl()}/api/users`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
-      },
-      headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
       },
     });
     const data = await res.json();
@@ -92,10 +88,8 @@ export default function AdminUsersPage() {
   const fetchAuctions = async () => {
     const res = await fetch(`${getApiUrl()}/api/auctions`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
-      },
-      headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
       },
     });
     const data = await res.json();
@@ -117,9 +111,9 @@ export default function AdminUsersPage() {
       const response = await fetch(`${getApiUrl()}/api/users/suspend/${encodeURIComponent(email)}`, {
         method: 'PUT',
         headers: {
-        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
-      },
-        headers: getHeaders(),
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+        },
         body: JSON.stringify({ suspended: !suspended }),
       });
       
@@ -182,9 +176,9 @@ export default function AdminUsersPage() {
       const response = await fetch(`${getApiUrl()}/api/users/${encodeURIComponent(email)}`, {
         method: 'DELETE',
         headers: {
-        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
-      },
-        headers: getHeaders(),
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+        },
       });
       
       if (!response.ok) {
