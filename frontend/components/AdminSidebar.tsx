@@ -8,7 +8,6 @@ const links = [
   { href: '/admin/users', label: 'Users' },
   { href: '/admin/pending-users', label: '⏳ Pending Users' },
   { href: '/admin/invoices', label: 'Invoices' },
-  { href: '/admin/payments', label: '💰 Payments' },
   { href: '/admin/assign-seller', label: 'Assign Seller' },
 ];
 

@@ -184,7 +184,7 @@ export default function HeroSection({
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-green-500 rounded-full" />
-              <span className="text-sm font-inter">Secure Payments</span>
+              <span className="text-sm font-inter">Secure Platform</span>
             </div>
             <div className="flex items-center space-x-2">
               <div className="w-3 h-3 bg-green-500 rounded-full" />

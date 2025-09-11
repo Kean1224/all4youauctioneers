@@ -389,4 +389,61 @@ router.delete('/:id', verifyAdmin, async (req, res) => {
   }
 });
 
+// POST /api/invoices/admin/:id/mark-paid - Admin marks invoice as paid
+router.post('/admin/:id/mark-paid', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(`💰 Admin marking invoice ${id} as paid...`);
+    
+    // Get current invoice
+    const currentInvoice = await dbModels.getInvoiceById(id);
+    if (!currentInvoice) {
+      return res.status(404).json({ 
+        error: 'Invoice not found',
+        hint: 'Check if the invoice ID is correct'
+      });
+    }
+
+    if (currentInvoice.payment_status === 'paid') {
+      return res.status(400).json({
+        error: 'Invoice is already marked as paid'
+      });
+    }
+
+    // Mark invoice as paid (manual admin action)
+    const updatedInvoice = await dbModels.markInvoiceAsPaid(id, {
+      payment_method: 'Manual Verification',
+      payment_date: new Date().toISOString(),
+      payment_reference: `Admin-${req.user.email}-${Date.now()}`
+    });
+    
+    if (!updatedInvoice) {
+      throw new Error('Failed to mark invoice as paid');
+    }
+
+    console.log(`✅ Invoice ${id} marked as paid by admin: ${req.user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Invoice marked as paid successfully',
+      invoice: {
+        id: updatedInvoice.id,
+        invoiceNumber: updatedInvoice.invoice_number,
+        buyerEmail: updatedInvoice.buyer_email,
+        paymentStatus: updatedInvoice.payment_status,
+        paymentMethod: updatedInvoice.payment_method,
+        paymentDate: updatedInvoice.payment_date,
+        paymentReference: updatedInvoice.payment_reference
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Error marking invoice as paid:', error);
+    res.status(500).json({ 
+      error: 'Failed to mark invoice as paid',
+      details: error.message 
+    });
+  }
+});
+
 module.exports = router;

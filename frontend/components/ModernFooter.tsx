@@ -75,8 +75,8 @@ export default function ModernFooter() {
     },
     {
       icon: CreditCardIcon,
-      title: 'Secure Payments',
-      description: 'SSL encrypted payment processing'
+      title: 'Secure Platform',
+      description: 'SSL encrypted secure transactions'
     },
     {
       icon: ClockIcon,

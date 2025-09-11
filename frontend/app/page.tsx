@@ -201,7 +201,7 @@ export default function HomePage() {
               {
                 icon: "🛡️", 
                 title: "Secure & Trusted",
-                description: "FICA verified users, secure payments, and comprehensive buyer protection for peace of mind.",
+                description: "FICA verified users, secure platform, and comprehensive buyer protection for peace of mind.",
                 color: "bg-blue-100"
               },
               {
