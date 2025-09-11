@@ -140,7 +140,9 @@ export default function CreateAuctionPage() {
 
       const auctionResponse = await fetch(`${getApiUrl()}/api/auctions`, {
         method: 'POST',
-        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`,
+        },
         body: formData,
       });
       
@@ -184,7 +186,9 @@ export default function CreateAuctionPage() {
 
           const lotResponse = await fetch(`${getApiUrl()}/api/lots/${auctionId}`, {
             method: 'POST',
-            credentials: 'include',
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`,
+            },
             body: lotFormData, // Send as FormData instead of JSON
           });
 

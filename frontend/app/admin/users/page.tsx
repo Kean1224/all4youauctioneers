@@ -12,7 +12,9 @@ function BackendStatus() {
     fetch(`${getApiUrl()}/api/ping`, {
       signal: controller.signal,
       method: 'GET',
-      credentials: 'include',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+      },
       headers: {
         'Content-Type': 'application/json',
       },
@@ -77,7 +79,9 @@ export default function AdminUsersPage() {
 
   const fetchUsers = async () => {
     const res = await fetch(`${getApiUrl()}/api/users`, {
-      credentials: 'include',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+      },
       headers: {
         'Content-Type': 'application/json',
       },
@@ -87,7 +91,9 @@ export default function AdminUsersPage() {
   };
   const fetchAuctions = async () => {
     const res = await fetch(`${getApiUrl()}/api/auctions`, {
-      credentials: 'include',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+      },
       headers: {
         'Content-Type': 'application/json',
       },
@@ -99,7 +105,8 @@ export default function AdminUsersPage() {
   // Helper to get headers for API requests (now uses httpOnly cookies)
   const getHeaders = () => {
     return {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
     };
   };
 
@@ -109,7 +116,9 @@ export default function AdminUsersPage() {
       
       const response = await fetch(`${getApiUrl()}/api/users/suspend/${encodeURIComponent(email)}`, {
         method: 'PUT',
-        credentials: 'include',
+        headers: {
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+      },
         headers: getHeaders(),
         body: JSON.stringify({ suspended: !suspended }),
       });
@@ -136,7 +145,6 @@ export default function AdminUsersPage() {
   const approveFica = async (email: string) => {
     await fetch(`${getApiUrl()}/api/users/fica/${encodeURIComponent(email)}`, {
       method: 'PUT',
-      credentials: 'include',
       headers: getHeaders(),
     });
     fetchUsers();
@@ -147,7 +155,6 @@ export default function AdminUsersPage() {
     setDepositActionLoading(email + auctionId + status);
     await fetch(`${getApiUrl()}/api/deposits/return`, {
       method: 'PUT',
-      credentials: 'include',
       headers: getHeaders(),
       body: JSON.stringify({ email, auctionId, status }),
     });
@@ -160,7 +167,6 @@ export default function AdminUsersPage() {
     setDepositActionLoading(email + auctionId + 'approve');
     await fetch(`${getApiUrl()}/api/deposits/${auctionId}/${encodeURIComponent(email)}`, {
       method: 'PUT',
-      credentials: 'include',
       headers: getHeaders(),
       body: JSON.stringify({ status: 'approved' }),
     });
@@ -175,7 +181,9 @@ export default function AdminUsersPage() {
     try {
       const response = await fetch(`${getApiUrl()}/api/users/${encodeURIComponent(email)}`, {
         method: 'DELETE',
-        credentials: 'include',
+        headers: {
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+      },
         headers: getHeaders(),
       });
       
