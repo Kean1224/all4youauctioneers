@@ -1,7 +1,7 @@
-// Realtime WebSocket Service Client
-// Replaces direct WebSocket server imports with HTTP calls to the realtime service
+// Self-hosted WebSocket Service Client
+// Uses local WebSocket service instead of external dependency
 
-const REALTIME_SERVICE_URL = process.env.REALTIME_SERVICE_URL || 'https://all4youauctioneers-1.onrender.com';
+const REALTIME_SERVICE_URL = process.env.REALTIME_SERVICE_URL || 'http://localhost:5000';
 
 /**
  * Send notification to specific user
@@ -10,7 +10,7 @@ const REALTIME_SERVICE_URL = process.env.REALTIME_SERVICE_URL || 'https://all4yo
  */
 const sendNotification = async (userEmail, data) => {
   try {
-    const response = await fetch(`${REALTIME_SERVICE_URL}/api/notify`, {
+    const response = await fetch(`${REALTIME_SERVICE_URL}/api/websocket/notify`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ userEmail, data }),
@@ -37,7 +37,7 @@ const sendNotification = async (userEmail, data) => {
  */
 const sendBidUpdate = async (auctionId, lotId, bidData) => {
   try {
-    const response = await fetch(`${REALTIME_SERVICE_URL}/api/bid-update`, {
+    const response = await fetch(`${REALTIME_SERVICE_URL}/api/websocket/bid-update`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -68,7 +68,7 @@ const sendBidUpdate = async (auctionId, lotId, bidData) => {
  */
 const sendTimerUpdate = async (auctionId, timerData) => {
   try {
-    const response = await fetch(`${REALTIME_SERVICE_URL}/api/timer-update`, {
+    const response = await fetch(`${REALTIME_SERVICE_URL}/api/websocket/timer-update`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -98,7 +98,7 @@ const sendTimerUpdate = async (auctionId, timerData) => {
  */
 const sendAuctionUpdate = async (auctionId, updateData) => {
   try {
-    const response = await fetch(`${REALTIME_SERVICE_URL}/api/auction-update`, {
+    const response = await fetch(`${REALTIME_SERVICE_URL}/api/websocket/auction-update`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 

@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const express = require('express');
+const http = require('http');
 const cors = require('./cors-config');
 const bodyParser = require('body-parser');
 const fs = require('fs');
@@ -21,6 +22,8 @@ const {
 const performanceMonitor = require('./middleware/performance-monitor');
 
 const app = express();
+const server = http.createServer(app);
+
 // Trust the first proxy (needed for correct IP detection behind Render, Heroku, etc.)
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
@@ -219,6 +222,132 @@ const adminRolesRouter = require('./api/admin/roles');
 const adminMigrateCloudinaryRouter = require('./api/admin/migrate-cloudinary');
 const migrateFilesRouter = require('./api/migrate-files');
 
+// 🔌 Initialize self-hosted WebSocket service for real-time bidding
+let wsService = null;
+try {
+  const EnhancedWebSocketService = require('./utils/websocket/enhanced-websocket');
+  wsService = new EnhancedWebSocketService(server);
+  console.log('✅ Self-hosted WebSocket service initialized successfully');
+  console.log('🚀 Real-time bidding now runs in-process - no external dependencies!');
+} catch (error) {
+  console.error('⚠️  WebSocket service initialization failed:', error.message);
+  console.log('🔄 Bidding will fall back to HTTP polling if available');
+}
+
+// 🔌 WebSocket API endpoints for real-time bidding
+if (wsService) {
+  // WebSocket health check and stats
+  app.get('/api/websocket/health', (req, res) => {
+    const stats = wsService.getStats();
+    res.json({
+      status: 'healthy',
+      service: 'Self-hosted WebSocket Service',
+      timestamp: new Date().toISOString(),
+      ...stats
+    });
+  });
+
+  app.get('/api/websocket/stats', (req, res) => {
+    const stats = wsService.getStats();
+    res.json({
+      success: true,
+      statistics: stats,
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // API endpoints for sending real-time updates
+  app.post('/api/websocket/notify', (req, res) => {
+    const { userEmail, data } = req.body;
+    
+    if (!data) {
+      return res.status(400).json({
+        success: false,
+        error: 'Message data is required'
+      });
+    }
+
+    try {
+      wsService.sendNotification(userEmail, data);
+      res.json({
+        success: true,
+        message: `Notification sent to ${userEmail || 'all users'}`
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  app.post('/api/websocket/bid-update', (req, res) => {
+    const { auctionId, lotId, ...bidData } = req.body;
+    
+    try {
+      wsService.broadcastToAuction(auctionId, {
+        type: 'bid_update',
+        auctionId,
+        lotId,
+        ...bidData
+      });
+      res.json({
+        success: true,
+        message: `Bid update sent for auction ${auctionId}`
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  app.post('/api/websocket/timer-update', (req, res) => {
+    const { auctionId, ...timerData } = req.body;
+    
+    try {
+      wsService.broadcastToAuction(auctionId, {
+        type: 'timer_update',
+        auctionId,
+        ...timerData
+      });
+      res.json({
+        success: true,
+        message: `Timer update sent for auction ${auctionId}`
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  app.post('/api/websocket/auction-update', (req, res) => {
+    const { auctionId, ...updateData } = req.body;
+    
+    try {
+      wsService.broadcastToAuction(auctionId, {
+        type: 'auction_update',
+        auctionId,
+        ...updateData
+      });
+      res.json({
+        success: true,
+        message: `Auction update sent for auction ${auctionId}`
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+  });
+
+  console.log('🔌 WebSocket API endpoints registered (notify, bid-update, timer-update, auction-update)');
+}
+
 // 🔗 Connect routes
 app.use('/api/deposits', depositsRouter);
 app.use('/api/auctions', auctionsRouter);
@@ -335,9 +464,9 @@ const dbModels = require('./database/models');
 // Initialize Redis caching system
 const redisCache = require('./utils/redis-cache');
 
-// Start the API server with proper initialization
-app.listen(PORT, async () => {
-  console.log(`🚀 API Gateway starting on port ${PORT}...`);
+// Start the API server with WebSocket support
+server.listen(PORT, async () => {
+  console.log(`🚀 API Gateway with WebSocket support starting on port ${PORT}...`);
   
   try {
     // Initialize PostgreSQL database

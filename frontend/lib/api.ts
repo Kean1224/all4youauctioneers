@@ -9,7 +9,7 @@ export const API_CONFIG = {
     
   REALTIME_URL: typeof window !== 'undefined'
     ? (window as any).__NEXT_DATA__?.env?.NEXT_PUBLIC_REALTIME_URL
-    : process.env.NEXT_PUBLIC_REALTIME_URL || 'wss://all4youauctioneers-1.onrender.com'
+    : process.env.NEXT_PUBLIC_REALTIME_URL || 'wss://api.all4youauctions.co.za'
 };
 
 // Utility function to get API URL
@@ -28,18 +28,19 @@ export const getApiUrl = (): string => {
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 };
 
-// Utility function to get realtime URL
+// Utility function to get WebSocket URL (same server as API)
 export const getRealtimeUrl = (): string => {
-  // In development, use localhost
+  // In development, use localhost WebSocket
   if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
-    return process.env.NEXT_PUBLIC_REALTIME_URL || 'ws://localhost:5001';
+    return process.env.NEXT_PUBLIC_REALTIME_URL || 'ws://localhost:5000';
   }
   
-  // In production, use the production Realtime URL
+  // In production, use the production WebSocket URL (same as API server)
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    return 'wss://all4youauctioneers-1.onrender.com';
+    return 'wss://api.all4youauctions.co.za';
   }
   
   // SSR fallback - use environment variable
-  return process.env.NEXT_PUBLIC_REALTIME_URL || 'ws://localhost:5001';
+  return process.env.NEXT_PUBLIC_REALTIME_URL || 'ws://localhost:5000';
 };
+
