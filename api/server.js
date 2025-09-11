@@ -244,61 +244,8 @@ app.use('/api/admin/migrate-cloudinary', adminMigrateCloudinaryRouter);
 app.use('/api/admin/optimize-database', require('./api/admin/optimize-database'));
 app.use('/api/migrate-files', migrateFilesRouter);
 
-// EMERGENCY: Direct admin login endpoint to bypass deployment issues
-app.post('/api/auth/admin-login', async (req, res) => {
-  console.log('🚨 EMERGENCY admin login endpoint called');
-  const { email, password } = req.body;
-  
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email and password are required' });
-  }
-  
-  try {
-    const dbModels = require('./database/models');
-    const bcrypt = require('bcryptjs');
-    const jwt = require('jsonwebtoken');
-    const JWT_SECRET = process.env.JWT_SECRET;
-    
-    // Get admin user from database
-    const user = await dbModels.getUserByEmailAndRole(email, 'admin');
-    
-    if (!user) {
-      console.log('❌ Admin user not found:', email);
-      return res.status(401).json({ error: 'Invalid admin credentials' });
-    }
-    
-    const isValid = await bcrypt.compare(password, user.password_hash);
-    
-    if (!isValid) {
-      console.log('❌ Invalid admin password for:', email);
-      return res.status(401).json({ error: 'Invalid admin credentials' });
-    }
-    
-    const issuedAt = Math.floor(Date.now() / 1000);
-    const token = jwt.sign({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      iat: issuedAt
-    }, JWT_SECRET, { expiresIn: '4h' });
-    
-    console.log('✅ EMERGENCY admin login successful:', email);
-    
-    res.json({
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      token: token,
-      expiresAt: issuedAt + (4 * 60 * 60),
-      message: 'Admin login successful'
-    });
-    
-  } catch (error) {
-    console.error('🚨 EMERGENCY admin login error:', error);
-    res.status(500).json({ error: 'Admin login failed' });
-  }
-});
+// REMOVED: Emergency admin login endpoint for security
+// Admin login is now handled through proper /api/auth/login endpoint only
 
 // HOTFIX: Add /session endpoint for production dashboard compatibility
 app.get('/session', (req, res) => {

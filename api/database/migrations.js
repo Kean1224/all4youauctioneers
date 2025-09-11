@@ -830,7 +830,11 @@ class MigrationManager {
       
       // Get admin credentials from environment  
       const adminEmail = process.env.ADMIN_EMAIL || 'admin@all4youauctions.co.za';
-      const adminPassword = process.env.ADMIN_PASSWORD || 'Tristan@89';
+      const adminPassword = process.env.ADMIN_PASSWORD;
+      
+      if (!adminPassword) {
+        throw new Error('ADMIN_PASSWORD environment variable is required for initial admin user creation');
+      }
       
       console.log(`🔐 Using admin password from env: ${adminPassword ? 'SET' : 'NOT SET'}`);
       console.log(`📧 Admin email: ${adminEmail}`);
