@@ -48,9 +48,9 @@ function AdminInvoicesPage() {
   const fetchInvoices = async () => {
     try {
       const res = await fetch(`${getApiUrl()}/api/invoices/admin/all`, {
-        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
         }
       });
       const data = await res.json();
@@ -152,9 +152,9 @@ function AdminInvoicesPage() {
                             try {
                               const res = await fetch(`${getApiUrl()}/api/invoices/admin/${inv.id}/mark-paid`, {
                                 method: 'POST',
-                                credentials: 'include',
                                 headers: {
-                                  'Content-Type': 'application/json'
+                                  'Content-Type': 'application/json',
+                                  'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
                                 },
                                 body: JSON.stringify({}),
                               });
@@ -220,9 +220,9 @@ function AdminInvoicesPage() {
                       try {
                         const res = await fetch(`${getApiUrl()}/api/invoices/${selectedInvoice.id}/paid`, {
                           method: 'PUT',
-                          credentials: 'include',
                           headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
                           }
                         });
                         if (!res.ok) throw new Error('Failed to update');

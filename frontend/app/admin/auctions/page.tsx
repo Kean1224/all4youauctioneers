@@ -31,9 +31,9 @@ export default function AdminAuctionsPage() {
   const fetchAuctions = async () => {
     try {
       const res = await fetch(`${getApiUrl()}/api/auctions`, {
-        credentials: 'include',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
         }
       });
       const data = await res.json();
@@ -59,7 +59,9 @@ export default function AdminAuctionsPage() {
       
       const res = await fetch(`${getApiUrl()}/api/auctions`, {
         method: "POST",
-        credentials: 'include',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+        },
         body: formData,
       });
       if (res.ok) {
@@ -85,9 +87,9 @@ export default function AdminAuctionsPage() {
     
     await fetch(`${getApiUrl()}/api/auctions/${id}`, {
       method: "DELETE",
-      credentials: 'include',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
       }
     });
     fetchAuctions();

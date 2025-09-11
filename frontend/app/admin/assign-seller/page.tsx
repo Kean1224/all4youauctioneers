@@ -15,14 +15,18 @@ export default function AssignSellerPage() {
 
   useEffect(() => {
     fetch(`${getApiUrl()}/api/auctions`, {
-      credentials: 'include',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+      },
       headers: { 'Content-Type': 'application/json' }
     })
       .then(res => res.json())
       .then(setAuctions);
     fetch(`${getApiUrl()}/api/users`, {
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+      }
     })
       .then(res => res.json())
       .then(data => setUsers(data.filter((u: any) => u.role !== 'admin' && !u.suspended)));
@@ -31,7 +35,9 @@ export default function AssignSellerPage() {
   useEffect(() => {
     if (selectedAuctionId) {
       fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}`, {
-        credentials: 'include',
+        headers: {
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+      },
         headers: { 'Content-Type': 'application/json' }
       })
         .then(res => res.json())
@@ -47,7 +53,9 @@ export default function AssignSellerPage() {
     
     const res = await fetch(`${getApiUrl()}/api/lots/${selectedAuctionId}/${selectedLotId}/assign-seller`, {
       method: 'PUT',
-      credentials: 'include',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
+      },
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sellerEmail: selectedSeller })
     });

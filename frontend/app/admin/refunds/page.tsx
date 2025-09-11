@@ -21,7 +21,6 @@ export default function AdminRefundsPage() {
   useEffect(() => {
     const adminToken = localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt');
     fetch(`${getApiUrl()}/api/refunds/`, {
-      credentials: 'include',
       headers: {
         'Authorization': adminToken ? `Bearer ${adminToken}` : ''
       }
@@ -47,8 +46,7 @@ export default function AdminRefundsPage() {
           'Content-Type': 'application/json',
           'Authorization': adminToken ? `Bearer ${adminToken}` : ''
         },
-        credentials: 'include',
-        body: JSON.stringify({ status }),
+          body: JSON.stringify({ status }),
       });
       if (res.ok) {
         setRefunds(refunds => refunds.map(r => r.auctionId === auctionId && r.email === email ? { ...r, status } : r));

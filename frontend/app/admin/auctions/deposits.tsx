@@ -10,7 +10,6 @@ export default function AdminAuctionDepositsPage() {
 
   useEffect(() => {
     fetch(`${getApiUrl()}/api/auctions`, {
-      credentials: 'include',
       headers: {
         'Content-Type': 'application/json'
       }
@@ -22,9 +21,9 @@ export default function AdminAuctionDepositsPage() {
   useEffect(() => {
     if (!selectedAuction) return;
     fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`, {
-      credentials: 'include',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
       }
     })
       .then((res) => res.json())
@@ -34,16 +33,16 @@ export default function AdminAuctionDepositsPage() {
   const handleApprove = async (email: string) => {
     await fetch(`${getApiUrl()}/api/deposits/${selectedAuction}/${email}`, {
       method: "PUT",
-      credentials: 'include',
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
       },
       body: JSON.stringify({ status: "approved" }),
     });
     fetch(`${getApiUrl()}/api/deposits/auction/${selectedAuction}`, {
-      credentials: 'include',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
       }
     })
       .then((res) => res.json())

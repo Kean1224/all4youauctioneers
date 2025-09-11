@@ -112,9 +112,9 @@ export default function ModernAdminDashboard() {
       // Fetch real data from API endpoints
       try {
         const usersRes = await fetch(`${getApiUrl()}/api/users`, {
-          credentials: 'include',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
           }
         });
         if (usersRes.ok) {
@@ -127,9 +127,9 @@ export default function ModernAdminDashboard() {
 
       try {
         const auctionsRes = await fetch(`${getApiUrl()}/api/auctions`, {
-          credentials: 'include',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
           }
         });
         if (auctionsRes.ok) {
@@ -142,9 +142,9 @@ export default function ModernAdminDashboard() {
 
       try {
         const offersRes = await fetch(`${getApiUrl()}/api/sell-item/admin/all`, {
-          credentials: 'include',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('admin_token') || localStorage.getItem('admin_jwt')}`
           }
         });
         if (offersRes.ok) {
